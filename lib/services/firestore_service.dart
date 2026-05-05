@@ -111,6 +111,10 @@ class FirestoreService {
     await _tablesRef.doc(id).delete();
   }
 
+  Future<void> updateTable(String id, Map<String, dynamic> data) async {
+    await _tablesRef.doc(id).update(data);
+  }
+
   // ============================================================
   // ORDERS
   // ============================================================

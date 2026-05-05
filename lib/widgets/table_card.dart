@@ -74,18 +74,18 @@ class TableCard extends StatelessWidget {
           children: [
             // Table icon with status glow
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _statusColor.withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.table_restaurant,
-                size: 28,
+                size: 24,
                 color: _statusColor,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
 
             // Table number
             Text(

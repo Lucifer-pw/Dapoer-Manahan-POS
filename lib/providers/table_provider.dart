@@ -47,6 +47,27 @@ class TableProvider extends ChangeNotifier {
     await updateStatus(tableId, TableStatus.reserved, null);
   }
 
+  Future<void> addTable(int number, int capacity) async {
+    final table = RestaurantTable(
+      id: '', // Firestore will generate
+      number: number,
+      capacity: capacity,
+      status: TableStatus.available,
+    );
+    await _firestoreService.addTable(table);
+  }
+
+  Future<void> updateTable(String id, int number, int capacity) async {
+    await _firestoreService.updateTable(id, {
+      'number': number,
+      'capacity': capacity,
+    });
+  }
+
+  Future<void> deleteTable(String id) async {
+    await _firestoreService.deleteTable(id);
+  }
+
   RestaurantTable? getTableByNumber(int number) {
     try {
       return _tables.firstWhere((t) => t.number == number);

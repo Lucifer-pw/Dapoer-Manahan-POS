@@ -72,9 +72,9 @@ class MenuGridItem extends StatelessWidget {
                 ),
                 // Info
                 Expanded(
-                  flex: 2,
+                  flex: 4,
                   child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
