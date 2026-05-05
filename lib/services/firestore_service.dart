@@ -402,4 +402,17 @@ class FirestoreService {
   Future<void> deleteExpense(String id) async {
     await _expensesRef.doc(id).delete();
   }
+
+  Future<List<Map<String, dynamic>>> getExpensesByDateRange(
+      DateTime start, DateTime end) async {
+    final query = await _expensesRef
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('date', isLessThan: Timestamp.fromDate(end))
+        .orderBy('date', descending: true)
+        .get();
+
+    return query.docs
+        .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+        .toList();
+  }
 }

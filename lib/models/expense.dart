@@ -3,17 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Expense {
   final String id;
   final String name;
-  final double qty;
+  final String unit; // e.g. "5 Kg", "10 Pcs"
   final int price;
-  final int total;
   final DateTime date;
 
   Expense({
     required this.id,
     required this.name,
-    required this.qty,
+    required this.unit,
     required this.price,
-    required this.total,
     required this.date,
   });
 
@@ -21,9 +19,8 @@ class Expense {
     return Expense(
       id: id,
       name: map['name'] ?? '',
-      qty: (map['qty'] ?? 0).toDouble(),
+      unit: map['unit'] ?? '',
       price: map['price'] ?? 0,
-      total: map['total'] ?? 0,
       date: (map['date'] as Timestamp).toDate(),
     );
   }
@@ -31,9 +28,8 @@ class Expense {
   Map<String, dynamic> toMap() {
     return {
       'name': name,
-      'qty': qty,
+      'unit': unit,
       'price': price,
-      'total': total,
       'date': Timestamp.fromDate(date),
     };
   }

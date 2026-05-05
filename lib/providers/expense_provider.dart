@@ -13,7 +13,7 @@ class ExpenseProvider extends ChangeNotifier {
   List<Expense> get todayExpenses => _todayExpenses;
   bool get isLoading => _isLoading;
 
-  int get dailyTotal => _todayExpenses.fold(0, (sum, e) => sum + e.total);
+  int get dailyTotal => _todayExpenses.fold(0, (sum, e) => sum + e.price);
 
   void init() {
     _expensesSub = _firestoreService.streamTodayExpenses().listen((data) {
@@ -25,21 +25,24 @@ class ExpenseProvider extends ChangeNotifier {
 
   Future<void> addExpense({
     required String name,
-    required double qty,
+    required String unit,
     required int price,
   }) async {
-    final total = (qty * price).toInt();
     await _firestoreService.addExpense({
       'name': name,
-      'qty': qty,
+      'unit': unit,
       'price': price,
-      'total': total,
       'date': DateTime.now(),
     });
   }
 
   Future<void> deleteExpense(String id) async {
     await _firestoreService.deleteExpense(id);
+  }
+
+  Future<List<Expense>> getExpensesByDateRange(DateTime start, DateTime end) async {
+    final data = await _firestoreService.getExpensesByDateRange(start, end);
+    return data.map((item) => Expense.fromMap(item, item['id'])).toList();
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/expense_provider.dart';
+import '../models/expense.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 
@@ -13,15 +14,66 @@ class ExpenseScreen extends StatefulWidget {
 
 class _ExpenseScreenState extends State<ExpenseScreen> {
   final _nameController = TextEditingController();
-  final _qtyController = TextEditingController();
+  final _unitController = TextEditingController();
   final _priceController = TextEditingController();
+  
+  DateTime? _filterDate;
+  List<Expense>? _searchResults;
+  bool _isSearching = false;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _qtyController.dispose();
+    _unitController.dispose();
     _priceController.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _filterDate ?? DateTime.now(),
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.surface,
+              onSurface: AppColors.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && picked != _filterDate) {
+      setState(() {
+        _filterDate = picked;
+        _isSearching = true;
+      });
+
+      final start = DateTime(picked.year, picked.month, picked.day);
+      final end = start.add(const Duration(days: 1));
+      
+      final provider = Provider.of<ExpenseProvider>(context, listen: false);
+      final results = await provider.getExpensesByDateRange(start, end);
+      
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    }
+  }
+
+  void _clearFilter() {
+    setState(() {
+      _filterDate = null;
+      _searchResults = null;
+    });
   }
 
   void _showAddDialog() {
@@ -38,10 +90,9 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                   _nameController, 'Nama Bahan', Icons.shopping_basket),
               const SizedBox(height: 12),
               _buildTextField(
-                  _qtyController, 'Jumlah (Qty/Kg/Liter)', Icons.scale,
-                  isNumber: true),
+                  _unitController, 'Ukuran (Pcs/Kg/Liter)', Icons.scale),
               const SizedBox(height: 12),
-              _buildTextField(_priceController, 'Harga', Icons.payments,
+              _buildTextField(_priceController, 'Harga Total', Icons.payments,
                   isNumber: true),
             ],
           ),
@@ -83,21 +134,21 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
 
   Future<void> _submitExpense() async {
     if (_nameController.text.isEmpty ||
-        _qtyController.text.isEmpty ||
+        _unitController.text.isEmpty ||
         _priceController.text.isEmpty) return;
 
     try {
       final provider = Provider.of<ExpenseProvider>(context, listen: false);
       await provider.addExpense(
         name: _nameController.text,
-        qty: double.parse(_qtyController.text),
+        unit: _unitController.text,
         price: int.parse(_priceController.text),
       );
 
       if (mounted) {
         Navigator.pop(context);
         _nameController.clear();
-        _qtyController.clear();
+        _unitController.clear();
         _priceController.clear();
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Berhasil menyimpan belanja')));
@@ -115,25 +166,46 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
       appBar: AppBar(
         title: const Text('Belanja Bahan Harian'),
         backgroundColor: Colors.transparent,
+        actions: [
+          if (_filterDate != null)
+            IconButton(
+              onPressed: _clearFilter,
+              icon: const Icon(Icons.close, color: AppColors.error),
+              tooltip: 'Hapus Filter',
+            ),
+          IconButton(
+            onPressed: () => _selectDate(context),
+            icon: Icon(
+              Icons.calendar_month_rounded, 
+              color: _filterDate != null ? AppColors.primary : AppColors.textHint
+            ),
+            tooltip: 'Filter Tanggal',
+          ),
+        ],
       ),
       body: Consumer<ExpenseProvider>(
         builder: (context, provider, _) {
-          if (provider.isLoading) {
+          if (provider.isLoading || _isSearching) {
             return const Center(
                 child: CircularProgressIndicator(color: AppColors.primary));
           }
 
+          final expenses = _filterDate != null ? (_searchResults ?? []) : provider.todayExpenses;
+          final total = _filterDate != null 
+              ? expenses.fold(0, (sum, e) => sum + e.price) 
+              : provider.dailyTotal;
+
           return Column(
             children: [
-              _buildDailyTotal(provider.dailyTotal),
+              _buildDailyTotal(total, _filterDate != null ? AppFormatter.formatDate(_filterDate!) : 'Hari Ini'),
               Expanded(
-                child: provider.todayExpenses.isEmpty
+                child: expenses.isEmpty
                     ? _buildEmptyState()
                     : ListView.builder(
                         padding: const EdgeInsets.all(AppSpacing.lg),
-                        itemCount: provider.todayExpenses.length,
+                        itemCount: expenses.length,
                         itemBuilder: (context, index) {
-                          final expense = provider.todayExpenses[index];
+                          final expense = expenses[index];
                           return _buildExpenseCard(expense);
                         },
                       ),
@@ -150,7 +222,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  Widget _buildDailyTotal(int total) {
+  Widget _buildDailyTotal(int total, String label) {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.lg),
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -165,8 +237,8 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Total Belanja Hari Ini',
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text('Total Belanja ($label)',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
               const SizedBox(height: 4),
               Text(AppFormatter.formatRupiah(total),
                   style: AppTextStyles.heading2.copyWith(color: Colors.white)),
@@ -187,14 +259,19 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
           Icon(Icons.inventory_2_outlined,
               size: 64, color: AppColors.textHint.withOpacity(0.3)),
           const SizedBox(height: 16),
-          Text('Belum ada belanja hari ini',
-              style: AppTextStyles.bodySecondary),
+          Text(
+            _filterDate != null 
+              ? 'Tidak ada data belanja pada ${AppFormatter.formatDate(_filterDate!)}'
+              : 'Belum ada belanja hari ini',
+            style: AppTextStyles.bodySecondary,
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildExpenseCard(expense) {
+  Widget _buildExpenseCard(Expense expense) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -221,16 +298,14 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
                 Text(expense.name,
                     style: AppTextStyles.subtitle
                         .copyWith(fontWeight: FontWeight.bold)),
-                Text(
-                    '${expense.qty} x ${AppFormatter.formatRupiah(expense.price)}',
-                    style: AppTextStyles.caption),
+                Text(expense.unit, style: AppTextStyles.caption),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(AppFormatter.formatRupiah(expense.total),
+              Text(AppFormatter.formatRupiah(expense.price),
                   style: AppTextStyles.priceSmall),
             ],
           ),
