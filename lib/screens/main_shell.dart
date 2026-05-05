@@ -52,22 +52,39 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 8,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-                _buildNavItem(1, Icons.point_of_sale_rounded, 'Kasir'),
-                _buildNavItem(2, Icons.table_restaurant_rounded, 'Meja'),
-                _buildNavItem(3, Icons.restaurant_menu_rounded, 'Menu'),
-                _buildNavItem(4, Icons.shopping_cart_rounded, 'Belanja'),
-                _buildNavItem(5, Icons.receipt_long_rounded, 'Riwayat'),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Powered by LUCIFAX',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textHint.withOpacity(0.3),
+                    fontSize: 8,
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
+                    _buildNavItem(1, Icons.point_of_sale_rounded, 'Kasir'),
+                    _buildNavItem(2, Icons.table_restaurant_rounded, 'Meja'),
+                    _buildNavItem(3, Icons.restaurant_menu_rounded, 'Menu'),
+                    _buildNavItem(4, Icons.shopping_cart_rounded, 'Belanja'),
+                    _buildNavItem(5, Icons.receipt_long_rounded, 'Riwayat'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -43,21 +43,29 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
-    _navigate();
+    _checkAuthAndNavigate();
   }
 
-  Future<void> _navigate() async {
+  Future<void> _checkAuthAndNavigate() async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final subProvider = Provider.of<SubscriptionProvider>(context, listen: false);
     
-    // Tunggu sedikit untuk animasi dan inisialisasi
-    await Future.wait([
-      Future.delayed(const Duration(seconds: 2)),
-      subProvider.checkStatus(),
-    ]);
+    // 1. Wait for splash animation (min 2 seconds)
+    await Future.delayed(const Duration(seconds: 2));
+
+    // 2. Wait for Auth state to be checked (Persistent Login)
+    int retryCount = 0;
+    while (!authProvider.isAuthChecked && retryCount < 10) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      retryCount++;
+    }
+
+    // 3. Check Subscription
+    await subProvider.checkStatus();
 
     if (!mounted) return;
 
-    // Jika diblokir (lebih dari tanggal 5 dan belum bayar)
+    // 4. Handle Navigation logic
     if (subProvider.status == SubscriptionStatus.blocked) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const BillingScreen()),
@@ -65,12 +73,13 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     if (authProvider.isLoggedIn) {
+      // User is already logged in from previous session!
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else {
+      // First time or logged out
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
@@ -98,7 +107,6 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo icon
                     Container(
                       width: 100,
                       height: 100,
@@ -114,8 +122,6 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                     const SizedBox(height: 24),
-
-                    // App name
                     Text(
                       DefaultData.restaurantName,
                       style: AppTextStyles.heading1.copyWith(
@@ -133,8 +139,6 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                     const SizedBox(height: 40),
-
-                    // Loading
                     SizedBox(
                       width: 28,
                       height: 28,

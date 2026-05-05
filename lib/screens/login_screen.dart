@@ -293,19 +293,6 @@ class _LoginScreenState extends State<LoginScreen>
                         fontSize: 10,
                       ),
                     ),
-                    const SizedBox(height: 40),
-                    Center(
-                      child: Text(
-                        'Powered by LUCIFAX',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textHint.withOpacity(0.5),
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
                   ],
                 ),
               ),
