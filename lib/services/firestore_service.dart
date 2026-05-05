@@ -68,6 +68,10 @@ class FirestoreService {
     await _menuItemsRef.add(item.toMap());
   }
 
+  Future<void> addMenuItemWithId(MenuItem item) async {
+    await _menuItemsRef.doc(item.id).set(item.toMap());
+  }
+
   Future<void> updateMenuItem(MenuItem item) async {
     await _menuItemsRef.doc(item.id).update(item.toMap());
   }

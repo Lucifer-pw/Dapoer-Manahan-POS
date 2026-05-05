@@ -70,6 +70,7 @@ class _PosScreenState extends State<PosScreen> {
     final isWide = MediaQuery.of(context).size.width > 600;
     return Scaffold(
       backgroundColor: AppColors.background,
+      resizeToAvoidBottomInset: false, // Prevents keyboard from causing overflow
       body: SafeArea(
         child: isWide ? _buildWideLayout() : _buildNarrowLayout(),
       ),
@@ -86,9 +87,9 @@ class _PosScreenState extends State<PosScreen> {
 
   Widget _buildNarrowLayout() {
     return Column(children: [
-      Expanded(flex: 6, child: _buildMenuSection()),
+      Expanded(flex: 5, child: _buildMenuSection()), // Reduced flex to give cart more room
       Container(height: 1, color: AppColors.border.withOpacity(0.2)),
-      Expanded(flex: 4, child: _buildCartSection()),
+      Expanded(flex: 5, child: _buildCartSection()),
     ]);
   }
 
@@ -246,30 +247,30 @@ class _PosScreenState extends State<PosScreen> {
           ),
           if (cartProv.items.isNotEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: AppColors.card,
                 border: Border(top: BorderSide(color: AppColors.border.withOpacity(0.2))),
               ),
               child: Column(children: [
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Subtotal', style: AppTextStyles.bodySecondary),
-                  Text(AppFormatter.formatRupiah(cartProv.subtotal), style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+                  Text('Subtotal', style: AppTextStyles.bodySecondary.copyWith(fontSize: 12)),
+                  Text(AppFormatter.formatRupiah(cartProv.subtotal), style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
                 ]),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Total', style: AppTextStyles.heading3),
-                  Text(AppFormatter.formatRupiah(cartProv.total), style: AppTextStyles.price.copyWith(fontSize: 20)),
+                  Text('Total', style: AppTextStyles.heading3.copyWith(fontSize: 16)),
+                  Text(AppFormatter.formatRupiah(cartProv.total), style: AppTextStyles.price.copyWith(fontSize: 18)),
                 ]),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 SizedBox(
-                  width: double.infinity, height: 48,
+                  width: double.infinity, height: 44,
                   child: ElevatedButton.icon(
                     onPressed: cartProv.tableNumber > 0
                         ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen()))
                         : null,
-                    icon: const Icon(Icons.payment, size: 20),
-                    label: Text('BAYAR', style: AppTextStyles.button.copyWith(letterSpacing: 1.5)),
+                    icon: const Icon(Icons.payment, size: 18),
+                    label: Text('BAYAR', style: AppTextStyles.button.copyWith(letterSpacing: 1.2, fontSize: 13)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       disabledBackgroundColor: AppColors.textHint.withOpacity(0.3),

@@ -27,6 +27,7 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
   File? _imageFile;
   String _imageUrl = '';
   bool _isLoading = false;
+  double _uploadProgress = 0; // New: tracking progress
 
   final FirestoreService _firestore = FirestoreService();
   final StorageService _storage = StorageService();
@@ -42,7 +43,6 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
       _isAvailable = widget.menuItem!.isAvailable;
       _imageUrl = widget.menuItem!.imageUrl;
     } else {
-      // Set default category if available
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final categories = Provider.of<MenuProvider>(context, listen: false).categories;
         if (categories.isNotEmpty) {
@@ -76,6 +76,7 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
 
     setState(() {
       _isLoading = true;
+      _uploadProgress = 0;
     });
 
     try {
@@ -85,11 +86,24 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
 
       // Upload image if new file selected
       if (_imageFile != null) {
-        finalImageUrl = await _storage.uploadMenuImage(_imageFile!, docId);
+        // Delete old image if it exists to keep storage clean
+        if (_imageUrl.isNotEmpty) {
+          await _storage.deleteImageByUrl(_imageUrl);
+        }
+
+        finalImageUrl = await _storage.uploadMenuImage(
+          _imageFile!, 
+          docId,
+          onProgress: (progress) {
+            setState(() {
+              _uploadProgress = progress;
+            });
+          },
+        );
       }
 
       final newItem = MenuItem(
-        id: isNew ? '' : widget.menuItem!.id,
+        id: docId,
         categoryId: _selectedCategory!,
         name: _nameController.text.trim(),
         price: int.parse(_priceController.text.trim()),
@@ -99,7 +113,7 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
       );
 
       if (isNew) {
-        await _firestore.addMenuItem(newItem);
+        await _firestore.addMenuItemWithId(newItem);
       } else {
         await _firestore.updateMenuItem(newItem);
       }
@@ -147,10 +161,10 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
     if (confirm == true && mounted) {
       setState(() => _isLoading = true);
       try {
-        await _firestore.deleteMenuItem(widget.menuItem!.id);
         if (widget.menuItem!.imageUrl.isNotEmpty) {
-           await _storage.deleteMenuImage(widget.menuItem!.id);
+           await _storage.deleteImageByUrl(widget.menuItem!.imageUrl);
         }
+        await _firestore.deleteMenuItem(widget.menuItem!.id);
         if (mounted) {
           Navigator.pop(context);
         }
@@ -182,127 +196,169 @@ class _AddEditMenuScreenState extends State<AddEditMenuScreen> {
             ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image Picker
-                    Center(
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppRadius.lg),
-                            border: Border.all(color: AppColors.border),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Picker
+                  Center(
+                    child: GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: _imageFile != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(AppRadius.lg),
+                                child: Image.file(_imageFile!, fit: BoxFit.cover),
+                              )
+                            : _imageUrl.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                                    child: Image.network(_imageUrl, fit: BoxFit.cover),
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_a_photo, size: 40, color: AppColors.textHint),
+                                      const SizedBox(height: 8),
+                                      Text('Pilih Foto', style: AppTextStyles.caption),
+                                    ],
+                                  ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Category Dropdown
+                  Text('Kategori', style: AppTextStyles.caption),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCategory,
+                        isExpanded: true,
+                        dropdownColor: AppColors.card,
+                        hint: Text('Pilih Kategori', style: AppTextStyles.bodySecondary),
+                        items: categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: AppTextStyles.body))).toList(),
+                        onChanged: (val) => setState(() => _selectedCategory = val),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Name
+                  _buildTextField(
+                    controller: _nameController,
+                    label: 'Nama Menu',
+                    validator: (val) => val == null || val.isEmpty ? 'Nama tidak boleh kosong' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Price
+                  _buildTextField(
+                    controller: _priceController,
+                    label: 'Harga (Rp)',
+                    keyboardType: TextInputType.number,
+                    validator: (val) => val == null || val.isEmpty ? 'Harga tidak boleh kosong' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  _buildTextField(
+                    controller: _descController,
+                    label: 'Deskripsi (Opsional)',
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Availability Toggle
+                  SwitchListTile(
+                    title: Text('Menu Tersedia', style: AppTextStyles.body),
+                    subtitle: Text('Matikan jika menu sedang habis', style: AppTextStyles.caption),
+                    value: _isAvailable,
+                    activeColor: AppColors.primary,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) => setState(() => _isAvailable = val),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveMenu,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                      child: Text('SIMPAN', style: AppTextStyles.button),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  margin: const EdgeInsets.symmetric(horizontal: 40),
+                  decoration: BoxDecoration(
+                    color: AppColors.card,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _uploadProgress > 0 && _uploadProgress < 1.0
+                        ? Column(
+                            children: [
+                              Text('Mengunggah Gambar...', style: AppTextStyles.heading3),
+                              const SizedBox(height: 16),
+                              LinearProgressIndicator(
+                                value: _uploadProgress,
+                                backgroundColor: AppColors.surface,
+                                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                              ),
+                              const SizedBox(height: 8),
+                              Text('${(_uploadProgress * 100).toInt()}%', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              const CircularProgressIndicator(color: AppColors.primary),
+                              const SizedBox(height: 16),
+                              Text('Menyimpan Data...', style: AppTextStyles.body),
+                            ],
                           ),
-                          child: _imageFile != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                                  child: Image.file(_imageFile!, fit: BoxFit.cover),
-                                )
-                              : _imageUrl.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(AppRadius.lg),
-                                      child: Image.network(_imageUrl, fit: BoxFit.cover),
-                                    )
-                                  : Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.add_a_photo, size: 40, color: AppColors.textHint),
-                                        const SizedBox(height: 8),
-                                        Text('Pilih Foto', style: AppTextStyles.caption),
-                                      ],
-                                    ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Category Dropdown
-                    Text('Kategori', style: AppTextStyles.caption),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.card,
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedCategory,
-                          isExpanded: true,
-                          dropdownColor: AppColors.card,
-                          hint: Text('Pilih Kategori', style: AppTextStyles.bodySecondary),
-                          items: categories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name, style: AppTextStyles.body))).toList(),
-                          onChanged: (val) => setState(() => _selectedCategory = val),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Name
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Nama Menu',
-                      validator: (val) => val == null || val.isEmpty ? 'Nama tidak boleh kosong' : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Price
-                    _buildTextField(
-                      controller: _priceController,
-                      label: 'Harga (Rp)',
-                      keyboardType: TextInputType.number,
-                      validator: (val) => val == null || val.isEmpty ? 'Harga tidak boleh kosong' : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Description
-                    _buildTextField(
-                      controller: _descController,
-                      label: 'Deskripsi (Opsional)',
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Availability Toggle
-                    SwitchListTile(
-                      title: Text('Menu Tersedia', style: AppTextStyles.body),
-                      subtitle: Text('Matikan jika menu sedang habis', style: AppTextStyles.caption),
-                      value: _isAvailable,
-                      activeColor: AppColors.primary,
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (val) => setState(() => _isAvailable = val),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Save Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _saveMenu,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                        ),
-                        child: Text('SIMPAN', style: AppTextStyles.button),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
+        ],
+      ),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
 class StorageService {
@@ -34,21 +35,52 @@ class StorageService {
     return null;
   }
 
-  /// Upload image to Firebase Storage
-  Future<String> uploadMenuImage(File file, String menuItemId) async {
-    final ref = _storage.ref().child('menu_images/$menuItemId.jpg');
-    final uploadTask = await ref.putFile(
-      file,
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
-    return await uploadTask.ref.getDownloadURL();
+  /// Upload image to Firebase Storage with progress tracking
+  Future<String> uploadMenuImage(File file, String menuItemId, {Function(double)? onProgress}) async {
+    try {
+      // Use a unique filename with timestamp to avoid caching/indexing issues
+      final fileName = '${menuItemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('menu_images').child(fileName);
+      
+      final uploadTask = ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      // Listen to progress
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        if (onProgress != null) onProgress(progress);
+      });
+      
+      await uploadTask;
+      
+      // Delay to ensure server indexing is complete
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      return await ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading image: $e');
+      rethrow;
+    }
   }
 
-  /// Delete image from Firebase Storage
+  /// Delete image from Firebase Storage by URL
+  Future<void> deleteImageByUrl(String url) async {
+    if (url.isEmpty || !url.contains('firebase')) return;
+    try {
+      final ref = _storage.refFromURL(url);
+      await ref.delete().catchError((e) => debugPrint('Silent error deleting: $e'));
+    } catch (e) {
+      debugPrint('Error getting ref from URL: $e');
+    }
+  }
+
+  /// Delete image from Firebase Storage by ID (deprecated for unique filenames)
   Future<void> deleteMenuImage(String menuItemId) async {
     try {
-      final ref = _storage.ref().child('menu_images/$menuItemId.jpg');
-      await ref.delete();
+      final ref = _storage.ref().child('menu_images').child('$menuItemId.jpg');
+      await ref.delete().catchError((e) => debugPrint('Silent error deleting by ID: $e'));
     } catch (_) {
       // Image might not exist, ignore
     }
