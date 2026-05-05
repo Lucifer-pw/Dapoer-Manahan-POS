@@ -6,7 +6,10 @@ import '../providers/order_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/starting_cash_provider.dart';
+import '../providers/menu_provider.dart';
 import '../models/order.dart';
+import '../models/menu_item.dart';
+import '../models/table_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/stat_card.dart';
@@ -337,6 +340,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.trending_up,
                   iconColor: AppColors.secondary)),
         ]),
+        const SizedBox(height: 12),
+        Consumer<MenuProvider>(builder: (context, menuProv, _) {
+          // Calculate Detailed Botolan Stats
+          int totalBotol = 0;
+          int countAirMineral = 0;
+          int countFruitea = 0;
+          int countTehBotol = 0;
+          int countTebs = 0;
+
+          final botolanCatId = menuProv.categories
+              .where((c) => c.name.toLowerCase().contains('botol'))
+              .map((c) => c.id)
+              .toList();
+          final paketCatId = menuProv.categories
+              .where((c) => c.name.toLowerCase().contains('paket'))
+              .map((c) => c.id)
+              .toList();
+
+          for (final order in orders) {
+            if (order.status != OrderStatus.completed) continue;
+            for (final item in order.items) {
+              final itemName = item.menuItemName.toLowerCase();
+              final variant = item.variant?.toLowerCase() ?? '';
+              int qty = item.quantity;
+
+              bool isFromBotolanCat = item.categoryId != null && botolanCatId.contains(item.categoryId);
+              bool isAirMineralPaket = item.categoryId != null && 
+                                       paketCatId.contains(item.categoryId) && 
+                                       variant.contains('air mineral');
+
+              if (isFromBotolanCat || isAirMineralPaket) {
+                totalBotol += qty;
+                
+                if (itemName.contains('air mineral') || isAirMineralPaket) {
+                  countAirMineral += qty;
+                } else if (itemName.contains('fruitea')) {
+                  countFruitea += qty;
+                } else if (itemName.contains('teh botol') || itemName.contains('sosro')) {
+                  countTehBotol += qty;
+                } else if (itemName.contains('tebs')) {
+                  countTebs += qty;
+                }
+              }
+            }
+          }
+
+          return StatCard(
+            title: 'Rincian Minuman Botol',
+            value: '$totalBotol Botol',
+            icon: Icons.local_drink,
+            iconColor: Colors.blueAccent,
+            subtitle: 'Air Mineral: $countAirMineral\nFruitea: $countFruitea\nTeh Botol: $countTehBotol\nTebs: $countTebs',
+          );
+        }),
       ]);
     });
   }

@@ -4,6 +4,7 @@ import '../providers/menu_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/table_provider.dart';
 import '../models/menu_item.dart';
+import '../models/table_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/menu_grid_item.dart';
@@ -26,6 +27,44 @@ class _PosScreenState extends State<PosScreen> {
     super.dispose();
   }
 
+  void _handleMenuItemTap(MenuItem item) {
+    final menuProv = Provider.of<MenuProvider>(context, listen: false);
+    final cartProv = Provider.of<CartProvider>(context, listen: false);
+    final categoryName = menuProv.getCategoryName(item.categoryId);
+
+    if (categoryName.toLowerCase().contains('paket')) {
+      _showDrinkOptionsDialog(item, cartProv);
+    } else {
+      cartProv.addItem(item);
+    }
+  }
+
+  void _showDrinkOptionsDialog(MenuItem item, CartProvider cartProv) {
+    final options = ['Teh Anget', 'Esteh', 'Air Mineral'];
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Pilih Minuman - ${item.name}', style: AppTextStyles.heading3),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.map((opt) => ListTile(
+            title: Text(opt, style: AppTextStyles.body),
+            onTap: () {
+              cartProv.addItem(item, variant: opt);
+              Navigator.pop(ctx);
+            },
+            trailing: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+          )).toList(),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 600;
@@ -37,7 +76,6 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  // Tablet: side by side
   Widget _buildWideLayout() {
     return Row(children: [
       Expanded(flex: 6, child: _buildMenuSection()),
@@ -46,7 +84,6 @@ class _PosScreenState extends State<PosScreen> {
     ]);
   }
 
-  // Phone: stacked
   Widget _buildNarrowLayout() {
     return Column(children: [
       Expanded(flex: 6, child: _buildMenuSection()),
@@ -57,11 +94,9 @@ class _PosScreenState extends State<PosScreen> {
 
   Widget _buildMenuSection() {
     return Column(children: [
-      // Header
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
         child: Column(children: [
-          // Title + Search
           Row(children: [
             Text('Kasir', style: AppTextStyles.heading2),
             const Spacer(),
@@ -85,7 +120,6 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ]),
           const SizedBox(height: 12),
-          // Category chips
           Consumer<MenuProvider>(builder: (context, menuProv, _) {
             return SizedBox(
               height: 40,
@@ -101,8 +135,6 @@ class _PosScreenState extends State<PosScreen> {
           }),
         ]),
       ),
-
-      // Menu Grid
       Expanded(
         child: Consumer2<MenuProvider, CartProvider>(builder: (context, menuProv, cartProv, _) {
           final items = menuProv.availableMenuItems;
@@ -114,7 +146,6 @@ class _PosScreenState extends State<PosScreen> {
               Icon(Icons.restaurant_menu, size: 60, color: AppColors.textHint.withOpacity(0.3)),
               const SizedBox(height: 12),
               Text('Belum ada menu', style: AppTextStyles.bodySecondary),
-              Text('Tambahkan menu di tab Menu', style: AppTextStyles.caption),
             ]));
           }
           return GridView.builder(
@@ -131,7 +162,7 @@ class _PosScreenState extends State<PosScreen> {
               return MenuGridItem(
                 menuItem: item,
                 cartQuantity: cartQty,
-                onTap: () => cartProv.addItem(item),
+                onTap: () => _handleMenuItemTap(item),
               );
             },
           );
@@ -153,7 +184,6 @@ class _PosScreenState extends State<PosScreen> {
       return Container(
         color: AppColors.surface,
         child: Column(children: [
-          // Cart header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(children: [
@@ -169,8 +199,6 @@ class _PosScreenState extends State<PosScreen> {
                 ),
             ]),
           ),
-
-          // Table selector
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Container(
@@ -184,7 +212,7 @@ class _PosScreenState extends State<PosScreen> {
                   dropdownColor: AppColors.card,
                   icon: const Icon(Icons.arrow_drop_down, color: AppColors.textHint),
                   items: tableProv.tables.map((t) => DropdownMenuItem(value: t.number, child: Row(children: [
-                    Icon(Icons.table_restaurant, size: 16, color: t.status.name == 'available' ? AppColors.success : AppColors.error),
+                    Icon(Icons.table_restaurant, size: 16, color: t.status == TableStatus.available ? AppColors.success : AppColors.error),
                     const SizedBox(width: 8),
                     Text('Meja ${t.number}', style: AppTextStyles.body.copyWith(fontSize: 13)),
                   ]))).toList(),
@@ -194,15 +222,12 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Cart items
           Expanded(
             child: cartProv.isEmpty
                 ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withOpacity(0.3)),
                     const SizedBox(height: 8),
                     Text('Keranjang kosong', style: AppTextStyles.bodySecondary),
-                    Text('Tap menu untuk menambahkan', style: AppTextStyles.caption),
                   ]))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -219,8 +244,6 @@ class _PosScreenState extends State<PosScreen> {
                     },
                   ),
           ),
-
-          // Total & Pay
           if (cartProv.items.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(16),
@@ -255,11 +278,6 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   ),
                 ),
-                if (cartProv.tableNumber == 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text('Pilih meja terlebih dahulu', style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11)),
-                  ),
               ]),
             ),
         ]),

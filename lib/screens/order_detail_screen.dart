@@ -86,6 +86,8 @@ class OrderDetailScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(item.menuItemName, style: AppTextStyles.body),
+                              if (item.variant != null)
+                                Text(item.variant!, style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
                               if (item.notes.isNotEmpty)
                                 Text('Catatan: ${item.notes}', style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic)),
                             ],

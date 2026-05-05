@@ -64,6 +64,15 @@ class CartItemWidget extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
+                      if (item.variant != null)
+                        Text(
+                          item.variant!,
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                          ),
+                        ),
                       Text(
                         AppFormatter.formatRupiah(item.price),
                         style: AppTextStyles.caption.copyWith(

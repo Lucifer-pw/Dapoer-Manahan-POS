@@ -17,7 +17,7 @@ class CartProvider extends ChangeNotifier {
   int get subtotal =>
       _items.fold(0, (sum, item) => sum + item.subtotal);
 
-  int get tax => 0; // No tax by default, can be configured
+  int get tax => 0; 
 
   int get total => subtotal + tax;
 
@@ -26,10 +26,11 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add menu item to cart. If already exists, increment quantity.
-  void addItem(MenuItem menuItem) {
+  void addItem(MenuItem menuItem, {String? variant}) {
     final existingIndex = _items.indexWhere(
-      (item) => item.menuItemId == menuItem.id && item.notes.isEmpty,
+      (item) => item.menuItemId == menuItem.id && 
+                item.notes.isEmpty && 
+                item.variant == variant,
     );
 
     if (existingIndex >= 0) {
@@ -41,14 +42,15 @@ class CartProvider extends ChangeNotifier {
       _items.add(OrderItem(
         menuItemId: menuItem.id,
         menuItemName: menuItem.name,
+        categoryId: menuItem.categoryId, // Save category ID
         quantity: 1,
         price: menuItem.price,
+        variant: variant,
       ));
     }
     notifyListeners();
   }
 
-  /// Remove item from cart entirely
   void removeItem(int index) {
     if (index >= 0 && index < _items.length) {
       _items.removeAt(index);
@@ -56,7 +58,6 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Update quantity of item at index
   void updateQuantity(int index, int quantity) {
     if (index >= 0 && index < _items.length) {
       if (quantity <= 0) {
@@ -68,7 +69,6 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Increment quantity
   void incrementItem(int index) {
     if (index >= 0 && index < _items.length) {
       final item = _items[index];
@@ -77,7 +77,6 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Decrement quantity (removes if 0)
   void decrementItem(int index) {
     if (index >= 0 && index < _items.length) {
       final item = _items[index];
@@ -90,7 +89,6 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Add/update notes for item
   void updateNotes(int index, String notes) {
     if (index >= 0 && index < _items.length) {
       _items[index] = _items[index].copyWith(notes: notes);
@@ -98,7 +96,6 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Clear entire cart
   void clear() {
     _items.clear();
     _tableNumber = 0;

@@ -58,6 +58,8 @@ class ReceiptScreen extends StatelessWidget {
                     child: Row(children: [
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(item.menuItemName, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+                        if (item.variant != null)
+                          Text('(${item.variant})', style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
                         Text('${item.quantity} x ${AppFormatter.formatRupiah(item.price)}', style: TextStyle(color: Colors.black54, fontSize: 11)),
                       ])),
                       Text(AppFormatter.formatRupiah(item.subtotal), style: const TextStyle(color: Colors.black87, fontSize: 13)),
@@ -165,6 +167,9 @@ class ReceiptScreen extends StatelessWidget {
         bluetooth.printCustom("--------------------------------", 1, 1);
         for (var item in order.items) {
           bluetooth.printCustom(item.menuItemName, 1, 0);
+          if (item.variant != null) {
+            bluetooth.printCustom("(${item.variant})", 1, 0);
+          }
           bluetooth.printLeftRight("${item.quantity} x ${AppFormatter.formatRupiah(item.price)}", AppFormatter.formatRupiah(item.subtotal), 1);
         }
         bluetooth.printCustom("--------------------------------", 1, 1);
@@ -214,7 +219,6 @@ class ReceiptScreen extends StatelessWidget {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                // ... Header ...
                 pw.Center(
                   child: pw.Text(
                     DefaultData.restaurantName,
@@ -245,6 +249,8 @@ class ReceiptScreen extends StatelessWidget {
                               crossAxisAlignment: pw.CrossAxisAlignment.start,
                               children: [
                                 pw.Text(item.menuItemName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                                if (item.variant != null)
+                                  pw.Text('(${item.variant})', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
                                 pw.Text('${item.quantity} x ${AppFormatter.formatRupiah(item.price)}', style: const pw.TextStyle(fontSize: 10)),
                               ],
                             ),
