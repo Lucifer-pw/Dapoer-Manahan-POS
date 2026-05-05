@@ -10,6 +10,7 @@ import 'providers/table_provider.dart';
 import 'providers/printer_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/expense_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
@@ -46,6 +47,7 @@ class DapoerManahanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PrinterProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()..init()),
       ],
       child: MaterialApp(
         title: DefaultData.restaurantName,

@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/expense_provider.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/stat_card.dart';
@@ -116,17 +117,52 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStatsSection() {
-    return Consumer<OrderProvider>(builder: (context, orderProv, _) {
+    return Consumer2<OrderProvider, ExpenseProvider>(
+        builder: (context, orderProv, expenseProv, _) {
+      final grossRevenue = orderProv.todayRevenue;
+      final totalExpense = expenseProv.dailyTotal;
+      final netRevenue = grossRevenue - totalExpense;
+
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Hari Ini', style: AppTextStyles.heading3),
         const SizedBox(height: 14),
         Row(children: [
-          Expanded(child: StatCard(title: 'Total Pendapatan', value: AppFormatter.formatRupiah(orderProv.todayRevenue), icon: Icons.account_balance_wallet, iconColor: AppColors.success)),
+          Expanded(
+              child: StatCard(
+                  title: 'Pendapatan Kotor',
+                  value: AppFormatter.formatRupiah(grossRevenue),
+                  icon: Icons.account_balance_wallet,
+                  iconColor: AppColors.success)),
           const SizedBox(width: 12),
-          Expanded(child: StatCard(title: 'Transaksi', value: '${orderProv.todayTransactions}', icon: Icons.receipt_long, iconColor: AppColors.info)),
+          Expanded(
+              child: StatCard(
+                  title: 'Total Belanja',
+                  value: AppFormatter.formatRupiah(totalExpense),
+                  icon: Icons.shopping_bag,
+                  iconColor: AppColors.error)),
         ]),
         const SizedBox(height: 12),
-        StatCard(title: 'Rata-rata per Transaksi', value: AppFormatter.formatRupiah(orderProv.averageTransaction), icon: Icons.trending_up, iconColor: AppColors.secondary),
+        StatCard(
+            title: 'Pendapatan Bersih (Profit)',
+            value: AppFormatter.formatRupiah(netRevenue),
+            icon: Icons.monetization_on,
+            iconColor: AppColors.primary),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(
+              child: StatCard(
+                  title: 'Transaksi',
+                  value: '${orderProv.todayTransactions}',
+                  icon: Icons.receipt_long,
+                  iconColor: AppColors.info)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: StatCard(
+                  title: 'Rata-rata',
+                  value: AppFormatter.formatRupiah(orderProv.averageTransaction),
+                  icon: Icons.trending_up,
+                  iconColor: AppColors.secondary)),
+        ]),
       ]);
     });
   }

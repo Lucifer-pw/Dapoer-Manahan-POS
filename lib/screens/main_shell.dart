@@ -5,6 +5,7 @@ import 'pos_screen.dart';
 import 'table_screen.dart';
 import 'menu_management_screen.dart';
 import 'order_history_screen.dart';
+import 'expense_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -21,6 +22,7 @@ class _MainShellState extends State<MainShell> {
     PosScreen(),
     TableScreen(),
     MenuManagementScreen(),
+    ExpenseScreen(),
     OrderHistoryScreen(),
   ];
 
@@ -62,7 +64,8 @@ class _MainShellState extends State<MainShell> {
                 _buildNavItem(1, Icons.point_of_sale_rounded, 'Kasir'),
                 _buildNavItem(2, Icons.table_restaurant_rounded, 'Meja'),
                 _buildNavItem(3, Icons.restaurant_menu_rounded, 'Menu'),
-                _buildNavItem(4, Icons.receipt_long_rounded, 'Riwayat'),
+                _buildNavItem(4, Icons.shopping_cart_rounded, 'Belanja'),
+                _buildNavItem(5, Icons.receipt_long_rounded, 'Riwayat'),
               ],
             ),
           ),

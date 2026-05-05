@@ -368,4 +368,38 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  // ============================================================
+  // EXPENSES (BELANJA)
+  // ============================================================
+
+  CollectionReference get _expensesRef => _db.collection('expenses');
+
+  Stream<List<Map<String, dynamic>>> streamTodayExpenses() {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return _expensesRef
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('date', isLessThan: Timestamp.fromDate(endOfDay))
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+          .toList();
+    });
+  }
+
+  Future<void> addExpense(Map<String, dynamic> expenseData) async {
+    await _expensesRef.add({
+      ...expenseData,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteExpense(String id) async {
+    await _expensesRef.doc(id).delete();
+  }
 }
