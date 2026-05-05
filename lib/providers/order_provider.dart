@@ -33,7 +33,8 @@ class OrderProvider extends ChangeNotifier {
       notifyListeners();
     });
 
-    _allOrdersSub = _firestoreService.streamOrders().listen((List<Order> orders) {
+    _allOrdersSub =
+        _firestoreService.streamOrders().listen((List<Order> orders) {
       _allOrders = orders;
       notifyListeners();
     });
@@ -51,6 +52,10 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> getStatsForDate(DateTime date) async {
+    return await _firestoreService.getStatsByDate(date);
+  }
+
   Future<String> createOrder(Order order) async {
     final orderId = await _firestoreService.createOrder(order);
     await loadStats(); // Refresh stats
@@ -58,13 +63,11 @@ class OrderProvider extends ChangeNotifier {
   }
 
   Future<void> cancelOrder(String orderId) async {
-    await _firestoreService.updateOrderStatus(
-        orderId, OrderStatus.cancelled);
+    await _firestoreService.updateOrderStatus(orderId, OrderStatus.cancelled);
     await loadStats();
   }
 
-  Future<List<Order>> getOrdersByDateRange(
-      DateTime start, DateTime end) async {
+  Future<List<Order>> getOrdersByDateRange(DateTime start, DateTime end) async {
     return await _firestoreService.getOrdersByDateRange(start, end);
   }
 

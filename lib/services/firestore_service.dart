@@ -214,8 +214,11 @@ class FirestoreService {
   // ============================================================
 
   Future<Map<String, dynamic>> getTodayStats() async {
-    final today = DateTime.now();
-    final startOfDay = DateTime(today.year, today.month, today.day);
+    return getStatsByDate(DateTime.now());
+  }
+
+  Future<Map<String, dynamic>> getStatsByDate(DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final snapshot = await _ordersRef
@@ -252,6 +255,7 @@ class FirestoreService {
       'averageTransaction':
           orders.isEmpty ? 0 : totalRevenue ~/ orders.length,
       'topMenuItems': sortedMenu.take(5).toList(),
+      'orders': allOrders, // Include orders for history summary
     };
   }
 
@@ -414,5 +418,27 @@ class FirestoreService {
     return query.docs
         .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
         .toList();
+  }
+
+  // ============================================================
+  // STARTING CASH (MODAL AWAL)
+  // ============================================================
+
+  Future<int> getStartingCash(DateTime date) async {
+    final dateStr = "${date.year}-${date.month}-${date.day}";
+    final doc = await _db.collection('starting_cash').doc(dateStr).get();
+    if (doc.exists) {
+      return (doc.data() as Map<String, dynamic>)['amount'] ?? 0;
+    }
+    return 0;
+  }
+
+  Future<void> setStartingCash(DateTime date, int amount) async {
+    final dateStr = "${date.year}-${date.month}-${date.day}";
+    await _db.collection('starting_cash').doc(dateStr).set({
+      'amount': amount,
+      'date': Timestamp.fromDate(date),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }
