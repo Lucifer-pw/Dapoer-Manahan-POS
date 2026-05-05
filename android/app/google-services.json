@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "662655416954",
+    "project_id": "pos-dapoer-manahan",
+    "storage_bucket": "pos-dapoer-manahan.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:662655416954:android:51e8c9b83fc1feb9d419c3",
+        "android_client_info": {
+          "package_name": "com.dapoermanahan.resto_pos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS1RrXfbGefV9LnR0yWkBfAogkGRkgkaY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
