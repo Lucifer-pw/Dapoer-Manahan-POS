@@ -214,7 +214,7 @@ class _PosScreenState extends State<PosScreen> {
                   items: tableProv.tables.map((t) => DropdownMenuItem(value: t.number, child: Row(children: [
                     Icon(Icons.table_restaurant, size: 16, color: t.status == TableStatus.available ? AppColors.success : AppColors.error),
                     const SizedBox(width: 8),
-                    Text('Meja ${t.number}', style: AppTextStyles.body.copyWith(fontSize: 13)),
+                    Text('Meja ${t.number} (${t.capacity} Kursi)', style: AppTextStyles.body.copyWith(fontSize: 13)),
                   ]))).toList(),
                   onChanged: (val) { if (val != null) cartProv.setTableNumber(val); },
                 ),
