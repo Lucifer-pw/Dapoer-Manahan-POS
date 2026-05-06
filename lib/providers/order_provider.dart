@@ -56,10 +56,31 @@ class OrderProvider extends ChangeNotifier {
     return await _firestoreService.getStatsByDate(date);
   }
 
-  Future<String> createOrder(Order order) async {
-    final orderId = await _firestoreService.createOrder(order);
+  Future<Order> createOrder(Order order) async {
+    // Get next sequence number (continuous)
+    final nextSeq = await _firestoreService.getNextOrderSequence();
+    final orderWithSeq = order.withSequenceNumber(nextSeq);
+    
+    final orderId = await _firestoreService.createOrder(orderWithSeq);
     await loadStats(); // Refresh stats
-    return orderId;
+    
+    // Return the full order with the new ID and sequence number
+    return Order(
+      id: orderId,
+      tableNumber: orderWithSeq.tableNumber,
+      cashierName: orderWithSeq.cashierName,
+      cashierId: orderWithSeq.cashierId,
+      items: orderWithSeq.items,
+      subtotal: orderWithSeq.subtotal,
+      tax: orderWithSeq.tax,
+      total: orderWithSeq.total,
+      paymentMethod: orderWithSeq.paymentMethod,
+      amountPaid: orderWithSeq.amountPaid,
+      change: orderWithSeq.change,
+      status: orderWithSeq.status,
+      createdAt: orderWithSeq.createdAt,
+      sequenceNumber: orderWithSeq.sequenceNumber,
+    );
   }
 
   Future<void> cancelOrder(String orderId) async {

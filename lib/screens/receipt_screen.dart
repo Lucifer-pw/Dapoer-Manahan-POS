@@ -159,7 +159,10 @@ class ReceiptScreen extends StatelessWidget {
         bluetooth.printNewLine();
         
         bluetooth.printLeftRight("No. Pesanan", order.orderNumber, 1);
-        bluetooth.printLeftRight("Tanggal", AppFormatter.formatDateTime(order.createdAt), 1);
+        final receiptDate = AppFormatter.formatDateTime(order.createdAt)
+            .replaceAll(', ', ' ')
+            .replaceAll('2026', '26'); // Shorten year to fit
+        bluetooth.printLeftRight("Tanggal", receiptDate, 1);
         bluetooth.printLeftRight("Meja", '${order.tableNumber}', 1);
         bluetooth.printLeftRight("Kasir", order.cashierName, 1);
         bluetooth.printNewLine();

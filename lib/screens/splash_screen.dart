@@ -48,8 +48,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _checkAuthAndNavigate() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final subProvider = Provider.of<SubscriptionProvider>(context, listen: false);
-    
+    final subProvider =
+        Provider.of<SubscriptionProvider>(context, listen: false);
+
     // 1. Wait for splash animation (min 2 seconds)
     await Future.delayed(const Duration(seconds: 2));
 
@@ -107,18 +108,12 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: AppShadows.glow,
-                      ),
-                      child: const Icon(
-                        Icons.restaurant_menu,
-                        size: 50,
-                        color: Colors.white,
+                    SizedBox(
+                      width: 240,
+                      height: 240,
+                      child: Image.asset(
+                        'assets/images/app_logo.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 24),

@@ -88,17 +88,23 @@ class _LoginScreenState extends State<LoginScreen>
                   children: [
                     // Logo
                     Container(
-                      width: 80,
-                      height: 80,
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: AppShadows.glow,
-                      ),
-                      child: const Icon(
-                        Icons.restaurant_menu,
-                        size: 40,
                         color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 15,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Image.asset(
+                        'assets/images/app_icon.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -176,11 +182,10 @@ class _LoginScreenState extends State<LoginScreen>
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: AppColors.error.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(
-                                        AppRadius.md),
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.md),
                                     border: Border.all(
-                                      color:
-                                          AppColors.error.withOpacity(0.3),
+                                      color: AppColors.error.withOpacity(0.3),
                                     ),
                                   ),
                                   child: Row(
@@ -194,8 +199,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       Expanded(
                                         child: Text(
                                           auth.error!,
-                                          style: AppTextStyles.caption
-                                              .copyWith(
+                                          style: AppTextStyles.caption.copyWith(
                                             color: AppColors.error,
                                           ),
                                         ),
@@ -223,8 +227,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     backgroundColor: AppColors.primary,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          AppRadius.md),
+                                      borderRadius:
+                                          BorderRadius.circular(AppRadius.md),
                                     ),
                                     elevation: 0,
                                   ),
@@ -239,8 +243,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         )
                                       : Text(
                                           'MASUK',
-                                          style: AppTextStyles.button
-                                              .copyWith(
+                                          style: AppTextStyles.button.copyWith(
                                             letterSpacing: 1.5,
                                           ),
                                         ),
@@ -256,7 +259,8 @@ class _LoginScreenState extends State<LoginScreen>
                                 onPressed: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute(
-                                        builder: (_) => const ForgotPasswordScreen()),
+                                        builder: (_) =>
+                                            const ForgotPasswordScreen()),
                                   );
                                 },
                                 child: Text(

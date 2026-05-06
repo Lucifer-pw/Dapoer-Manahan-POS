@@ -17,6 +17,7 @@ class Order {
   final int change;
   final OrderStatus status;
   final DateTime createdAt;
+  final int sequenceNumber; // New: for sequential order numbers
 
   Order({
     required this.id,
@@ -32,6 +33,7 @@ class Order {
     this.change = 0,
     this.status = OrderStatus.pending,
     DateTime? createdAt,
+    this.sequenceNumber = 0, // Default to 0
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory Order.fromMap(Map<String, dynamic> map, String docId) {
@@ -57,6 +59,7 @@ class Order {
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      sequenceNumber: map['sequenceNumber'] ?? 0,
     );
   }
 
@@ -74,8 +77,30 @@ class Order {
       'change': change,
       'status': status.name,
       'createdAt': Timestamp.fromDate(createdAt),
+      'sequenceNumber': sequenceNumber,
     };
   }
 
-  String get orderNumber => 'DM-${id.substring(0, 8).toUpperCase()}';
+  // Changed: Use sequenceNumber if available, otherwise fallback to ID
+  String get orderNumber => sequenceNumber > 0 ? 'DM-$sequenceNumber' : 'DM-${id.substring(0, 8).toUpperCase()}';
+  
+  // Method to create a copy with a sequence number
+  Order withSequenceNumber(int seq) {
+    return Order(
+      id: id,
+      tableNumber: tableNumber,
+      cashierName: cashierName,
+      cashierId: cashierId,
+      items: items,
+      subtotal: subtotal,
+      tax: tax,
+      total: total,
+      paymentMethod: paymentMethod,
+      amountPaid: amountPaid,
+      change: change,
+      status: status,
+      createdAt: createdAt,
+      sequenceNumber: seq,
+    );
+  }
 }

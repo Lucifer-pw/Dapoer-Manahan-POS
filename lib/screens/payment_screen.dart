@@ -192,7 +192,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary),
+                    Image.asset(
+                      'assets/images/payment_qr_cs.png',
+                      width: 200,
+                      height: 200,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary);
+                      },
+                    ),
                     const SizedBox(height: 16),
                     Text('Minta pelanggan memindai QRIS', style: AppTextStyles.bodySecondary),
                     const SizedBox(height: 8),
@@ -260,29 +268,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
       status: OrderStatus.completed,
     );
 
-    final orderId = await orderProv.createOrder(order);
-
+    final completedOrder = await orderProv.createOrder(order);
+    
     // Update table status
     final table = tableProv.getTableByNumber(cart.tableNumber);
     if (table != null) {
       await tableProv.setAvailable(table.id);
     }
-
-    final completedOrder = Order(
-      id: orderId,
-      tableNumber: order.tableNumber,
-      cashierName: order.cashierName,
-      cashierId: order.cashierId,
-      items: order.items,
-      subtotal: order.subtotal,
-      tax: order.tax,
-      total: order.total,
-      paymentMethod: order.paymentMethod,
-      amountPaid: order.amountPaid,
-      change: order.change,
-      status: OrderStatus.completed,
-      createdAt: order.createdAt,
-    );
 
     cart.clear();
 

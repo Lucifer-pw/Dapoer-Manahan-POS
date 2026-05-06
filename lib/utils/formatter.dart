@@ -11,6 +11,7 @@ class AppFormatter {
   static final _timeFormat = DateFormat('HH:mm', 'id_ID');
   static final _dateTimeFormat = DateFormat('dd MMM yyyy, HH:mm', 'id_ID');
   static final _shortDateFormat = DateFormat('dd/MM/yyyy', 'id_ID');
+  static final _receiptDateTimeFormat = DateFormat('dd/MM/yy HH:mm', 'id_ID');
 
   /// Format angka ke Rupiah: 25000 → Rp 25.000
   static String formatRupiah(int amount) {
@@ -35,6 +36,11 @@ class AppFormatter {
   /// Format tanggal pendek: 15/01/2024
   static String formatShortDate(DateTime date) {
     return _shortDateFormat.format(date);
+  }
+
+  /// Format tanggal struk: 15/01/24 14:30
+  static String formatReceiptDateTime(DateTime date) {
+    return _receiptDateTimeFormat.format(date);
   }
 
   /// Format angka pendek: 1500000 → 1.5jt

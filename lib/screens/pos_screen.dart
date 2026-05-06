@@ -111,11 +111,22 @@ class _PosScreenState extends State<PosScreen> {
                   hintText: 'Cari menu...',
                   hintStyle: AppTextStyles.caption,
                   prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textHint),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18, color: AppColors.textHint),
+                          onPressed: () {
+                            _searchController.clear();
+                            Provider.of<MenuProvider>(context, listen: false).setSearchQuery('');
+                            setState(() {});
+                          },
+                        )
+                      : null,
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 onChanged: (val) {
                   Provider.of<MenuProvider>(context, listen: false).setSearchQuery(val);
+                  setState(() {}); // Refresh to show/hide clear button
                 },
               ),
             ),

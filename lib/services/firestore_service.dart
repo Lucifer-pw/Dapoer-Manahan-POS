@@ -173,6 +173,11 @@ class FirestoreService {
         .toList();
   }
 
+  Future<int> getNextOrderSequence() async {
+    final snapshot = await _ordersRef.get();
+    return snapshot.docs.length + 1;
+  }
+
   Future<String> createOrder(app.Order order) async {
     final docRef = await _ordersRef.add(order.toMap());
     return docRef.id;
