@@ -88,7 +88,7 @@ class BillingScreen extends StatelessWidget {
                             .copyWith(color: AppColors.primary),
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Info pembayaran otomatis
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -116,7 +116,7 @@ class BillingScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      
+
                       const SizedBox(height: 20),
 
                       // Tombol Bayar via Midtrans
@@ -136,25 +136,26 @@ class BillingScreen extends StatelessWidget {
                             backgroundColor: AppColors.primary,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                             elevation: 2,
                           ),
                         ),
                       ),
-                      
+
                       const SizedBox(height: 12),
-                      
+
                       // Sub-icons metode pembayaran
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildPaymentMethodIcon(Icons.account_balance, 'Bank'),
+                          _buildPaymentMethodIcon(
+                              Icons.account_balance, 'Bank'),
                           const SizedBox(width: 16),
                           _buildPaymentMethodIcon(Icons.qr_code_2, 'QRIS'),
                           const SizedBox(width: 16),
-                          _buildPaymentMethodIcon(Icons.account_balance_wallet, 'E-Wallet'),
+                          _buildPaymentMethodIcon(
+                              Icons.account_balance_wallet, 'E-Wallet'),
                           const SizedBox(width: 16),
                           _buildPaymentMethodIcon(Icons.store, 'Retail'),
                         ],
@@ -163,7 +164,7 @@ class BillingScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 28),
-                
+
                 // Cek Status Pembayaran
                 Consumer<SubscriptionProvider>(builder: (context, sub, _) {
                   return SizedBox(
