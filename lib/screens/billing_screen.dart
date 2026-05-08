@@ -6,6 +6,7 @@ import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import 'billing_history_screen.dart';
 import 'main_shell.dart';
+import 'midtrans_payment_screen.dart';
 
 class BillingScreen extends StatelessWidget {
   const BillingScreen({super.key});
@@ -14,14 +15,24 @@ class BillingScreen extends StatelessWidget {
   static const String adminWhatsApp = "6281328580511";
 
   Future<void> _launchWhatsApp(BuildContext context) async {
-    final url = Uri.parse(
-        "https://wa.me/$adminWhatsApp?text=Halo%20Admin,%20saya%20sudah%20melakukan%20pembayaran%20untuk%20aplikasi%20POS.");
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
+    final String message =
+        "Halo Admin, saya sudah melakukan pembayaran aplikasi POS.";
+
+    final Uri whatsappUrl = Uri.parse(
+      "https://wa.me/6281328580511?text=${Uri.encodeComponent(message)}",
+    );
+
+    try {
+      await launchUrl(
+        whatsappUrl,
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tidak dapat membuka WhatsApp')),
+          SnackBar(
+            content: Text("Tidak dapat membuka WhatsApp: $e"),
+          ),
         );
       }
     }
@@ -76,45 +87,89 @@ class BillingScreen extends StatelessWidget {
                         style: AppTextStyles.heading2
                             .copyWith(color: AppColors.primary),
                       ),
-                      const SizedBox(height: 24),
-
-                      // QR Code Placeholder / Image
+                      const SizedBox(height: 16),
+                      
+                      // Info pembayaran otomatis
                       Container(
-                        width: 200,
-                        height: 200,
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.primary.withOpacity(0.08),
                           borderRadius: BorderRadius.circular(AppRadius.md),
+                          border: Border.all(
+                            color: AppColors.primary.withOpacity(0.2),
+                          ),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                          child: Image.asset(
-                            'assets/images/payment_qr.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(Icons.qr_code_2,
-                                    size: 100, color: Colors.black54),
-                              );
-                            },
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: AppColors.primary, size: 18),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'Bayar otomatis Rp 50.000 via Transfer Bank, GoPay, QRIS, dan lainnya.',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 20),
+
+                      // Tombol Bayar via Midtrans
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _openMidtransPayment(context),
+                          icon: const Icon(Icons.payment_rounded, size: 22),
+                          label: Text(
+                            'BAYAR SEKARANG',
+                            style: AppTextStyles.button.copyWith(
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.md),
+                            ),
+                            elevation: 2,
                           ),
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-                      Text(
-                        'Scan QR di atas untuk membayar',
-                        style: AppTextStyles.caption,
+                      
+                      const SizedBox(height: 12),
+                      
+                      // Sub-icons metode pembayaran
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildPaymentMethodIcon(Icons.account_balance, 'Bank'),
+                          const SizedBox(width: 16),
+                          _buildPaymentMethodIcon(Icons.qr_code_2, 'QRIS'),
+                          const SizedBox(width: 16),
+                          _buildPaymentMethodIcon(Icons.account_balance_wallet, 'E-Wallet'),
+                          const SizedBox(width: 16),
+                          _buildPaymentMethodIcon(Icons.store, 'Retail'),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 28),
+                
+                // Cek Status Pembayaran
                 Consumer<SubscriptionProvider>(builder: (context, sub, _) {
                   return SizedBox(
                     width: double.infinity,
                     height: 52,
-                    child: ElevatedButton.icon(
+                    child: OutlinedButton.icon(
                       onPressed: sub.isLoading
                           ? null
                           : () async {
@@ -145,14 +200,15 @@ class BillingScreen extends StatelessWidget {
                               width: 18,
                               height: 18,
                               child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white))
+                                  strokeWidth: 2, color: AppColors.primary))
                           : const Icon(Icons.refresh),
                       label: Text(sub.isLoading
                           ? 'MENGECEK...'
                           : 'CEK STATUS PEMBAYARAN'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: BorderSide(
+                            color: AppColors.primary.withOpacity(0.5)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppRadius.md),
                         ),
@@ -174,7 +230,8 @@ class BillingScreen extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const BillingHistoryScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const BillingHistoryScreen()),
                     );
                   },
                   icon: const Icon(Icons.history_rounded, size: 18),
@@ -189,5 +246,43 @@ class BillingScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPaymentMethodIcon(IconData icon, String label) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Icon(icon, color: AppColors.textSecondary, size: 18),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(fontSize: 9),
+        ),
+      ],
+    );
+  }
+
+  void _openMidtransPayment(BuildContext context) async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const MidtransPaymentScreen(),
+      ),
+    );
+
+    if (result == 'success' && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pembayaran berhasil! Menunggu konfirmasi admin...'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
   }
 }

@@ -646,10 +646,64 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBillingBanner() {
-    return Consumer<SubscriptionProvider>(
-      builder: (context, sub, _) {
-        if (sub.status != SubscriptionStatus.warning)
+    return Consumer2<SubscriptionProvider, AuthProvider>(
+      builder: (context, sub, auth, _) {
+        // ★ ADMIN BANNER: Saat status blocked dan user adalah admin
+        // Admin tetap bisa masuk app, tapi tampilkan banner info
+        if (sub.status == SubscriptionStatus.blocked && auth.isAdmin) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.admin_panel_settings_rounded,
+                    color: AppColors.info, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Billing Belum Dibayar',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.info,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        'Sebagai Admin, Anda bisa mengupdate status pembayaran di Pengaturan → Kelola Billing.',
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.info, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AppSettingsScreen()));
+                  },
+                  child: const Text('KELOLA',
+                      style: TextStyle(
+                          color: AppColors.info, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Warning banner untuk user biasa saat jatuh tempo
+        if (sub.status != SubscriptionStatus.warning) {
           return const SizedBox.shrink();
+        }
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),

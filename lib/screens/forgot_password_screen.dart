@@ -82,7 +82,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Silakan periksa kotak masuk email Anda untuk instruksi pengaturan ulang kata sandi.',
+          'Silakan periksa kotak masuk email Anda pada bagian SPAM untuk instruksi pengaturan ulang kata sandi.',
           style: AppTextStyles.bodySecondary,
           textAlign: TextAlign.center,
         ),
@@ -123,7 +123,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 40),
-
         Form(
           key: _formKey,
           child: Column(
@@ -143,7 +142,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 style: AppTextStyles.body,
                 decoration: InputDecoration(
                   labelText: 'Email',
-                  labelStyle: AppTextStyles.bodySecondary.copyWith(fontSize: 14),
+                  labelStyle:
+                      AppTextStyles.bodySecondary.copyWith(fontSize: 14),
                   prefixIcon: const Icon(Icons.email_outlined,
                       color: AppColors.textHint, size: 20),
                   filled: true,
@@ -170,7 +170,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   if (auth.error != null) {
@@ -208,9 +207,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   return const SizedBox.shrink();
                 },
               ),
-
               const SizedBox(height: 28),
-
               Consumer<AuthProvider>(
                 builder: (context, auth, _) {
                   return SizedBox(

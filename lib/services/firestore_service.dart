@@ -355,6 +355,39 @@ class FirestoreService {
   }
 
   // ============================================================
+  // APP VERSION (UPDATE NOTIFICATION)
+  // ============================================================
+
+  /// Mendapatkan info versi terbaru dari Firestore
+  Future<Map<String, dynamic>> getAppVersionInfo() async {
+    try {
+      final doc = await _db.collection('app_settings').doc('app_version').get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Error getting app version info: $e');
+    }
+    return {};
+  }
+
+  /// Update info versi terbaru (untuk admin)
+  Future<void> setAppVersionInfo({
+    required String latestVersion,
+    String? downloadUrl,
+    String? message,
+    bool forceUpdate = false,
+  }) async {
+    await _db.collection('app_settings').doc('app_version').set({
+      'latestVersion': latestVersion,
+      'downloadUrl': downloadUrl ?? '',
+      'message': message ?? '',
+      'forceUpdate': forceUpdate,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ============================================================
   // WIFI INFO
   // ============================================================
 

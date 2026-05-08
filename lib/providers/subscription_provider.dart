@@ -18,11 +18,12 @@ class SubscriptionProvider extends ChangeNotifier {
 
   SubscriptionProvider() {
     _initHistoryStream();
+    checkStatus();
   }
-
   void _initHistoryStream() {
     _firestoreService.streamBillingHistory().listen((data) {
-      _history = data.map((item) => BillingRecord.fromMap(item, item['id'])).toList();
+      _history =
+          data.map((item) => BillingRecord.fromMap(item, item['id'])).toList();
       notifyListeners();
     });
   }
@@ -60,9 +61,10 @@ class SubscriptionProvider extends ChangeNotifier {
 
       if (isPaidThisMonth) {
         _status = SubscriptionStatus.active;
-        
+
         // Tambahkan ke riwayat secara otomatis jika belum ada
-        final recordId = 'pay_${lastPaidYear}_${lastPaidMonth.toString().padLeft(2, '0')}';
+        final recordId =
+            'pay_${lastPaidYear}_${lastPaidMonth.toString().padLeft(2, '0')}';
         await _firestoreService.addBillingRecordIfNotExist({
           'amount': 50000,
           'date': Timestamp.now(),
