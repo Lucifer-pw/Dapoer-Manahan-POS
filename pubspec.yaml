@@ -38,6 +38,12 @@ dependencies:
   webview_flutter: ^4.8.0
   package_info_plus: ^8.0.2
 
+  # AUTO UPDATE APK
+  dio: ^5.7.0
+  open_filex: ^4.4.0
+  path_provider: ^2.1.4
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
