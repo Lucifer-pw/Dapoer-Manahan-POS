@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../utils/constants.dart';
+
+import '../services/update_service.dart';
+import '../widgets/update_dialog.dart';
+
 import 'home_screen.dart';
 import 'pos_screen.dart';
 import 'table_screen.dart';
@@ -25,6 +30,62 @@ class _MainShellState extends State<MainShell> {
     ExpenseScreen(),
     OrderHistoryScreen(),
   ];
+
+  // ============================================================
+  // INIT STATE
+  // ============================================================
+
+  @override
+  void initState() {
+    super.initState();
+
+    _checkForUpdates();
+  }
+
+  // ============================================================
+  // CHECK UPDATE APK
+  // ============================================================
+
+  Future<void> _checkForUpdates() async {
+    try {
+      debugPrint('🔍 Checking for app updates...');
+
+      final updateInfo = await UpdateService().checkForUpdate();
+
+      if (!mounted) return;
+
+      if (updateInfo.hasUpdate) {
+        debugPrint(
+          '🆕 Update available: '
+          '${updateInfo.currentVersion} '
+          '→ '
+          '${updateInfo.latestVersion}',
+        );
+
+        // Delay agar UI stabil dulu
+        await Future.delayed(
+          const Duration(seconds: 2),
+        );
+
+        if (!mounted) return;
+
+        await UpdateDialog.show(
+          context,
+          updateInfo,
+        );
+      } else {
+        debugPrint('✅ App already up to date');
+      }
+    } catch (e) {
+      debugPrint(
+        '⚠️ Error checking update: $e',
+      );
+    }
+  }
+
+  // ============================================================
+  // UI
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +116,10 @@ class _MainShellState extends State<MainShell> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // ============================================================
+              // POWERED BY
+              // ============================================================
+
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
@@ -67,6 +132,11 @@ class _MainShellState extends State<MainShell> {
                   ),
                 ),
               ),
+
+              // ============================================================
+              // NAVIGATION BAR
+              // ============================================================
+
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 8,
@@ -75,12 +145,36 @@ class _MainShellState extends State<MainShell> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildNavItem(0, Icons.dashboard_rounded, 'Dashboard'),
-                    _buildNavItem(1, Icons.point_of_sale_rounded, 'Kasir'),
-                    _buildNavItem(2, Icons.table_restaurant_rounded, 'Meja'),
-                    _buildNavItem(3, Icons.restaurant_menu_rounded, 'Menu'),
-                    _buildNavItem(4, Icons.shopping_cart_rounded, 'Belanja'),
-                    _buildNavItem(5, Icons.receipt_long_rounded, 'Riwayat'),
+                    _buildNavItem(
+                      0,
+                      Icons.dashboard_rounded,
+                      'Dashboard',
+                    ),
+                    _buildNavItem(
+                      1,
+                      Icons.point_of_sale_rounded,
+                      'Kasir',
+                    ),
+                    _buildNavItem(
+                      2,
+                      Icons.table_restaurant_rounded,
+                      'Meja',
+                    ),
+                    _buildNavItem(
+                      3,
+                      Icons.restaurant_menu_rounded,
+                      'Menu',
+                    ),
+                    _buildNavItem(
+                      4,
+                      Icons.shopping_cart_rounded,
+                      'Belanja',
+                    ),
+                    _buildNavItem(
+                      5,
+                      Icons.receipt_long_rounded,
+                      'Riwayat',
+                    ),
                   ],
                 ),
               ),
@@ -91,10 +185,23 @@ class _MainShellState extends State<MainShell> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  // ============================================================
+  // NAVIGATION ITEM
+  // ============================================================
+
+  Widget _buildNavItem(
+    int index,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = _currentIndex == index;
+
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
@@ -107,7 +214,9 @@ class _MainShellState extends State<MainShell> {
           color: isSelected
               ? AppColors.primary.withOpacity(0.15)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.xl),
+          borderRadius: BorderRadius.circular(
+            AppRadius.xl,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
