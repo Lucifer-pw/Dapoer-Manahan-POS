@@ -23,7 +23,7 @@ class AppUpdateInfo {
 }
 
 /// Service untuk mengecek apakah ada versi terbaru aplikasi.
-/// 
+///
 /// Cara kerja:
 /// 1. Baca pubspec.yaml dari GitHub repo (raw content)
 /// 2. Parse versi terbaru dari file tersebut
@@ -39,24 +39,24 @@ class UpdateService {
   // ============================================================
   // GITHUB CONFIGURATION
   // ============================================================
-  
+
   /// GitHub repository owner
   static const String _repoOwner = 'Lucifer-pw';
-  
+
   /// GitHub repository name
   static const String _repoName = 'Dapoer-Manahan-POS';
-  
+
   /// Branch utama (main/master)
   static const String _branch = 'main';
-  
+
   /// URL raw pubspec.yaml dari GitHub
   static String get _pubspecUrl =>
       'https://raw.githubusercontent.com/$_repoOwner/$_repoName/$_branch/pubspec.yaml';
-  
+
   /// URL GitHub Releases API
   static String get _releasesUrl =>
       'https://api.github.com/repos/$_repoOwner/$_repoName/releases/latest';
-  
+
   /// URL halaman releases (fallback jika tidak ada APK di release)
   static String get _releasesPageUrl =>
       'https://github.com/$_repoOwner/$_repoName/releases';
@@ -71,12 +71,12 @@ class UpdateService {
       // Ambil versi current dari package info
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version; // e.g. "1.0.0"
-      
+
       debugPrint('📱 Current app version: $currentVersion');
 
       // Ambil versi terbaru dari GitHub
       final latestVersion = await _getLatestVersionFromGitHub();
-      
+
       if (latestVersion == null) {
         debugPrint('⚠️ Could not fetch version from GitHub');
         return AppUpdateInfo(
@@ -90,13 +90,13 @@ class UpdateService {
 
       // Bandingkan versi
       final hasUpdate = _isNewerVersion(currentVersion, latestVersion);
-      
+
       String? downloadUrl;
       String? releaseMessage;
-      
+
       if (hasUpdate) {
         debugPrint('🆕 Update available: $currentVersion → $latestVersion');
-        
+
         // Coba ambil info dari GitHub Releases (download URL & release notes)
         final releaseInfo = await _getLatestReleaseInfo();
         downloadUrl = releaseInfo?['downloadUrl'];
@@ -131,23 +131,25 @@ class UpdateService {
   /// Baca versi terbaru dari pubspec.yaml di GitHub
   Future<String?> _getLatestVersionFromGitHub() async {
     try {
-      final response = await http.get(
-        Uri.parse(_pubspecUrl),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .get(
+            Uri.parse(_pubspecUrl),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final content = response.body;
-        
+
         // Parse version dari pubspec.yaml
         // Format: version: 1.0.0+1
         final versionRegex = RegExp(r'version:\s*(\d+\.\d+\.\d+)');
         final match = versionRegex.firstMatch(content);
-        
+
         if (match != null) {
           return match.group(1);
         }
       }
-      
+
       debugPrint('⚠️ GitHub raw content status: ${response.statusCode}');
       return null;
     } catch (e) {
@@ -172,15 +174,15 @@ class UpdateService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        
+
         // Ambil release notes
         final message = data['body'] as String? ?? '';
         final releaseName = data['name'] as String? ?? '';
-        
+
         // Cari APK di assets release
         String? downloadUrl;
         final assets = data['assets'] as List<dynamic>? ?? [];
-        
+
         for (final asset in assets) {
           final assetName = (asset['name'] as String).toLowerCase();
           if (assetName.endsWith('.apk')) {
@@ -188,18 +190,17 @@ class UpdateService {
             break;
           }
         }
-        
+
         // Fallback ke halaman release jika tidak ada APK
         downloadUrl ??= data['html_url'] as String? ?? _releasesPageUrl;
-        
+
         return {
           'downloadUrl': downloadUrl,
-          'message': releaseName.isNotEmpty 
-              ? '$releaseName\n$message'
-              : message,
+          'message':
+              releaseName.isNotEmpty ? '$releaseName\n$message' : message,
         };
       }
-      
+
       return null;
     } catch (e) {
       debugPrint('⚠️ Error fetching GitHub release: $e');
