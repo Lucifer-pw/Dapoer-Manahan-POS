@@ -39,7 +39,9 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
 
-    _checkForUpdates();
+    Future.microtask(() async {
+      await _checkForUpdates();
+    });
   }
 
   // ============================================================
@@ -62,9 +64,9 @@ class _MainShellState extends State<MainShell> {
           '${updateInfo.latestVersion}',
         );
 
-        // Delay agar UI stabil dulu
+        // Delay sedikit agar UI stabil
         await Future.delayed(
-          const Duration(seconds: 2),
+          const Duration(seconds: 1),
         );
 
         if (!mounted) return;
@@ -74,7 +76,9 @@ class _MainShellState extends State<MainShell> {
           updateInfo,
         );
       } else {
-        debugPrint('✅ App already up to date');
+        debugPrint(
+          '✅ App already up to date',
+        );
       }
     } catch (e) {
       debugPrint(
@@ -134,7 +138,7 @@ class _MainShellState extends State<MainShell> {
               ),
 
               // ============================================================
-              // NAVIGATION BAR
+              // NAVIGATION
               // ============================================================
 
               Padding(
