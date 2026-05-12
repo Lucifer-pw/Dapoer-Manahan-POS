@@ -260,6 +260,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final tableProv = Provider.of<TableProvider>(context, listen: false);
 
+    final draftProv = Provider.of<DraftProvider>(context, listen: false);
+
+    // Hitung nomor urut yang benar (Database vs Draf)
+    int finalSequenceNumber = cart.activeDraftNumber ?? 0;
+
+    if (finalSequenceNumber == 0) {
+      // Jika ini transaksi langsung (bukan draf), cari nomor baru
+      final nextFromDb = await orderProv.getNextSequenceNumber();
+      int maxDraftNum = 0;
+      if (draftProv.drafts.isNotEmpty) {
+        maxDraftNum = draftProv.drafts
+            .map((d) => d.draftNumber ?? 0)
+            .reduce((a, b) => a > b ? a : b);
+      }
+      // Ambil yang paling besar agar tidak bentrok
+      finalSequenceNumber = (nextFromDb > maxDraftNum) ? nextFromDb : (maxDraftNum + 1);
+    }
+
     final order = Order(
       id: '',
       tableNumber: cart.tableNumber,
@@ -278,7 +296,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     final completedOrder = await orderProv.createOrder(
       order, 
-      sequenceNumber: cart.activeDraftNumber,
+      sequenceNumber: finalSequenceNumber,
     );
     
     // Update table status if not takeaway
