@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../utils/constants.dart';
 
-import '../services/update_service.dart';
-import '../widgets/update_dialog.dart';
-
 import 'home_screen.dart';
 import 'pos_screen.dart';
 import 'table_screen.dart';
@@ -38,53 +35,6 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
-
-    Future.microtask(() async {
-      await _checkForUpdates();
-    });
-  }
-
-  // ============================================================
-  // CHECK UPDATE APK
-  // ============================================================
-
-  Future<void> _checkForUpdates() async {
-    try {
-      debugPrint('🔍 Checking for app updates...');
-
-      final updateInfo = await UpdateService().checkForUpdate();
-
-      if (!mounted) return;
-
-      if (updateInfo.hasUpdate) {
-        debugPrint(
-          '🆕 Update available: '
-          '${updateInfo.currentVersion} '
-          '→ '
-          '${updateInfo.latestVersion}',
-        );
-
-        // Delay sedikit agar UI stabil
-        await Future.delayed(
-          const Duration(seconds: 1),
-        );
-
-        if (!mounted) return;
-
-        await UpdateDialog.show(
-          context,
-          updateInfo,
-        );
-      } else {
-        debugPrint(
-          '✅ App already up to date',
-        );
-      }
-    } catch (e) {
-      debugPrint(
-        '⚠️ Error checking update: $e',
-      );
-    }
   }
 
   // ============================================================

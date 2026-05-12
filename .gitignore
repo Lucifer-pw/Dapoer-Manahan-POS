@@ -44,3 +44,4 @@ app.*.map.json
 
 # Secrets / API Keys
 lib/config/midtrans_config.dart
+android/app/release-keystore.jks
