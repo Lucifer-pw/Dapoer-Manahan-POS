@@ -38,7 +38,15 @@ jobs:
         run: flutter pub get
 
       - name: Decode Keystore
-        run: printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release-keystore.jks
+        shell: python
+        run: |
+          import os
+          import base64
+          keystore_base64 = os.environ['KEYSTORE_BASE64']
+          with open("android/app/release-keystore.jks", "wb") as f:
+              f.write(base64.b64decode(keystore_base64))
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build APK
         run: flutter build apk --release
