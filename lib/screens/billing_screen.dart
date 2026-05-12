@@ -119,6 +119,56 @@ class BillingScreen extends StatelessWidget {
 
                       const SizedBox(height: 20),
 
+                      // QR Payment Manual (Temporary)
+                      Column(
+                        children: [
+                          Text(
+                            'Metode Alternatif (QRIS)',
+                            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Image.asset(
+                              'assets/images/payment_qr.png',
+                              width: 200,
+                              height: 200,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Scan QR di atas & Bayar Rp 50.000',
+                            style: AppTextStyles.caption.copyWith(fontSize: 10),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _launchWhatsApp(context),
+                              icon: const Icon(Icons.send_rounded, size: 18),
+                              label: const Text('KIRIM BUKTI BAYAR (WA)'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                ),
+                                elevation: 0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
                       // Tombol Bayar via Midtrans
                       SizedBox(
                         width: double.infinity,
@@ -127,18 +177,19 @@ class BillingScreen extends StatelessWidget {
                           onPressed: () => _openMidtransPayment(context),
                           icon: const Icon(Icons.payment_rounded, size: 22),
                           label: Text(
-                            'BAYAR SEKARANG',
+                            'BAYAR VIA MIDTRANS (PROSES)',
                             style: AppTextStyles.button.copyWith(
                               letterSpacing: 1,
+                              fontSize: 12,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: AppColors.textHint, // Grayed out since it's pending
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
-                            elevation: 2,
+                            elevation: 0,
                           ),
                         ),
                       ),
