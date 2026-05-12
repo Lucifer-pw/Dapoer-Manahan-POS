@@ -346,13 +346,24 @@ class _PosScreenState extends State<PosScreen> {
                           String draftId = cartProv.activeDraftId ?? const Uuid().v4();
                           int? draftNumber = cartProv.activeDraftNumber;
                           
-                          // Jika draf baru, ambil nomor urut berikutnya dari database
+                          // Jika draf baru, ambil nomor urut berikutnya
                           if (draftNumber == null) {
                             try {
-                              // Mengambil nomor urut invoice berikutnya (misal DM-62 -> 62)
-                              draftNumber = await Provider.of<OrderProvider>(context, listen: false).getNextSequenceNumber();
+                              // 1. Ambil nomor urut dari transaksi yang sudah lunas (database)
+                              final nextOrderSeq = await orderProv.getNextSequenceNumber();
+                              
+                              // 2. Ambil nomor urut tertinggi dari draf yang sedang ada di list tertunda
+                              int maxDraftNum = 0;
+                              if (draftProv.drafts.isNotEmpty) {
+                                maxDraftNum = draftProv.drafts
+                                    .map((d) => d.draftNumber ?? 0)
+                                    .reduce((a, b) => a > b ? a : b);
+                              }
+                              
+                              // 3. Gunakan angka yang paling besar di antara keduanya
+                              draftNumber = (nextOrderSeq > maxDraftNum) ? nextOrderSeq : (maxDraftNum + 1);
                             } catch (e) {
-                              // Fallback jika gagal ambil dari database
+                              // Fallback jika gagal
                               draftNumber = 60 + draftProv.drafts.length;
                             }
                           }
