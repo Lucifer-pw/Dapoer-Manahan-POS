@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/menu_item.dart';
 import '../models/order_item.dart';
+import '../models/draft_order.dart';
 
 class CartProvider extends ChangeNotifier {
   final List<OrderItem> _items = [];

@@ -243,7 +243,7 @@ class _PosScreenState extends State<PosScreen> {
                       child: Row(children: [
                         const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
-                        Text('Dibawa Pulang (Take Away)', style: AppTextStyles.bodyBold.copyWith(fontSize: 13, color: AppColors.primary)),
+                        Text('Dibawa Pulang (Take Away)', style: AppTextStyles.subtitle.copyWith(fontSize: 13, color: AppColors.primary)),
                       ]),
                     ),
                     ...tableProv.tables.map((t) => DropdownMenuItem(value: t.number, child: Row(children: [

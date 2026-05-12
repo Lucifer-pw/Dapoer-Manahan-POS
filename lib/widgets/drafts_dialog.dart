@@ -45,7 +45,7 @@ class DraftsDialog extends StatelessWidget {
                   child: ListTile(
                     title: Text(
                       draft.isTakeAway ? 'Dibawa Pulang' : 'Meja ${draft.tableNumber}',
-                      style: AppTextStyles.bodyBold,
+                      style: AppTextStyles.subtitle,
                     ),
                     subtitle: Text(
                       '${draft.totalQuantity} item • ${AppFormatter.formatRupiah(draft.total)}',
