@@ -18,6 +18,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Create Placeholder Config
+        run: |
+          mkdir -p lib/config
+          echo "class MidtransConfig { static const String merchantId = ''; static const String serverKey = ''; static const String clientKey = ''; }" > lib/config/midtrans_config.dart
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -27,7 +32,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version: '3.19.2'
 
       - name: Install Dependencies
         run: flutter pub get
