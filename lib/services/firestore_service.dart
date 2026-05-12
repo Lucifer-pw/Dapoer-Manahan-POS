@@ -174,8 +174,25 @@ class FirestoreService {
   }
 
   Future<int> getNextOrderSequence() async {
-    final snapshot = await _ordersRef.get();
-    return snapshot.docs.length + 1;
+    try {
+      final snapshot = await _ordersRef
+          .orderBy('sequenceNumber', descending: true)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return 1;
+      }
+
+      final lastOrder = snapshot.docs.first.data() as Map<String, dynamic>;
+      final lastSeq = lastOrder['sequenceNumber'] as int? ?? 0;
+      return lastSeq + 1;
+    } catch (e) {
+      debugPrint('Error getting next sequence: $e');
+      // Fallback: count documents if ordering fails
+      final snapshot = await _ordersRef.get();
+      return snapshot.docs.length + 1;
+    }
   }
 
   Future<String> createOrder(app.Order order) async {

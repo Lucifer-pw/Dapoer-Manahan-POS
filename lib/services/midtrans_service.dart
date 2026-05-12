@@ -16,7 +16,7 @@ class MidtransService {
 
   /// Set ke true untuk testing dengan Sandbox environment
   /// Set ke false untuk Production (transaksi nyata)
-  static const bool isSandbox = true;
+  static const bool isSandbox = false;
 
   // ============================================================
   // API ENDPOINTS
