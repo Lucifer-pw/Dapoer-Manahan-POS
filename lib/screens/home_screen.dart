@@ -33,8 +33,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<OrderProvider>(context, listen: false).loadStats();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final orderProv = Provider.of<OrderProvider>(context, listen: false);
+      final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+      
+      await orderProv.loadStats();
+      if (mounted) {
+        await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
+      }
     });
   }
 
@@ -164,6 +170,9 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }
             if (mounted) {
+              final orderProv = Provider.of<OrderProvider>(context, listen: false);
+              final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+              await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
               await Provider.of<SubscriptionProvider>(context, listen: false)
                   .checkStatus();
             }
@@ -339,7 +348,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildPeriodItem(String title, ReportPeriod period, bool isActive, OrderProvider orderProv) {
     return Expanded(
       child: GestureDetector(
-        onTap: () => orderProv.changePeriod(period),
+        onTap: () async {
+          await orderProv.changePeriod(period);
+          if (mounted) {
+            final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+            await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
+          }
+        },
         child: Container(
           decoration: BoxDecoration(
             color: isActive ? AppColors.surface : Colors.transparent,
@@ -377,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final grossRevenue = stats['totalRevenue'] ?? 0;
       final totalExpense =
-          _filterDate != null ? _filteredExpense : (orderProv.currentPeriod == ReportPeriod.daily ? expenseProv.dailyTotal : 0); // Expenses only tracked daily for now
+          _filterDate != null ? _filteredExpense : expenseProv.periodTotal;
       
       final netRevenue = grossRevenue - totalExpense;
       final transactions = stats['totalTransactions'] ?? 0;

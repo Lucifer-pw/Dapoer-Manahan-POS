@@ -14,6 +14,8 @@ class OrderProvider extends ChangeNotifier {
   
   Map<String, dynamic> _stats = {};
   ReportPeriod _currentPeriod = ReportPeriod.daily;
+  DateTime _currentStart = DateTime.now();
+  DateTime _currentEnd = DateTime.now();
 
   StreamSubscription? _todayOrdersSub;
   StreamSubscription? _allOrdersSub;
@@ -24,6 +26,8 @@ class OrderProvider extends ChangeNotifier {
   
   Map<String, dynamic> get todayStats => _stats;
   ReportPeriod get currentPeriod => _currentPeriod;
+  DateTime get currentStart => _currentStart;
+  DateTime get currentEnd => _currentEnd;
   List<Map<String, dynamic>> get weeklyRevenue => 
       (_stats['chartData'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
@@ -82,6 +86,8 @@ class OrderProvider extends ChangeNotifier {
           break;
       }
 
+      _currentStart = start;
+      _currentEnd = end;
       _stats = await _firestoreService.getStatsByDateRange(start, end);
       notifyListeners();
     } catch (e) {

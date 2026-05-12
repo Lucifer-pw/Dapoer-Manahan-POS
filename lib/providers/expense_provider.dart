@@ -8,12 +8,20 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<Expense> _todayExpenses = [];
   bool _isLoading = true;
+  int _periodTotal = 0;
   StreamSubscription? _expensesSub;
 
   List<Expense> get todayExpenses => _todayExpenses;
   bool get isLoading => _isLoading;
+  int get periodTotal => _periodTotal;
 
   int get dailyTotal => _todayExpenses.fold(0, (sum, e) => sum + e.price);
+
+  Future<void> loadPeriodTotal(DateTime start, DateTime end) async {
+    final expenses = await getExpensesByDateRange(start, end);
+    _periodTotal = expenses.fold(0, (sum, e) => sum + e.price);
+    notifyListeners();
+  }
 
   void init() {
     _expensesSub = _firestoreService.streamTodayExpenses().listen((data) {
