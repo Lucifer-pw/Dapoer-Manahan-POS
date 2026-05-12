@@ -74,11 +74,12 @@ class UpdateService {
 
       debugPrint('📱 Current app version: $currentVersion');
 
-      // Ambil versi terbaru dari GitHub
-      final latestVersion = await _getLatestVersionFromGitHub();
+      // Ambil info rilis terbaru dari GitHub
+      // Kita langsung cek rilis karena di situ ada file APK-nya
+      final releaseInfo = await _getLatestReleaseInfo();
 
-      if (latestVersion == null) {
-        debugPrint('⚠️ Could not fetch version from GitHub');
+      if (releaseInfo == null) {
+        debugPrint('⚠️ Could not fetch release info from GitHub');
         return AppUpdateInfo(
           hasUpdate: false,
           currentVersion: currentVersion,
@@ -86,21 +87,14 @@ class UpdateService {
         );
       }
 
-      debugPrint('🌐 Latest version from GitHub: $latestVersion');
+      final latestVersion = releaseInfo['version']!;
+      debugPrint('🌐 Latest version from GitHub Release: $latestVersion');
 
       // Bandingkan versi
       final hasUpdate = _isNewerVersion(currentVersion, latestVersion);
 
-      String? downloadUrl;
-      String? releaseMessage;
-
       if (hasUpdate) {
         debugPrint('🆕 Update available: $currentVersion → $latestVersion');
-
-        // Coba ambil info dari GitHub Releases (download URL & release notes)
-        final releaseInfo = await _getLatestReleaseInfo();
-        downloadUrl = releaseInfo?['downloadUrl'];
-        releaseMessage = releaseInfo?['message'];
       } else {
         debugPrint('✅ App is up to date');
       }
@@ -109,8 +103,8 @@ class UpdateService {
         hasUpdate: hasUpdate,
         currentVersion: currentVersion,
         latestVersion: latestVersion,
-        downloadUrl: downloadUrl ?? _releasesPageUrl,
-        message: releaseMessage,
+        downloadUrl: releaseInfo['downloadUrl'] ?? _releasesPageUrl,
+        message: releaseInfo['message'],
         forceUpdate: false,
       );
     } catch (e) {
@@ -125,44 +119,10 @@ class UpdateService {
   }
 
   // ============================================================
-  // GITHUB RAW CONTENT - Read pubspec.yaml
+  // GITHUB RELEASES API - Get version, download URL & release notes
   // ============================================================
 
-  /// Baca versi terbaru dari pubspec.yaml di GitHub
-  Future<String?> _getLatestVersionFromGitHub() async {
-    try {
-      final response = await http
-          .get(
-            Uri.parse(_pubspecUrl),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final content = response.body;
-
-        // Parse version dari pubspec.yaml
-        // Format: version: 1.0.0+1
-        final versionRegex = RegExp(r'version:\s*(\d+\.\d+\.\d+)');
-        final match = versionRegex.firstMatch(content);
-
-        if (match != null) {
-          return match.group(1);
-        }
-      }
-
-      debugPrint('⚠️ GitHub raw content status: ${response.statusCode}');
-      return null;
-    } catch (e) {
-      debugPrint('⚠️ Error fetching pubspec from GitHub: $e');
-      return null;
-    }
-  }
-
-  // ============================================================
-  // GITHUB RELEASES API - Get download URL & release notes
-  // ============================================================
-
-  /// Ambil info release terbaru dari GitHub (download URL, release notes)
+  /// Ambil info release terbaru dari GitHub
   Future<Map<String, String>?> _getLatestReleaseInfo() async {
     try {
       final response = await http.get(
@@ -175,9 +135,18 @@ class UpdateService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-        // Ambil release notes
+        // Ambil info dasar
         final message = data['body'] as String? ?? '';
         final releaseName = data['name'] as String? ?? '';
+        final tagName = data['tag_name'] as String? ?? '';
+
+        // Parse versi dari tag_name (misal: v1.0.1 -> 1.0.1)
+        String version = tagName.startsWith('v') ? tagName.substring(1) : tagName;
+        
+        // Jika tag mengandung build number (misal: 1.0.1+2), kita bandingkan versi dasarnya
+        if (version.contains('+')) {
+          version = version.split('+')[0];
+        }
 
         // Cari APK di assets release
         String? downloadUrl;
@@ -195,6 +164,7 @@ class UpdateService {
         downloadUrl ??= data['html_url'] as String? ?? _releasesPageUrl;
 
         return {
+          'version': version,
           'downloadUrl': downloadUrl,
           'message':
               releaseName.isNotEmpty ? '$releaseName\n$message' : message,
