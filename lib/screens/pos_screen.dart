@@ -265,27 +265,54 @@ class _PosScreenState extends State<PosScreen> {
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: cartProv.isEmpty
-                ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withOpacity(0.3)),
-                    const SizedBox(height: 8),
-                    Text('Keranjang kosong', style: AppTextStyles.bodySecondary),
-                  ]))
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: cartProv.items.length,
-                    itemBuilder: (context, index) {
-                      final item = cartProv.items[index];
-                      return CartItemWidget(
-                        item: item, index: index,
-                        onIncrement: () => cartProv.incrementItem(index),
-                        onDecrement: () => cartProv.decrementItem(index),
-                        onRemove: () => cartProv.removeItem(index),
-                        onBonusToggle: () => cartProv.toggleBonus(index),
-                        onNotesChanged: (notes) => cartProv.updateNotes(index, notes),
-                      );
-                    },
+            child: Column(
+              children: [
+                if (cartProv.activeDraftId != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.edit_note, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Mengedit Pesanan #${cartProv.activeDraftNumber}',
+                          style: AppTextStyles.body.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
                   ),
+                Expanded(
+                  child: cartProv.isEmpty
+                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.add_shopping_cart, size: 48, color: AppColors.textHint.withOpacity(0.3)),
+                          const SizedBox(height: 8),
+                          Text('Keranjang kosong', style: AppTextStyles.bodySecondary),
+                        ]))
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: cartProv.items.length,
+                          itemBuilder: (context, index) {
+                            final item = cartProv.items[index];
+                            return CartItemWidget(
+                              item: item, index: index,
+                              onIncrement: () => cartProv.incrementItem(index),
+                              onDecrement: () => cartProv.decrementItem(index),
+                              onRemove: () => cartProv.removeItem(index),
+                              onBonusToggle: () => cartProv.toggleBonus(index),
+                              onNotesChanged: (notes) => cartProv.updateNotes(index, notes),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
           ),
           if (cartProv.items.isNotEmpty)
             Container(
@@ -311,19 +338,41 @@ class _PosScreenState extends State<PosScreen> {
                     Expanded(
                       flex: 4,
                       child: OutlinedButton.icon(
-                        onPressed: () async {
+                        onPressed: cartProv.isEmpty ? null : () async {
+                          final draftProv = Provider.of<DraftProvider>(context, listen: false);
+                          final orderProv = Provider.of<OrderProvider>(context, listen: false);
+                          
+                          String draftId = cartProv.activeDraftId ?? const Uuid().v4();
+                          int? draftNumber = cartProv.activeDraftNumber;
+                          
+                          // Jika draf baru, ambil nomor urut berikutnya dari database
+                          if (draftNumber == null) {
+                            try {
+                              // Mengambil nomor urut invoice berikutnya (misal DM-62 -> 62)
+                              draftNumber = await Provider.of<OrderProvider>(context, listen: false).getNextSequenceNumber();
+                            } catch (e) {
+                              // Fallback jika gagal ambil dari database
+                              draftNumber = 60 + draftProv.drafts.length;
+                            }
+                          }
+
                           final draft = DraftOrder(
-                            id: const Uuid().v4(),
-                            customerName: 'Customer', // Bisa ditambahkan field input nama
+                            id: draftId,
+                            draftNumber: draftNumber,
+                            customerName: 'Pesanan #$draftNumber',
                             tableNumber: cartProv.tableNumber > 0 ? cartProv.tableNumber : null,
                             isTakeAway: cartProv.isTakeAway,
                             items: List.from(cartProv.items),
                             createdAt: DateTime.now(),
                           );
-                          await Provider.of<DraftProvider>(context, listen: false).saveDraft(draft);
+                          
+                          await draftProv.saveDraft(draft);
                           cartProv.clear();
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan disimpan sementara')));
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Pesanan #$draftNumber berhasil disimpan'),
+                              backgroundColor: AppColors.success,
+                            ));
                           }
                         },
                         icon: const Icon(Icons.save_outlined, size: 18),

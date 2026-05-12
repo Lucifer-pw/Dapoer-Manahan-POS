@@ -8,7 +8,7 @@ class UpdateDialog {
     BuildContext context,
     AppUpdateInfo info,
   ) async {
-    showDialog(
+    return showDialog(
       context: context,
       barrierDismissible: !info.forceUpdate,
       builder: (_) => WillPopScope(

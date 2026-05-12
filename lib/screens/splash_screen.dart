@@ -105,17 +105,21 @@ class _SplashScreenState extends State<SplashScreen>
   /// Mengecek apakah ada versi baru aplikasi
   Future<void> _checkForUpdates() async {
     try {
+      debugPrint('🔍 Checking for updates...');
       final updateService = UpdateService();
       final updateInfo = await updateService.checkForUpdate();
 
       if (!mounted) return;
 
       if (updateInfo.hasUpdate) {
-        // Tampilkan dialog update
+        debugPrint('🆕 Update detected! Showing dialog...');
+        // Tampilkan dialog update dan TUNGGU sampai user merespons
         await _showUpdateDialog(updateInfo);
+      } else {
+        debugPrint('✅ No update needed.');
       }
     } catch (e) {
-      debugPrint('Error checking updates: $e');
+      debugPrint('⚠️ Error checking updates: $e');
       // Fail silently, don't block app startup
     }
   }

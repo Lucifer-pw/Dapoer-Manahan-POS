@@ -285,6 +285,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
       }
     }
 
+    // Delete draft if this was a resumed order
+    if (cart.activeDraftId != null) {
+      if (mounted) {
+        await Provider.of<DraftProvider>(context, listen: false).deleteDraft(cart.activeDraftId!);
+      }
+    }
+
     cart.clear();
 
     if (mounted) {

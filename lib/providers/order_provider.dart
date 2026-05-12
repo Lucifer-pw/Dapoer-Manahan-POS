@@ -56,6 +56,10 @@ class OrderProvider extends ChangeNotifier {
     return await _firestoreService.getStatsByDate(date);
   }
 
+  Future<int> getNextSequenceNumber() async {
+    return await _firestoreService.getNextOrderSequence();
+  }
+
   Future<Order> createOrder(Order order) async {
     // Get next sequence number (continuous)
     final nextSeq = await _firestoreService.getNextOrderSequence();

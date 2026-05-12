@@ -4,6 +4,7 @@ class DraftOrder {
   final String id;
   final String customerName;
   final int? tableNumber;
+  final int? draftNumber; // No. Invoice/Urutan sementara
   final bool isTakeAway;
   final List<OrderItem> items;
   final DateTime createdAt;
@@ -12,6 +13,7 @@ class DraftOrder {
     required this.id,
     required this.customerName,
     this.tableNumber,
+    this.draftNumber,
     this.isTakeAway = false,
     required this.items,
     required this.createdAt,
@@ -25,6 +27,7 @@ class DraftOrder {
       'id': id,
       'customerName': customerName,
       'tableNumber': tableNumber,
+      'draftNumber': draftNumber,
       'isTakeAway': isTakeAway,
       'items': items.map((x) => x.toMap()).toList(),
       'createdAt': createdAt.toIso8601String(),
@@ -36,6 +39,7 @@ class DraftOrder {
       id: map['id'] ?? '',
       customerName: map['customerName'] ?? '',
       tableNumber: map['tableNumber'],
+      draftNumber: map['draftNumber'],
       isTakeAway: map['isTakeAway'] ?? false,
       items: List<OrderItem>.from(map['items']?.map((x) => OrderItem.fromMap(x))),
       createdAt: DateTime.parse(map['createdAt']),

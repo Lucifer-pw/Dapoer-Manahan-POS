@@ -129,6 +129,7 @@ class UpdateService {
         Uri.parse(_releasesUrl),
         headers: {
           'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Flutter-POS-App',
         },
       ).timeout(const Duration(seconds: 10));
 

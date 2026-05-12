@@ -7,10 +7,14 @@ class CartProvider extends ChangeNotifier {
   final List<OrderItem> _items = [];
   int _tableNumber = 0;
   bool _isTakeAway = false;
+  String? _activeDraftId;
+  int? _activeDraftNumber;
 
   List<OrderItem> get items => List.unmodifiable(_items);
   int get tableNumber => _tableNumber;
   bool get isTakeAway => _isTakeAway;
+  String? get activeDraftId => _activeDraftId;
+  int? get activeDraftNumber => _activeDraftNumber;
   bool get isEmpty => _items.isEmpty;
   int get itemCount => _items.length;
 
@@ -120,6 +124,8 @@ class CartProvider extends ChangeNotifier {
     _items.addAll(draft.items);
     _isTakeAway = draft.isTakeAway;
     _tableNumber = draft.tableNumber ?? 0;
+    _activeDraftId = draft.id;
+    _activeDraftNumber = draft.draftNumber;
     notifyListeners();
   }
 
@@ -127,6 +133,8 @@ class CartProvider extends ChangeNotifier {
     _items.clear();
     _tableNumber = 0;
     _isTakeAway = false;
+    _activeDraftId = null;
+    _activeDraftNumber = null;
     notifyListeners();
   }
 }
