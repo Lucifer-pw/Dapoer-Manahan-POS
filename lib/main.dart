@@ -12,6 +12,7 @@ import 'providers/subscription_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/expense_provider.dart';
 import 'providers/starting_cash_provider.dart';
+import 'providers/draft_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
@@ -50,6 +51,7 @@ class DapoerManahanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => ExpenseProvider()..init()),
         ChangeNotifierProvider(create: (_) => StartingCashProvider()..loadStartingCash(DateTime.now())),
+        ChangeNotifierProvider(create: (_) => DraftProvider()..fetchDrafts()),
       ],
       child: MaterialApp(
         title: DefaultData.restaurantName,

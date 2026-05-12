@@ -9,6 +9,7 @@ class CartItemWidget extends StatelessWidget {
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final VoidCallback onRemove;
+  final VoidCallback onBonusToggle;
   final Function(String) onNotesChanged;
 
   const CartItemWidget({
@@ -18,6 +19,7 @@ class CartItemWidget extends StatelessWidget {
     required this.onIncrement,
     required this.onDecrement,
     required this.onRemove,
+    required this.onBonusToggle,
     required this.onNotesChanged,
   });
 
@@ -54,15 +56,37 @@ class CartItemWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        item.menuItemName,
-                        style: AppTextStyles.body.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.menuItemName,
+                                style: AppTextStyles.body.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (item.isBonus)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'BONUS',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                       const SizedBox(height: 2),
                       if (item.variant != null)
                         Text(
@@ -77,10 +101,22 @@ class CartItemWidget extends StatelessWidget {
                         AppFormatter.formatRupiah(item.price),
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textSecondary,
+                          decoration: item.isBonus ? TextDecoration.lineThrough : null,
                         ),
                       ),
                     ],
                   ),
+                ),
+
+                // Bonus Toggle
+                IconButton(
+                  icon: Icon(
+                    item.isBonus ? Icons.star : Icons.star_border,
+                    color: item.isBonus ? Colors.amber : AppColors.textHint,
+                    size: 20,
+                  ),
+                  onPressed: onBonusToggle,
+                  tooltip: 'Tandai sebagai Bonus',
                 ),
 
                 // Quantity controls

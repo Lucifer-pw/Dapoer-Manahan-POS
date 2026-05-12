@@ -70,7 +70,7 @@ class UpdateService {
     try {
       // Ambil versi current dari package info
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version; // e.g. "1.0.0"
+      final currentVersion = '${packageInfo.version}+${packageInfo.buildNumber}'; // e.g. "1.0.4+7"
 
       debugPrint('📱 Current app version: $currentVersion');
 
@@ -140,14 +140,9 @@ class UpdateService {
         final releaseName = data['name'] as String? ?? '';
         final tagName = data['tag_name'] as String? ?? '';
 
-        // Parse versi dari tag_name (misal: v1.0.1 -> 1.0.1)
+        // Parse versi dari tag_name (misal: v1.0.1+8 -> 1.0.1+8)
         String version = tagName.startsWith('v') ? tagName.substring(1) : tagName;
         
-        // Jika tag mengandung build number (misal: 1.0.1+2), kita bandingkan versi dasarnya
-        if (version.contains('+')) {
-          version = version.split('+')[0];
-        }
-
         // Cari APK di assets release
         String? downloadUrl;
         final assets = data['assets'] as List<dynamic>? ?? [];
@@ -183,27 +178,39 @@ class UpdateService {
   // ============================================================
 
   /// Membandingkan versi: apakah latestVersion lebih baru dari currentVersion
-  /// Format: "major.minor.patch" (e.g. "1.2.3")
+  /// Format: "major.minor.patch+build" (e.g. "1.0.4+8")
   bool _isNewerVersion(String current, String latest) {
     try {
-      final currentParts = current.split('.').map(int.parse).toList();
-      final latestParts = latest.split('.').map(int.parse).toList();
+      // Pisahkan versi utama dan build number
+      final currentFull = current.split('+');
+      final latestFull = latest.split('+');
+      
+      final currentVer = currentFull[0];
+      final latestVer = latestFull[0];
+      
+      // 1. Bandingkan versi utama (major.minor.patch)
+      final currentParts = currentVer.split('.').map(int.parse).toList();
+      final latestParts = latestVer.split('.').map(int.parse).toList();
 
-      // Pastikan kedua list punya 3 elemen
-      while (currentParts.length < 3) {
-        currentParts.add(0);
-      }
-      while (latestParts.length < 3) {
-        latestParts.add(0);
-      }
+      while (currentParts.length < 3) currentParts.add(0);
+      while (latestParts.length < 3) latestParts.add(0);
 
-      // Bandingkan: major > minor > patch
       for (int i = 0; i < 3; i++) {
         if (latestParts[i] > currentParts[i]) return true;
         if (latestParts[i] < currentParts[i]) return false;
       }
 
-      return false; // Versi sama
+      // 2. Jika versi utama sama, bandingkan build number (setelah +)
+      if (currentFull.length > 1 && latestFull.length > 1) {
+        final currentBuild = int.tryParse(currentFull[1]) ?? 0;
+        final latestBuild = int.tryParse(latestFull[1]) ?? 0;
+        return latestBuild > currentBuild;
+      } else if (latestFull.length > 1) {
+        // Jika versi sekarang tidak punya build number tapi yang terbaru punya
+        return true;
+      }
+
+      return false;
     } catch (e) {
       debugPrint('Error comparing versions: $e');
       return false;

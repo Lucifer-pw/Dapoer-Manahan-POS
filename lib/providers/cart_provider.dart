@@ -5,9 +5,11 @@ import '../models/order_item.dart';
 class CartProvider extends ChangeNotifier {
   final List<OrderItem> _items = [];
   int _tableNumber = 0;
+  bool _isTakeAway = false;
 
   List<OrderItem> get items => List.unmodifiable(_items);
   int get tableNumber => _tableNumber;
+  bool get isTakeAway => _isTakeAway;
   bool get isEmpty => _items.isEmpty;
   int get itemCount => _items.length;
 
@@ -23,6 +25,13 @@ class CartProvider extends ChangeNotifier {
 
   void setTableNumber(int number) {
     _tableNumber = number;
+    _isTakeAway = false; // Jika pilih meja, maka bukan takeaway
+    notifyListeners();
+  }
+
+  void setTakeAway(bool value) {
+    _isTakeAway = value;
+    if (_isTakeAway) _tableNumber = 0; // Jika takeaway, reset nomor meja
     notifyListeners();
   }
 
@@ -30,7 +39,8 @@ class CartProvider extends ChangeNotifier {
     final existingIndex = _items.indexWhere(
       (item) => item.menuItemId == menuItem.id && 
                 item.notes.isEmpty && 
-                item.variant == variant,
+                item.variant == variant &&
+                !item.isBonus, // Item bonus dibedakan
     );
 
     if (existingIndex >= 0) {
@@ -49,6 +59,14 @@ class CartProvider extends ChangeNotifier {
       ));
     }
     notifyListeners();
+  }
+
+  void toggleBonus(int index) {
+    if (index >= 0 && index < _items.length) {
+      final item = _items[index];
+      _items[index] = item.copyWith(isBonus: !item.isBonus);
+      notifyListeners();
+    }
   }
 
   void removeItem(int index) {
@@ -96,9 +114,18 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  void loadDraft(DraftOrder draft) {
+    _items.clear();
+    _items.addAll(draft.items);
+    _isTakeAway = draft.isTakeAway;
+    _tableNumber = draft.tableNumber ?? 0;
+    notifyListeners();
+  }
+
   void clear() {
     _items.clear();
     _tableNumber = 0;
+    _isTakeAway = false;
     notifyListeners();
   }
 }

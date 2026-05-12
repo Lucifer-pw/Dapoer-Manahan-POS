@@ -11,6 +11,10 @@ import '../widgets/menu_grid_item.dart';
 import '../widgets/cart_item_widget.dart';
 import '../widgets/category_chip.dart';
 import 'payment_screen.dart';
+import '../providers/draft_provider.dart';
+import '../models/draft_order.dart';
+import '../widgets/drafts_dialog.dart';
+import 'package:uuid/uuid.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -100,6 +104,16 @@ class _PosScreenState extends State<PosScreen> {
         child: Column(children: [
           Row(children: [
             Text('Kasir', style: AppTextStyles.heading2),
+            const SizedBox(width: 12),
+            // Drafts Button
+            IconButton(
+              onPressed: () => showDialog(context: context, builder: (_) => const DraftsDialog()),
+              icon: Consumer<DraftProvider>(builder: (context, dp, _) => Badge(
+                label: Text('${dp.drafts.length}'),
+                isLabelVisible: dp.drafts.isNotEmpty,
+                child: const Icon(Icons.pending_actions, color: AppColors.primary),
+              )),
+            ),
             const Spacer(),
             Container(
               width: 180, height: 40,
@@ -218,17 +232,33 @@ class _PosScreenState extends State<PosScreen> {
               decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(AppRadius.md), border: Border.all(color: AppColors.border.withOpacity(0.3))),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
-                  value: cartProv.tableNumber > 0 ? cartProv.tableNumber : null,
+                  value: cartProv.isTakeAway ? -1 : (cartProv.tableNumber > 0 ? cartProv.tableNumber : null),
                   hint: Text('Pilih Meja', style: AppTextStyles.bodySecondary.copyWith(fontSize: 13)),
                   isExpanded: true,
                   dropdownColor: AppColors.card,
                   icon: const Icon(Icons.arrow_drop_down, color: AppColors.textHint),
-                  items: tableProv.tables.map((t) => DropdownMenuItem(value: t.number, child: Row(children: [
-                    Icon(Icons.table_restaurant, size: 16, color: t.status == TableStatus.available ? AppColors.success : AppColors.error),
-                    const SizedBox(width: 8),
-                    Text('Meja ${t.number} (${t.capacity} Kursi)', style: AppTextStyles.body.copyWith(fontSize: 13)),
-                  ]))).toList(),
-                  onChanged: (val) { if (val != null) cartProv.setTableNumber(val); },
+                  items: [
+                    DropdownMenuItem(
+                      value: -1,
+                      child: Row(children: [
+                        const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
+                        const SizedBox(width: 8),
+                        Text('Dibawa Pulang (Take Away)', style: AppTextStyles.bodyBold.copyWith(fontSize: 13, color: AppColors.primary)),
+                      ]),
+                    ),
+                    ...tableProv.tables.map((t) => DropdownMenuItem(value: t.number, child: Row(children: [
+                      Icon(Icons.table_restaurant, size: 16, color: t.status == TableStatus.available ? AppColors.success : AppColors.error),
+                      const SizedBox(width: 8),
+                      Text('Meja ${t.number} (${t.capacity} Kursi)', style: AppTextStyles.body.copyWith(fontSize: 13)),
+                    ]))),
+                  ],
+                  onChanged: (val) { 
+                    if (val == -1) {
+                      cartProv.setTakeAway(true);
+                    } else if (val != null) {
+                      cartProv.setTableNumber(val);
+                    } 
+                  },
                 ),
               ),
             ),
@@ -251,6 +281,7 @@ class _PosScreenState extends State<PosScreen> {
                         onIncrement: () => cartProv.incrementItem(index),
                         onDecrement: () => cartProv.decrementItem(index),
                         onRemove: () => cartProv.removeItem(index),
+                        onBonusToggle: () => cartProv.toggleBonus(index),
                         onNotesChanged: (notes) => cartProv.updateNotes(index, notes),
                       );
                     },
@@ -276,19 +307,52 @@ class _PosScreenState extends State<PosScreen> {
                 const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity, height: 44,
-                  child: ElevatedButton.icon(
-                    onPressed: cartProv.tableNumber > 0
-                        ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen()))
-                        : null,
-                    icon: const Icon(Icons.payment, size: 18),
-                    label: Text('BAYAR', style: AppTextStyles.button.copyWith(letterSpacing: 1.2, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      disabledBackgroundColor: AppColors.textHint.withOpacity(0.3),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  child: Row(children: [
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final draft = DraftOrder(
+                            id: const Uuid().v4(),
+                            customerName: 'Customer', // Bisa ditambahkan field input nama
+                            tableNumber: cartProv.tableNumber > 0 ? cartProv.tableNumber : null,
+                            isTakeAway: cartProv.isTakeAway,
+                            items: List.from(cartProv.items),
+                            createdAt: DateTime.now(),
+                          );
+                          await Provider.of<DraftProvider>(context, listen: false).saveDraft(draft);
+                          cartProv.clear();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pesanan disimpan sementara')));
+                          }
+                        },
+                        icon: const Icon(Icons.save_outlined, size: 18),
+                        label: Text('SIMPAN', style: AppTextStyles.button.copyWith(fontSize: 11)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.secondary,
+                          side: BorderSide(color: AppColors.secondary.withOpacity(0.5)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 6,
+                      child: ElevatedButton.icon(
+                        onPressed: (cartProv.tableNumber > 0 || cartProv.isTakeAway)
+                            ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen()))
+                            : null,
+                        icon: const Icon(Icons.payment, size: 18),
+                        label: Text('BAYAR', style: AppTextStyles.button.copyWith(letterSpacing: 1.2, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          disabledBackgroundColor: AppColors.textHint.withOpacity(0.3),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                      ),
+                    ),
+                  ]),
                 ),
               ]),
             ),

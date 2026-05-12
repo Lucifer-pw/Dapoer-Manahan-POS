@@ -48,7 +48,7 @@ class ReceiptScreen extends StatelessWidget {
                   // Order info
                   _receiptRow('No. Pesanan', order.orderNumber, Colors.black87),
                   _receiptRow('Tanggal', AppFormatter.formatDateTime(order.createdAt), Colors.black54),
-                  _receiptRow('Meja', '${order.tableNumber}', Colors.black54),
+                  _receiptRow(order.isTakeAway ? 'Tipe' : 'Meja', order.isTakeAway ? 'DIBAWA PULANG' : '${order.tableNumber}', Colors.black54),
                   _receiptRow('Kasir', order.cashierName, Colors.black54),
                   const Divider(height: 20),
 
@@ -57,10 +57,15 @@ class ReceiptScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Row(children: [
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(item.menuItemName, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+                        Row(children: [
+                          Text(item.menuItemName, style: const TextStyle(color: Colors.black87, fontSize: 13, fontWeight: FontWeight.w500)),
+                          if (item.isBonus)
+                            const Text(' (Bonus)', style: TextStyle(color: AppColors.error, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ]),
                         if (item.variant != null)
                           Text('(${item.variant})', style: const TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
-                        Text('${item.quantity} x ${AppFormatter.formatRupiah(item.price)}', style: TextStyle(color: Colors.black54, fontSize: 11)),
+                        Text('${item.quantity} x ${AppFormatter.formatRupiah(item.price)}', 
+                          style: TextStyle(color: Colors.black54, fontSize: 11, decoration: item.isBonus ? TextDecoration.lineThrough : null)),
                       ])),
                       Text(AppFormatter.formatRupiah(item.subtotal), style: const TextStyle(color: Colors.black87, fontSize: 13)),
                     ]),
@@ -163,7 +168,7 @@ class ReceiptScreen extends StatelessWidget {
             .replaceAll(', ', ' ')
             .replaceAll('2026', '26'); // Shorten year to fit
         bluetooth.printLeftRight("Tanggal", receiptDate, 1);
-        bluetooth.printLeftRight("Meja", '${order.tableNumber}', 1);
+        bluetooth.printLeftRight(order.isTakeAway ? "Tipe" : "Meja", order.isTakeAway ? "TAKE AWAY" : '${order.tableNumber}', 1);
         bluetooth.printLeftRight("Kasir", order.cashierName, 1);
         bluetooth.printNewLine();
         
@@ -237,7 +242,7 @@ class ReceiptScreen extends StatelessWidget {
                 // Order Info
                 _pdfRow('No. Pesanan', order.orderNumber),
                 _pdfRow('Tanggal', AppFormatter.formatDateTime(order.createdAt)),
-                _pdfRow('Meja', '${order.tableNumber}'),
+                _pdfRow(order.isTakeAway ? 'Tipe' : 'Meja', order.isTakeAway ? 'TAKE AWAY' : '${order.tableNumber}'),
                 _pdfRow('Kasir', order.cashierName),
                 pw.Divider(height: 20),
 

@@ -53,7 +53,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(gradient: AppColors.cardGradient, borderRadius: BorderRadius.circular(AppRadius.lg), border: Border.all(color: AppColors.border.withOpacity(0.2))),
               child: Column(children: [
-                Text('Meja ${cart.tableNumber}', style: AppTextStyles.subtitle.copyWith(color: AppColors.secondary)),
+                Text(
+                  cart.isTakeAway ? 'DIBAWA PULANG' : 'Meja ${cart.tableNumber}',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: cart.isTakeAway ? AppColors.primary : AppColors.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 ...cart.items.map((item) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
@@ -266,14 +272,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
       amountPaid: _amountPaid,
       change: _paymentMethod == 'QRIS' ? 0 : (_amountPaid - cart.total),
       status: OrderStatus.completed,
+      isTakeAway: cart.isTakeAway,
     );
 
     final completedOrder = await orderProv.createOrder(order);
     
-    // Update table status
-    final table = tableProv.getTableByNumber(cart.tableNumber);
-    if (table != null) {
-      await tableProv.setAvailable(table.id);
+    // Update table status if not takeaway
+    if (!cart.isTakeAway) {
+      final table = tableProv.getTableByNumber(cart.tableNumber);
+      if (table != null) {
+        await tableProv.setAvailable(table.id);
+      }
     }
 
     cart.clear();

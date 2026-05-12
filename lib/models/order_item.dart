@@ -5,6 +5,7 @@ class OrderItem {
   final int quantity;
   final int price;
   final String notes;
+  final bool isBonus;
   final String? variant; // e.g. "Teh Anget", "Esteh", "Air Mineral"
 
   OrderItem({
@@ -14,10 +15,11 @@ class OrderItem {
     required this.quantity,
     required this.price,
     this.notes = '',
+    this.isBonus = false,
     this.variant,
   });
 
-  int get subtotal => price * quantity;
+  int get subtotal => isBonus ? 0 : price * quantity;
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
@@ -27,6 +29,7 @@ class OrderItem {
       quantity: map['quantity'] ?? 0,
       price: map['price'] ?? 0,
       notes: map['notes'] ?? '',
+      isBonus: map['isBonus'] ?? false,
       variant: map['variant'],
     );
   }
@@ -39,6 +42,7 @@ class OrderItem {
       'quantity': quantity,
       'price': price,
       'notes': notes,
+      'isBonus': isBonus,
       'variant': variant,
     };
   }
@@ -50,6 +54,7 @@ class OrderItem {
     int? quantity,
     int? price,
     String? notes,
+    bool? isBonus,
     String? variant,
   }) {
     return OrderItem(
@@ -59,6 +64,7 @@ class OrderItem {
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
       notes: notes ?? this.notes,
+      isBonus: isBonus ?? this.isBonus,
       variant: variant ?? this.variant,
     );
   }

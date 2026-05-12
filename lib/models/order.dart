@@ -16,6 +16,7 @@ class Order {
   final int amountPaid;
   final int change;
   final OrderStatus status;
+  final bool isTakeAway;
   final DateTime createdAt;
   final int sequenceNumber; // New: for sequential order numbers
 
@@ -32,6 +33,7 @@ class Order {
     this.amountPaid = 0,
     this.change = 0,
     this.status = OrderStatus.pending,
+    this.isTakeAway = false,
     DateTime? createdAt,
     this.sequenceNumber = 0, // Default to 0
   }) : createdAt = createdAt ?? DateTime.now();
@@ -56,6 +58,7 @@ class Order {
         (e) => e.name == (map['status'] ?? 'pending'),
         orElse: () => OrderStatus.pending,
       ),
+      isTakeAway: map['isTakeAway'] ?? false,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -76,6 +79,7 @@ class Order {
       'amountPaid': amountPaid,
       'change': change,
       'status': status.name,
+      'isTakeAway': isTakeAway,
       'createdAt': Timestamp.fromDate(createdAt),
       'sequenceNumber': sequenceNumber,
     };
@@ -99,6 +103,7 @@ class Order {
       amountPaid: amountPaid,
       change: change,
       status: status,
+      isTakeAway: isTakeAway,
       createdAt: createdAt,
       sequenceNumber: seq,
     );
