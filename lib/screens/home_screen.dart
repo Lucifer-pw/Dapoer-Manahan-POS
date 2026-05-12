@@ -174,6 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildBillingBanner(),
               _buildAppBar(),
               const SizedBox(height: 20),
+              _buildPeriodSelector(),
+              const SizedBox(height: 20),
               if (_isSearching)
                 const Center(
                     child: Padding(
@@ -184,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildStatsSection(),
               const SizedBox(height: 20),
               if (_filterDate == null) ...[
-                _buildWeeklyChart(),
+                _buildDynamicChart(),
                 const SizedBox(height: 20),
               ],
               _buildOrdersSection(),
@@ -297,40 +299,122 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Widget _buildPeriodSelector() {
+    if (_filterDate != null) return const SizedBox.shrink();
+    
+    return Consumer<OrderProvider>(builder: (context, orderProv, _) {
+      return Container(
+        height: 48,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        child: Row(
+          children: [
+            _buildPeriodItem(
+              'Harian', 
+              ReportPeriod.daily, 
+              orderProv.currentPeriod == ReportPeriod.daily,
+              orderProv,
+            ),
+            _buildPeriodItem(
+              'Mingguan', 
+              ReportPeriod.weekly, 
+              orderProv.currentPeriod == ReportPeriod.weekly,
+              orderProv,
+            ),
+            _buildPeriodItem(
+              'Bulanan', 
+              ReportPeriod.monthly, 
+              orderProv.currentPeriod == ReportPeriod.monthly,
+              orderProv,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildPeriodItem(String title, ReportPeriod period, bool isActive, OrderProvider orderProv) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => orderProv.changePeriod(period),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isActive ? AppColors.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            boxShadow: isActive ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              )
+            ] : null,
+          ),
+          child: Center(
+            child: Text(
+              title,
+              style: AppTextStyles.body.copyWith(
+                fontSize: 13,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive ? AppColors.primary : AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStatsSection() {
     return Consumer3<OrderProvider, ExpenseProvider, StartingCashProvider>(
         builder: (context, orderProv, expenseProv, cashProv, _) {
       final stats =
           _filterDate != null ? (_filteredStats ?? {}) : orderProv.todayStats;
+      
+      final currentPeriod = _filterDate != null ? 'Filter' : (orderProv.currentPeriod == ReportPeriod.daily ? 'Hari Ini' : (orderProv.currentPeriod == ReportPeriod.weekly ? 'Minggu Ini' : 'Bulan Ini'));
+
       final grossRevenue = stats['totalRevenue'] ?? 0;
       final totalExpense =
-          _filterDate != null ? _filteredExpense : expenseProv.dailyTotal;
+          _filterDate != null ? _filteredExpense : (orderProv.currentPeriod == ReportPeriod.daily ? expenseProv.dailyTotal : 0); // Expenses only tracked daily for now
+      
       final netRevenue = grossRevenue - totalExpense;
       final transactions = stats['totalTransactions'] ?? 0;
       final average = stats['averageTransaction'] ?? 0;
+      final avgDaily = stats['averageDailyRevenue'] ?? 0;
+      final showAvgDaily = _filterDate == null && orderProv.currentPeriod != ReportPeriod.daily;
 
       final modalAwal = cashProv.startingCash;
 
-      // Calculate Cash in Hand (Starting Cash + Cash Payments - Expenses)
-      final orders = stats['orders'] as List<Order>? ?? [];
-      final cashPayments = orders
-          .where((o) =>
-              o.status == OrderStatus.completed && o.paymentMethod == 'Tunai')
-          .fold(0, (sum, o) => sum + o.total);
+      final orders = stats['orders'] as List? ?? [];
+      // Support for both Order objects and Map objects from Firestore (if mixed)
+      final cashPayments = orders.fold(0, (sum, o) {
+        if (o is Order) {
+          return o.status == OrderStatus.completed && o.paymentMethod == 'Tunai' ? sum + o.total : sum;
+        } else {
+          final data = o as Map<String, dynamic>;
+          return data['status'] == 'completed' && data['paymentMethod'] == 'Tunai' ? sum + (data['total'] as int) : sum;
+        }
+      });
 
-      final qrisPayments = orders
-          .where((o) =>
-              o.status == OrderStatus.completed && o.paymentMethod == 'QRIS')
-          .fold(0, (sum, o) => sum + o.total);
+      final qrisPayments = orders.fold(0, (sum, o) {
+        if (o is Order) {
+          return o.status == OrderStatus.completed && o.paymentMethod == 'QRIS' ? sum + o.total : sum;
+        } else {
+          final data = o as Map<String, dynamic>;
+          return data['status'] == 'completed' && data['paymentMethod'] == 'QRIS' ? sum + (data['total'] as int) : sum;
+        }
+      });
 
       final grandTotalTunai = modalAwal + cashPayments - totalExpense;
       final walletCash = grandTotalTunai - 50000;
 
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(_filterDate != null ? 'Data Terfilter' : 'Hari Ini',
+          Text(_filterDate != null ? 'Data Terfilter' : currentPeriod,
               style: AppTextStyles.heading3),
-          if (_filterDate == null || _filterDate!.day == DateTime.now().day)
+          if (_filterDate == null && orderProv.currentPeriod == ReportPeriod.daily)
             TextButton.icon(
               onPressed: () => _showStartingCashDialog(modalAwal),
               icon: const Icon(Icons.edit, size: 14, color: AppColors.primary),
@@ -421,14 +505,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: 'Transaksi',
                   value: '$transactions',
                   icon: Icons.receipt_long,
-                  iconColor: AppColors.info)),
+                  iconColor: AppColors.info,
+                  subtitle: 'Jumlah Pesanan')),
           const SizedBox(width: 12),
           Expanded(
               child: StatCard(
-                  title: 'Rata-rata',
-                  value: AppFormatter.formatRupiah(average),
+                  title: showAvgDaily ? 'Rata-rata Harian' : 'Rata-rata',
+                  value: AppFormatter.formatRupiah(showAvgDaily ? avgDaily : average),
                   icon: Icons.trending_up,
-                  iconColor: AppColors.secondary)),
+                  iconColor: AppColors.secondary,
+                  subtitle: showAvgDaily ? 'Rerata Penjualan per Hari' : 'Rerata per Transaksi')),
         ]),
         const SizedBox(height: 12),
         Consumer<MenuProvider>(builder: (context, menuProv, _) {
@@ -491,13 +577,20 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Widget _buildWeeklyChart() {
+  Widget _buildDynamicChart() {
     return Consumer<OrderProvider>(builder: (context, orderProv, _) {
-      final weeklyData = orderProv.weeklyRevenue;
-      if (weeklyData.isEmpty) return const SizedBox.shrink();
-      final maxRevenue = weeklyData
+      final chartData = orderProv.weeklyRevenue;
+      if (chartData.isEmpty) return const SizedBox.shrink();
+
+      final maxRevenue = chartData
           .map((d) => (d['revenue'] as int).toDouble())
-          .reduce((a, b) => a > b ? a : b);
+          .fold(0.0, (a, b) => a > b ? a : b);
+
+      String title = 'Penjualan 7 Hari';
+      if (orderProv.currentPeriod == ReportPeriod.monthly) {
+        title = 'Penjualan Bulan Ini';
+      }
+
       return Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
@@ -505,42 +598,46 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: AppColors.border.withOpacity(0.2))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Penjualan 7 Hari', style: AppTextStyles.heading3),
+          Text(title, style: AppTextStyles.heading3),
           const SizedBox(height: 20),
           SizedBox(
-              height: 180,
+              height: 200,
               child: BarChart(BarChartData(
                 alignment: BarChartAlignment.spaceAround,
                 maxY: maxRevenue > 0 ? maxRevenue * 1.2 : 100000,
                 barTouchData: BarTouchData(
                     touchTooltipData: BarTouchTooltipData(
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                      BarTooltipItem(
-                          AppFormatter.formatCompact(rod.toY.toInt()),
-                          AppTextStyles.caption.copyWith(color: Colors.white)),
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final data = chartData[groupIndex];
+                    final date = data['date'] as DateTime;
+                    return BarTooltipItem(
+                        '${AppFormatter.formatDate(date)}\n${AppFormatter.formatRupiah(rod.toY.toInt())}',
+                        AppTextStyles.caption.copyWith(color: Colors.white, fontSize: 10));
+                  },
                 )),
                 titlesData: FlTitlesData(
                   show: true,
                   bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                           showTitles: true,
+                          interval: orderProv.currentPeriod == ReportPeriod.monthly ? 5 : 1,
                           getTitlesWidget: (value, meta) {
                             final i = value.toInt();
-                            if (i < 0 || i >= weeklyData.length)
+                            if (i < 0 || i >= chartData.length)
                               return const SizedBox();
-                            final date = weeklyData[i]['date'] as DateTime;
-                            final days = [
-                              'Sen',
-                              'Sel',
-                              'Rab',
-                              'Kam',
-                              'Jum',
-                              'Sab',
-                              'Min'
-                            ];
+                            final date = chartData[i]['date'] as DateTime;
+                            
+                            String label;
+                            if (orderProv.currentPeriod == ReportPeriod.monthly) {
+                              label = '${date.day}';
+                            } else {
+                              final days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                              label = days[date.weekday - 1];
+                            }
+                            
                             return Padding(
                                 padding: const EdgeInsets.only(top: 8),
-                                child: Text(days[date.weekday - 1],
+                                child: Text(label,
                                     style: AppTextStyles.caption
                                         .copyWith(fontSize: 10)));
                           })),
@@ -553,13 +650,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 borderData: FlBorderData(show: false),
                 gridData: const FlGridData(show: false),
-                barGroups: List.generate(weeklyData.length, (i) {
+                barGroups: List.generate(chartData.length, (i) {
                   return BarChartGroupData(x: i, barRods: [
                     BarChartRodData(
-                        toY: (weeklyData[i]['revenue'] as int).toDouble(),
-                        width: 20,
+                        toY: (chartData[i]['revenue'] as int).toDouble(),
+                        width: orderProv.currentPeriod == ReportPeriod.monthly ? 6 : 20,
                         borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(6)),
+                            top: Radius.circular(4)),
                         gradient: AppColors.primaryGradient)
                   ]);
                 }),

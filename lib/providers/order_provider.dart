@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/firestore_service.dart';
 
+enum ReportPeriod { daily, weekly, monthly }
+
 class OrderProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
 
   List<Order> _todayOrders = [];
   List<Order> _allOrders = [];
   bool _isLoading = true;
-  Map<String, dynamic> _todayStats = {};
-  List<Map<String, dynamic>> _weeklyRevenue = [];
+  
+  Map<String, dynamic> _stats = {};
+  ReportPeriod _currentPeriod = ReportPeriod.daily;
 
   StreamSubscription? _todayOrdersSub;
   StreamSubscription? _allOrdersSub;
@@ -18,17 +21,23 @@ class OrderProvider extends ChangeNotifier {
   List<Order> get todayOrders => _todayOrders;
   List<Order> get allOrders => _allOrders;
   bool get isLoading => _isLoading;
-  Map<String, dynamic> get todayStats => _todayStats;
-  List<Map<String, dynamic>> get weeklyRevenue => _weeklyRevenue;
+  
+  Map<String, dynamic> get todayStats => _stats;
+  ReportPeriod get currentPeriod => _currentPeriod;
+  List<Map<String, dynamic>> get weeklyRevenue => 
+      (_stats['chartData'] as List?)?.cast<Map<String, dynamic>>() ?? [];
 
-  int get todayRevenue => _todayStats['totalRevenue'] ?? 0;
-  int get todayTransactions => _todayStats['totalTransactions'] ?? 0;
-  int get averageTransaction => _todayStats['averageTransaction'] ?? 0;
+  int get todayRevenue => _stats['totalRevenue'] ?? 0;
+  int get todayTransactions => _stats['totalTransactions'] ?? 0;
+  int get averageTransaction => _stats['averageTransaction'] ?? 0;
 
   void init() {
     _todayOrdersSub =
         _firestoreService.streamTodayOrders().listen((List<Order> orders) {
       _todayOrders = orders;
+      if (_currentPeriod == ReportPeriod.daily) {
+        loadStats();
+      }
       _isLoading = false;
       notifyListeners();
     });
@@ -42,10 +51,38 @@ class OrderProvider extends ChangeNotifier {
     loadStats();
   }
 
+  Future<void> changePeriod(ReportPeriod period) async {
+    _currentPeriod = period;
+    _isLoading = true;
+    notifyListeners();
+    await loadStats();
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> loadStats() async {
     try {
-      _todayStats = await _firestoreService.getTodayStats();
-      _weeklyRevenue = await _firestoreService.getWeeklyRevenue();
+      final now = DateTime.now();
+      DateTime start, end;
+
+      switch (_currentPeriod) {
+        case ReportPeriod.daily:
+          start = DateTime(now.year, now.month, now.day);
+          end = start.add(const Duration(days: 1));
+          break;
+        case ReportPeriod.weekly:
+          // Start of last 7 days
+          start = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+          end = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+          break;
+        case ReportPeriod.monthly:
+          // Start of current month
+          start = DateTime(now.year, now.month, 1);
+          end = DateTime(now.year, now.month + 1, 1);
+          break;
+      }
+
+      _stats = await _firestoreService.getStatsByDateRange(start, end);
       notifyListeners();
     } catch (e) {
       debugPrint('Error loading stats: $e');

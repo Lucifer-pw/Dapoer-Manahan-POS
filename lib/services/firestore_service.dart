@@ -250,11 +250,14 @@ class FirestoreService {
   Future<Map<String, dynamic>> getStatsByDate(DateTime date) async {
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
+    return getStatsByDateRange(startOfDay, endOfDay);
+  }
 
+  Future<Map<String, dynamic>> getStatsByDateRange(DateTime start, DateTime end) async {
     final snapshot = await _ordersRef
         .where('createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-        .where('createdAt', isLessThan: Timestamp.fromDate(endOfDay))
+            isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThan: Timestamp.fromDate(end))
         .get();
 
     final allOrders = snapshot.docs
@@ -266,6 +269,9 @@ class FirestoreService {
 
     int totalRevenue = 0;
     Map<String, int> menuCount = {};
+    
+    // Group by day for chart
+    Map<String, int> dailyRevenue = {};
 
     for (final order in orders) {
       totalRevenue += order.total;
@@ -273,19 +279,39 @@ class FirestoreService {
         menuCount[item.menuItemName] =
             (menuCount[item.menuItemName] ?? 0) + item.quantity;
       }
+      
+      final dateKey = "${order.createdAt.year}-${order.createdAt.month}-${order.createdAt.day}";
+      dailyRevenue[dateKey] = (dailyRevenue[dateKey] ?? 0) + order.total;
     }
 
     // Sort by most popular
     final sortedMenu = menuCount.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
+    // Calculate chart data
+    List<Map<String, dynamic>> chartData = [];
+    int dayCount = end.difference(start).inDays;
+    if (dayCount == 0) dayCount = 1;
+
+    for (int i = 0; i < dayCount; i++) {
+      final date = start.add(Duration(days: i));
+      final key = "${date.year}-${date.month}-${date.day}";
+      chartData.add({
+        'date': date,
+        'revenue': dailyRevenue[key] ?? 0,
+      });
+    }
+
     return {
       'totalRevenue': totalRevenue,
       'totalTransactions': orders.length,
       'averageTransaction':
           orders.isEmpty ? 0 : totalRevenue ~/ orders.length,
+      'averageDailyRevenue':
+          dayCount == 0 ? totalRevenue : totalRevenue ~/ dayCount,
       'topMenuItems': sortedMenu.take(5).toList(),
-      'orders': allOrders, // Include orders for history summary
+      'orders': allOrders,
+      'chartData': chartData,
     };
   }
 
