@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/constants.dart';
 
@@ -74,17 +75,25 @@ class _MainShellState extends State<MainShell> {
               // POWERED BY
               // ============================================================
 
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Powered by LUCIFAX',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textHint.withOpacity(0.3),
-                    fontSize: 8,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.hasData 
+                      ? ' | v${snapshot.data!.version}+${snapshot.data!.buildNumber}' 
+                      : '';
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Powered by LUCIFAX$version',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textHint.withOpacity(0.3),
+                        fontSize: 8,
+                        letterSpacing: 1,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
               ),
 
               // ============================================================

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
@@ -142,15 +143,24 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               );
             }),
             const SizedBox(height: 40),
+
             Center(
-              child: Text(
-                'Powered by LUCIFAX',
-                style: AppTextStyles.caption.copyWith(
-                  color: AppColors.textHint.withOpacity(0.5),
-                  letterSpacing: 2,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10,
-                ),
+              child: FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final version = snapshot.hasData 
+                      ? ' | v${snapshot.data!.version}+${snapshot.data!.buildNumber}' 
+                      : '';
+                  return Text(
+                    'Powered by LUCIFAX$version',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textHint.withOpacity(0.5),
+                      letterSpacing: 1,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 20),

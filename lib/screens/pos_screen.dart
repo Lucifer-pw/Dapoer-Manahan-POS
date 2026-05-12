@@ -14,6 +14,7 @@ import 'payment_screen.dart';
 import '../providers/draft_provider.dart';
 import '../models/draft_order.dart';
 import '../widgets/drafts_dialog.dart';
+import '../providers/order_provider.dart';
 import 'package:uuid/uuid.dart';
 
 class PosScreen extends StatefulWidget {
