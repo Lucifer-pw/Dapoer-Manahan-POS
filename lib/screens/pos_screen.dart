@@ -45,7 +45,21 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _showDrinkOptionsDialog(MenuItem item, CartProvider cartProv) {
-    final options = ['Teh Anget', 'Esteh', 'Air Mineral'];
+    final menuProv = Provider.of<MenuProvider>(context, listen: false);
+
+    // Ambil opsi dinamis dari kategori "Botolan"
+    final botolanCatIds = menuProv.categories
+        .where((c) => c.name.toLowerCase().contains('botol'))
+        .map((c) => c.id)
+        .toList();
+
+    final dynamicOptions = menuProv.allMenuItems
+        .where((m) => botolanCatIds.contains(m.categoryId) && m.isAvailable)
+        .map((m) => m.name)
+        .toList();
+
+    // Gabungkan dengan opsi tetap (Teh Anget, Esteh)
+    final options = ['Teh Anget', 'Esteh', ...dynamicOptions].toSet().toList();
     
     showDialog(
       context: context,

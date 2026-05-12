@@ -558,21 +558,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
               bool isFromBotolanCat = item.categoryId != null &&
                   botolanCatId.contains(item.categoryId);
-              bool isAirMineralPaket = item.categoryId != null &&
+              bool isBotolPaket = item.categoryId != null &&
                   paketCatId.contains(item.categoryId) &&
-                  variant.contains('air mineral');
+                  (variant.contains('air mineral') ||
+                      variant.contains('teh botol') ||
+                      variant.contains('fruitea') ||
+                      variant.contains('fruit tea') ||
+                      variant.contains('tebs'));
 
-              if (isFromBotolanCat || isAirMineralPaket) {
+              if (isFromBotolanCat || isBotolPaket) {
                 totalBotol += qty;
 
-                if (itemName.contains('air mineral') || isAirMineralPaket) {
+                if (itemName.contains('air mineral') ||
+                    variant.contains('air mineral')) {
                   countAirMineral += qty;
-                } else if (itemName.contains('fruitea')) {
+                } else if (itemName.contains('fruitea') ||
+                    variant.contains('fruitea') ||
+                    variant.contains('fruit tea')) {
                   countFruitea += qty;
                 } else if (itemName.contains('teh botol') ||
-                    itemName.contains('sosro')) {
+                    itemName.contains('sosro') ||
+                    variant.contains('teh botol')) {
                   countTehBotol += qty;
-                } else if (itemName.contains('tebs')) {
+                } else if (itemName.contains('tebs') ||
+                    variant.contains('tebs')) {
                   countTebs += qty;
                 }
               }
