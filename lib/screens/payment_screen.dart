@@ -276,7 +276,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
       isTakeAway: cart.isTakeAway,
     );
 
-    final completedOrder = await orderProv.createOrder(order);
+    final completedOrder = await orderProv.createOrder(
+      order, 
+      sequenceNumber: cart.activeDraftNumber,
+    );
     
     // Update table status if not takeaway
     if (!cart.isTakeAway) {

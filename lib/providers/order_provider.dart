@@ -60,10 +60,10 @@ class OrderProvider extends ChangeNotifier {
     return await _firestoreService.getNextOrderSequence();
   }
 
-  Future<Order> createOrder(Order order) async {
-    // Get next sequence number (continuous)
-    final nextSeq = await _firestoreService.getNextOrderSequence();
-    final orderWithSeq = order.withSequenceNumber(nextSeq);
+  Future<Order> createOrder(Order order, {int? sequenceNumber}) async {
+    // Gunakan nomor urut manual (dari draf) jika ada, jika tidak baru ambil dari database
+    final seq = sequenceNumber ?? await _firestoreService.getNextOrderSequence();
+    final orderWithSeq = order.withSequenceNumber(seq);
     
     final orderId = await _firestoreService.createOrder(orderWithSeq);
     await loadStats(); // Refresh stats
