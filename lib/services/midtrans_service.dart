@@ -46,6 +46,13 @@ class MidtransService {
     String? customerName,
     String? customerEmail,
   }) async {
+    // Validasi Kunci
+    if (merchantId.isEmpty || _serverKey.isEmpty || clientKey.isEmpty) {
+      throw MidtransException(
+        'Konfigurasi Midtrans tidak lengkap. Pastikan Merchant ID, Server Key, dan Client Key sudah diatur di GitHub Secrets.',
+      );
+    }
+
     // Generate unique order ID berdasarkan timestamp
     final orderId = 'BILLING-${DateTime.now().millisecondsSinceEpoch}';
 

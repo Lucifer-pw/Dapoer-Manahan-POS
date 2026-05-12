@@ -21,7 +21,7 @@ jobs:
       - name: Create Placeholder Config
         run: |
           mkdir -p lib/config
-          echo "class MidtransConfig { static const String merchantId = ''; static const String serverKey = ''; static const String clientKey = ''; }" > lib/config/midtrans_config.dart
+          echo "class MidtransConfig { static const String merchantId = '${{ secrets.MIDTRANS_MERCHANT_ID }}'; static const String serverKey = '${{ secrets.MIDTRANS_SERVER_KEY }}'; static const String clientKey = '${{ secrets.MIDTRANS_CLIENT_KEY }}'; }" > lib/config/midtrans_config.dart
 
       - name: Setup Java
         uses: actions/setup-java@v4
