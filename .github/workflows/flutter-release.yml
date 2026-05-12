@@ -18,11 +18,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Create Placeholder Config
-        run: |
-          mkdir -p lib/config
-          echo "class MidtransConfig { static const String merchantId = '${{ secrets.MIDTRANS_MERCHANT_ID }}'; static const String serverKey = '${{ secrets.MIDTRANS_SERVER_KEY }}'; static const String clientKey = '${{ secrets.MIDTRANS_CLIENT_KEY }}'; }" > lib/config/midtrans_config.dart
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -49,7 +44,11 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
 
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+            --dart-define=MIDTRANS_MERCHANT_ID=${{ secrets.MIDTRANS_MERCHANT_ID }} \
+            --dart-define=MIDTRANS_SERVER_KEY=${{ secrets.MIDTRANS_SERVER_KEY }} \
+            --dart-define=MIDTRANS_CLIENT_KEY=${{ secrets.MIDTRANS_CLIENT_KEY }}
         env:
           STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}

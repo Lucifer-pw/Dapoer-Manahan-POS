@@ -1,18 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import '../config/midtrans_config.dart';
 
 /// Service untuk integrasi Midtrans Snap API
 /// Membuat transaksi pembayaran billing otomatis Rp 50.000
 class MidtransService {
   // ============================================================
-  // CREDENTIALS (dari config file yang di-gitignore)
+  // CREDENTIALS
   // ============================================================
-
-  static const String merchantId = MidtransConfig.merchantId;
-  static const String _serverKey = MidtransConfig.serverKey;
-  static const String clientKey = MidtransConfig.clientKey;
+  static const String merchantId = String.fromEnvironment('MIDTRANS_MERCHANT_ID', defaultValue: '');
+  static const String _serverKey = String.fromEnvironment('MIDTRANS_SERVER_KEY', defaultValue: '');
+  static const String clientKey = String.fromEnvironment('MIDTRANS_CLIENT_KEY', defaultValue: '');
 
   /// Set ke true untuk testing dengan Sandbox environment
   /// Set ke false untuk Production (transaksi nyata)
