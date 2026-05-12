@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import '../providers/printer_provider.dart';
 import '../utils/constants.dart';
 

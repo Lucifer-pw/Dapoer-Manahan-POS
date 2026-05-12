@@ -11,8 +11,8 @@ class UpdateDialog {
     return showDialog(
       context: context,
       barrierDismissible: !info.forceUpdate,
-      builder: (_) => WillPopScope(
-        onWillPop: () async => !info.forceUpdate,
+      builder: (_) => PopScope(
+        canPop: !info.forceUpdate,
         child: AlertDialog(
           title: const Text(
             '🚀 Update Tersedia',

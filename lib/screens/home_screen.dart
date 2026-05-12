@@ -6,10 +6,9 @@ import '../providers/order_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/starting_cash_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../providers/menu_provider.dart';
 import '../models/order.dart';
-import '../models/menu_item.dart';
-import '../models/table_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/stat_card.dart';
@@ -79,11 +78,14 @@ class _HomeScreenState extends State<HomeScreen> {
             Provider.of<StartingCashProvider>(context, listen: false);
 
         final stats = await orderProv.getStatsForDate(picked);
+        if (!mounted) return;
         await cashProv.loadStartingCash(picked);
+        if (!mounted) return;
 
         final start = DateTime(picked.year, picked.month, picked.day);
         final end = start.add(const Duration(days: 1));
         final expenses = await expenseProv.getExpensesByDateRange(start, end);
+        if (!mounted) return;
         final totalExpense = expenses.fold(0, (sum, e) => sum + e.price);
 
         setState(() {
@@ -482,6 +484,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: 'Total Belanja',
                   value: AppFormatter.formatRupiah(totalExpense),
                   icon: Icons.shopping_bag,
+                  onTap: () {
+                    Provider.of<NavigationProvider>(context, listen: false).setIndex(4);
+                  },
                   iconColor: AppColors.error)),
         ]),
         const SizedBox(height: 12),

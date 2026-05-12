@@ -8,6 +8,7 @@ class StatCard extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
   final LinearGradient? gradient;
+  final VoidCallback? onTap;
 
   const StatCard({
     super.key,
@@ -17,18 +18,29 @@ class StatCard extends StatelessWidget {
     required this.icon,
     this.iconColor,
     this.gradient,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: gradient ?? AppColors.cardGradient,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.border.withOpacity(0.2)),
-        boxShadow: AppShadows.card,
-      ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: gradient ?? AppColors.cardGradient,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: (isDark ? AppColors.border : AppColors.borderLightMode).withOpacity(0.2)),
+          boxShadow: isDark ? AppShadows.card : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,6 +67,7 @@ class StatCard extends StatelessWidget {
             style: AppTextStyles.heading2.copyWith(
               fontSize: 22,
               fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.textPrimary : AppColors.textPrimaryLight,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -62,7 +75,10 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: AppTextStyles.caption.copyWith(fontSize: 12),
+            style: AppTextStyles.caption.copyWith(
+              fontSize: 12,
+              color: isDark ? AppColors.textSecondary : AppColors.textSecondaryLight,
+            ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
@@ -75,6 +91,7 @@ class StatCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
       ),
     );
   }

@@ -21,6 +21,18 @@ class AppColors {
   static const Color card = Color(0xFF252540);
   static const Color cardHover = Color(0xFF2E2E4A);
 
+  // Constants for Theme Definition
+  static const Color backgroundDark = Color(0xFF0F0F1A);
+  static const Color backgroundLight = Color(0xFFF5F5F7);
+  static const Color surfaceDark = Color(0xFF1A1A2E);
+  static const Color surfaceLight = Color(0xFFFFFFFF);
+  static const Color cardDark = Color(0xFF252540);
+  static const Color cardLight = Color(0xFFFFFFFF);
+  static const Color textPrimaryDark = Color(0xFFFFFFFF);
+  static const Color textPrimaryLight = Color(0xFF1A1A2E);
+  static const Color textSecondaryDark = Color(0xFFB0B0C0);
+  static const Color textSecondaryLight = Color(0xFF6E6E80);
+
   // Status
   static const Color success = Color(0xFF4CAF50);
   static const Color successLight = Color(0xFF66BB6A);
@@ -37,7 +49,9 @@ class AppColors {
 
   // Border
   static const Color border = Color(0xFF333355);
-  static const Color borderLight = Color(0xFF444466);
+  static const Color borderLighter = Color(0xFF444466);
+  static const Color borderLightMode = Color(0xFFE0E0E0);
+
 
   // Gradient
   static const LinearGradient primaryGradient = LinearGradient(
@@ -57,6 +71,65 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+}
+
+class AppTheme {
+  static ThemeData get darkTheme => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: AppColors.backgroundDark,
+        primaryColor: AppColors.primary,
+        colorScheme: const ColorScheme.dark(
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.surfaceDark,
+          error: AppColors.error,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.surfaceDark,
+          elevation: 0,
+          centerTitle: false,
+        ),
+        cardTheme: CardTheme(
+          color: AppColors.cardDark,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      );
+
+  static ThemeData get lightTheme => ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: AppColors.backgroundLight,
+        primaryColor: AppColors.primary,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.surfaceLight,
+          error: AppColors.error,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.surfaceLight,
+          elevation: 0,
+          centerTitle: false,
+          iconTheme: IconThemeData(color: AppColors.textPrimaryLight),
+          titleTextStyle: TextStyle(
+            color: AppColors.textPrimaryLight,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        cardTheme: CardTheme(
+          color: AppColors.cardLight,
+          elevation: 2,
+          shadowColor: Colors.black.withOpacity(0.1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      );
 }
 
 class AppTextStyles {

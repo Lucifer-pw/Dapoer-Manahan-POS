@@ -13,6 +13,8 @@ import 'providers/settings_provider.dart';
 import 'providers/expense_provider.dart';
 import 'providers/starting_cash_provider.dart';
 import 'providers/draft_provider.dart';
+import 'providers/theme_provider.dart';
+import 'providers/navigation_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
@@ -52,29 +54,20 @@ class DapoerManahanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ExpenseProvider()..init()),
         ChangeNotifierProvider(create: (_) => StartingCashProvider()..loadStartingCash(DateTime.now())),
         ChangeNotifierProvider(create: (_) => DraftProvider()..fetchDrafts()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => NavigationProvider()),
       ],
-      child: MaterialApp(
-        title: DefaultData.restaurantName,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: AppColors.background,
-          primaryColor: AppColors.primary,
-          colorScheme: const ColorScheme.dark(
-            primary: AppColors.primary,
-            secondary: AppColors.secondary,
-            surface: AppColors.surface,
-            background: AppColors.background,
-            error: AppColors.error,
-          ),
-          appBarTheme: const AppBarTheme(
-            backgroundColor: AppColors.surface,
-            elevation: 0,
-            centerTitle: false,
-          ),
-        ),
-        home: const SplashScreen(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProv, _) {
+          return MaterialApp(
+            title: DefaultData.restaurantName,
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProv.themeMode,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }

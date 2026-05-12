@@ -6,7 +6,6 @@ import '../providers/auth_provider.dart';
 import '../providers/table_provider.dart';
 import '../providers/draft_provider.dart';
 import '../models/order.dart';
-import '../models/table_model.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/custom_numpad.dart';

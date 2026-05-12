@@ -9,6 +9,8 @@ import 'table_screen.dart';
 import 'menu_management_screen.dart';
 import 'order_history_screen.dart';
 import 'expense_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/navigation_provider.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -18,7 +20,7 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 0;
+  late PageController _pageController;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -36,6 +38,27 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    final navProv = Provider.of<NavigationProvider>(context, listen: false);
+    _pageController = PageController(initialPage: navProv.currentIndex);
+    
+    // Sync PageController when index changes from outside
+    navProv.addListener(() {
+      if (_pageController.hasClients) {
+        if (_pageController.page?.round() != navProv.currentIndex) {
+          _pageController.animateToPage(
+            navProv.currentIndex,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   // ============================================================
@@ -44,13 +67,18 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: Container(
+    return Consumer<NavigationProvider>(
+      builder: (context, navProv, _) {
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              navProv.setIndex(index);
+            },
+            children: _screens,
+          ),
+          bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border(
@@ -112,31 +140,37 @@ class _MainShellState extends State<MainShell> {
                       0,
                       Icons.dashboard_rounded,
                       'Dashboard',
+                      navProv,
                     ),
                     _buildNavItem(
                       1,
                       Icons.point_of_sale_rounded,
                       'Kasir',
+                      navProv,
                     ),
                     _buildNavItem(
                       2,
                       Icons.table_restaurant_rounded,
                       'Meja',
+                      navProv,
                     ),
                     _buildNavItem(
                       3,
                       Icons.restaurant_menu_rounded,
                       'Menu',
+                      navProv,
                     ),
                     _buildNavItem(
                       4,
                       Icons.shopping_cart_rounded,
                       'Belanja',
+                      navProv,
                     ),
                     _buildNavItem(
                       5,
                       Icons.receipt_long_rounded,
                       'Riwayat',
+                      navProv,
                     ),
                   ],
                 ),
@@ -144,7 +178,9 @@ class _MainShellState extends State<MainShell> {
             ],
           ),
         ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -156,14 +192,18 @@ class _MainShellState extends State<MainShell> {
     int index,
     IconData icon,
     String label,
+    NavigationProvider navProv,
   ) {
-    final isSelected = _currentIndex == index;
+    final isSelected = navProv.currentIndex == index;
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _currentIndex = index;
-        });
+        navProv.setIndex(index);
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(

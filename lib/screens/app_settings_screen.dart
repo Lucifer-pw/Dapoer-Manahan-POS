@@ -3,6 +3,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/theme_provider.dart';
 import '../utils/constants.dart';
 import 'admin_billing_screen.dart';
 import 'billing_history_screen.dart';
@@ -51,6 +52,24 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     }
   }
 
+  Widget _buildThemeTile(
+    BuildContext context,
+    String title,
+    IconData icon,
+    ThemeMode mode,
+    ThemeProvider themeProv,
+  ) {
+    final isSelected = themeProv.themeMode == mode;
+    return ListTile(
+      onTap: () => themeProv.setThemeMode(mode),
+      leading: Icon(icon, color: isSelected ? AppColors.primary : AppColors.textHint),
+      title: Text(title, style: AppTextStyles.body),
+      trailing: isSelected 
+        ? const Icon(Icons.check_circle_rounded, color: AppColors.primary)
+        : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -64,6 +83,46 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildSectionHeader('Tampilan'),
+            const SizedBox(height: 16),
+            Consumer<ThemeProvider>(
+              builder: (context, themeProv, _) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardTheme.color ?? AppColors.card,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildThemeTile(
+                        context,
+                        'Tema Terang',
+                        Icons.light_mode_rounded,
+                        ThemeMode.light,
+                        themeProv,
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      _buildThemeTile(
+                        context,
+                        'Tema Gelap',
+                        Icons.dark_mode_rounded,
+                        ThemeMode.dark,
+                        themeProv,
+                      ),
+                      const Divider(height: 1, indent: 56),
+                      _buildThemeTile(
+                        context,
+                        'Ikuti Sistem HP',
+                        Icons.settings_brightness_rounded,
+                        ThemeMode.system,
+                        themeProv,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
             _buildSectionHeader('Informasi WiFi'),
             const SizedBox(height: 16),
             _buildTextField(
