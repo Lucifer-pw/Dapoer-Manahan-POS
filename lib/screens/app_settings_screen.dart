@@ -252,7 +252,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         ),
         title: Text(title, style: AppTextStyles.subtitle),
         subtitle: Text(subtitle, style: AppTextStyles.caption),
-        trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
+        trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
       ),
     );
   }

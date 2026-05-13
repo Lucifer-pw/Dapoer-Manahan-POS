@@ -139,10 +139,10 @@ class _PosScreenState extends State<PosScreen> {
                 decoration: InputDecoration(
                   hintText: 'Cari menu...',
                   hintStyle: AppTextStyles.caption,
-                  prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textHint),
+                  prefixIcon: Icon(Icons.search, size: 18, color: AppColors.textHint),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18, color: AppColors.textHint),
+                          icon: Icon(Icons.clear, size: 18, color: AppColors.textHint),
                           onPressed: () {
                             _searchController.clear();
                             Provider.of<MenuProvider>(context, listen: false).setSearchQuery('');
@@ -180,7 +180,7 @@ class _PosScreenState extends State<PosScreen> {
         child: Consumer2<MenuProvider, CartProvider>(builder: (context, menuProv, cartProv, _) {
           final items = menuProv.availableMenuItems;
           if (menuProv.isLoading) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
           if (items.isEmpty) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -228,7 +228,7 @@ class _PosScreenState extends State<PosScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(children: [
-              const Icon(Icons.shopping_cart, color: AppColors.primary, size: 20),
+              Icon(Icons.shopping_cart, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text('Pesanan', style: AppTextStyles.heading3),
               const Spacer(),
@@ -251,12 +251,12 @@ class _PosScreenState extends State<PosScreen> {
                   hint: Text('Pilih Meja', style: AppTextStyles.bodySecondary.copyWith(fontSize: 13)),
                   isExpanded: true,
                   dropdownColor: AppColors.card,
-                  icon: const Icon(Icons.arrow_drop_down, color: AppColors.textHint),
+                  icon: Icon(Icons.arrow_drop_down, color: AppColors.textHint),
                   items: [
                     DropdownMenuItem(
                       value: -1,
                       child: Row(children: [
-                        const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
+                        Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text('Dibawa Pulang (Take Away)', style: AppTextStyles.subtitle.copyWith(fontSize: 13, color: AppColors.primary)),
                       ]),

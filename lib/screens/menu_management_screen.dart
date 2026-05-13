@@ -47,7 +47,7 @@ class MenuManagementScreen extends StatelessWidget {
                   onChanged: (value) => menuProv.setSearchQuery(value),
                   decoration: InputDecoration(
                     hintText: 'Cari menu...',
-                    prefixIcon: const Icon(Icons.search, color: AppColors.textHint),
+                    prefixIcon: Icon(Icons.search, color: AppColors.textHint),
                     filled: true,
                     fillColor: AppColors.surface,
                     border: OutlineInputBorder(
@@ -128,7 +128,7 @@ class MenuManagementScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   child: Image.network(item.imageUrl, fit: BoxFit.cover),
                 )
-              : const Icon(Icons.fastfood, color: AppColors.textHint),
+              : Icon(Icons.fastfood, color: AppColors.textHint),
         ),
         title: Text(item.name, style: AppTextStyles.subtitle),
         subtitle: Column(

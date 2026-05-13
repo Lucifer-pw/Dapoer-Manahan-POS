@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -59,6 +60,13 @@ class DapoerManahanApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProv, _) {
+          // Sync AppColors with current theme
+          final Brightness platformBrightness = PlatformDispatcher.instance.platformBrightness;
+          final bool isSystemDark = platformBrightness == Brightness.dark;
+          final bool isDark = themeProv.themeMode == ThemeMode.dark || 
+                            (themeProv.themeMode == ThemeMode.system && isSystemDark);
+          AppColors.setDarkMode(isDark);
+
           return MaterialApp(
             title: DefaultData.restaurantName,
             debugShowCheckedModeBanner: false,

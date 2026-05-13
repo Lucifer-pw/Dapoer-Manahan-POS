@@ -252,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(
                     builder: (_) => const PrinterSettingsScreen()));
           },
-          icon: const Icon(Icons.print_rounded,
+          icon: Icon(Icons.print_rounded,
               color: AppColors.textHint, size: 22),
           tooltip: 'Pengaturan Printer',
         ),
@@ -269,7 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
           },
-          icon: const Icon(Icons.settings_rounded,
+          icon: Icon(Icons.settings_rounded,
               color: AppColors.textHint, size: 22),
           tooltip: 'Pengaturan Aplikasi',
         ),
@@ -302,7 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             }
           },
-          icon: const Icon(Icons.logout_rounded,
+          icon: Icon(Icons.logout_rounded,
               color: AppColors.textHint, size: 22),
           tooltip: 'Keluar',
         ),

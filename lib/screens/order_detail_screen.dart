@@ -97,7 +97,7 @@ class OrderDetailScreen extends StatelessWidget {
                       ],
                     ),
                   )),
-                  const Divider(color: AppColors.border, height: 32),
+                  Divider(color: AppColors.border, height: 32),
                   _buildTotalRow('Subtotal', AppFormatter.formatRupiah(order.subtotal)),
                   if (order.tax > 0) _buildTotalRow('Pajak', AppFormatter.formatRupiah(order.tax)),
                   const SizedBox(height: 8),

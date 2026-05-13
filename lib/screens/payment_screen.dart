@@ -39,7 +39,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
         title: Text('Pembayaran', style: AppTextStyles.heading3),
         centerTitle: true,
       ),
@@ -68,7 +68,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     Text(AppFormatter.formatRupiah(item.subtotal), style: AppTextStyles.body.copyWith(fontSize: 13)),
                   ]),
                 )),
-                const Divider(color: AppColors.border, height: 20),
+                Divider(color: AppColors.border, height: 20),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('TOTAL', style: AppTextStyles.heading3),
                   Text(AppFormatter.formatRupiah(cart.total), style: AppTextStyles.price.copyWith(fontSize: 22)),
@@ -204,7 +204,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       height: 200,
                       fit: BoxFit.contain,
                       errorBuilder: (context, error, stackTrace) {
-                        return const Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary);
+                        return Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary);
                       },
                     ),
                     const SizedBox(height: 16),

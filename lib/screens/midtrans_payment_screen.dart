@@ -302,7 +302,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
         backgroundColor: AppColors.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: Icon(Icons.close, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Pembayaran Billing', style: AppTextStyles.heading3),
@@ -310,7 +310,7 @@ class _MidtransPaymentScreenState extends State<MidtransPaymentScreen> {
         actions: [
           if (_paymentUrl != null)
             IconButton(
-              icon: const Icon(Icons.refresh, color: AppColors.textHint),
+              icon: Icon(Icons.refresh, color: AppColors.textHint),
               onPressed: () => _webViewController?.reload(),
               tooltip: 'Refresh',
             ),

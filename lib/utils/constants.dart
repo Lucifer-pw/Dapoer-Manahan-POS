@@ -6,6 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 // ============================================================
 
 class AppColors {
+  static bool _isDark = true;
+  static void setDarkMode(bool value) => _isDark = value;
+  static bool get isDark => _isDark;
+
   // Primary palette
   static const Color primary = Color(0xFFFF6B35);
   static const Color primaryLight = Color(0xFFFF8A5C);
@@ -16,10 +20,10 @@ class AppColors {
   static const Color secondaryLight = Color(0xFFFFCC80);
 
   // Background
-  static const Color background = Color(0xFF0F0F1A);
-  static const Color surface = Color(0xFF1A1A2E);
-  static const Color card = Color(0xFF252540);
-  static const Color cardHover = Color(0xFF2E2E4A);
+  static Color get background => _isDark ? backgroundDark : backgroundLight;
+  static Color get surface => _isDark ? surfaceDark : surfaceLight;
+  static Color get card => _isDark ? cardDark : cardLight;
+  static Color get cardHover => _isDark ? (isDark ? const Color(0xFF2E2E4A) : const Color(0xFFF0F0F0)) : const Color(0xFFF0F0F0);
 
   // Constants for Theme Definition
   static const Color backgroundDark = Color(0xFF0F0F1A);
@@ -43,30 +47,36 @@ class AppColors {
   static const Color info = Color(0xFF42A5F5);
 
   // Text
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0B0C0);
-  static const Color textHint = Color(0xFF6E6E80);
+  static Color get textPrimary => _isDark ? textPrimaryDark : textPrimaryLight;
+  static Color get textSecondary => _isDark ? textSecondaryDark : textSecondaryLight;
+  static Color get textHint => _isDark ? const Color(0xFF6E6E80) : const Color(0xFF9E9E9E);
 
   // Border
-  static const Color border = Color(0xFF333355);
-  static const Color borderLighter = Color(0xFF444466);
-  static const Color borderLightMode = Color(0xFFE0E0E0);
+  static Color get border => _isDark ? const Color(0xFF333355) : const Color(0xFFE0E0E0);
+  static Color get borderLighter => _isDark ? const Color(0xFF444466) : const Color(0xFFEEEEEE);
+  static Color get borderLightMode => const Color(0xFFE0E0E0);
 
 
   // Gradient
-  static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, Color(0xFFFF8A5C)],
+  static LinearGradient get primaryGradient => LinearGradient(
+    colors: [primary, _isDark ? const Color(0xFFFF8A5C) : const Color(0xFFE05A2B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const LinearGradient cardGradient = LinearGradient(
-    colors: [Color(0xFF1E1E38), Color(0xFF252545)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  static LinearGradient get cardGradient => _isDark 
+    ? const LinearGradient(
+        colors: [Color(0xFF1E1E38), Color(0xFF252545)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      )
+    : const LinearGradient(
+        colors: [Color(0xFFFFFFFF), Color(0xFFF0F0F5)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
-  static const LinearGradient successGradient = LinearGradient(
+  static LinearGradient get successGradient => const LinearGradient(
     colors: [Color(0xFF43A047), Color(0xFF66BB6A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -104,10 +114,12 @@ class AppTheme {
         brightness: Brightness.light,
         scaffoldBackgroundColor: AppColors.backgroundLight,
         primaryColor: AppColors.primary,
+        dividerColor: AppColors.textSecondaryLight.withOpacity(0.1),
         colorScheme: const ColorScheme.light(
           primary: AppColors.primary,
           secondary: AppColors.secondary,
           surface: AppColors.surfaceLight,
+          onSurface: AppColors.textPrimaryLight,
           error: AppColors.error,
         ),
         appBarTheme: const AppBarTheme(
@@ -124,10 +136,32 @@ class AppTheme {
         cardTheme: CardTheme(
           color: AppColors.cardLight,
           elevation: 2,
-          shadowColor: Colors.black.withOpacity(0.1),
+          shadowColor: Colors.black.withOpacity(0.05),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.backgroundLight,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1),
+          ),
+          hintStyle: const TextStyle(color: AppColors.textSecondaryLight),
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme().copyWith(
+          bodyLarge: const TextStyle(color: AppColors.textPrimaryLight),
+          bodyMedium: const TextStyle(color: AppColors.textPrimaryLight),
+          titleLarge: const TextStyle(color: AppColors.textPrimaryLight, fontWeight: FontWeight.bold),
         ),
       );
 }

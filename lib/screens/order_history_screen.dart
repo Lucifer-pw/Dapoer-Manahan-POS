@@ -274,8 +274,8 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                 Text('Meja ${order.tableNumber}', style: AppTextStyles.caption),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Divider(color: AppColors.border, height: 1),
             ),
             Row(

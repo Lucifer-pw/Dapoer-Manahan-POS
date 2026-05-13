@@ -144,7 +144,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   labelText: 'Email',
                   labelStyle:
                       AppTextStyles.bodySecondary.copyWith(fontSize: 14),
-                  prefixIcon: const Icon(Icons.email_outlined,
+                  prefixIcon: Icon(Icons.email_outlined,
                       color: AppColors.textHint, size: 20),
                   filled: true,
                   fillColor: AppColors.card,
