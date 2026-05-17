@@ -351,6 +351,65 @@ class FirestoreService {
   }
 
   // ============================================================
+  // BEST SELLER ANALYTICS
+  // ============================================================
+
+  Future<Map<String, dynamic>> getBestSellersByDateRange(
+      DateTime start, DateTime end) async {
+    final snapshot = await _ordersRef
+        .where('createdAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThan: Timestamp.fromDate(end))
+        .get();
+
+    final allOrders = snapshot.docs
+        .map((doc) =>
+            app.Order.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+        .toList();
+
+    final completedOrders =
+        allOrders.where((o) => o.status.name == 'completed').toList();
+
+    // Aggregate item data
+    Map<String, Map<String, dynamic>> menuAgg = {};
+    int totalItemsSold = 0;
+    int totalRevenue = 0;
+
+    for (final order in completedOrders) {
+      totalRevenue += order.total;
+      for (final item in order.items) {
+        totalItemsSold += item.quantity;
+        final key = item.menuItemName;
+        if (menuAgg.containsKey(key)) {
+          menuAgg[key]!['quantity'] =
+              (menuAgg[key]!['quantity'] as int) + item.quantity;
+          menuAgg[key]!['revenue'] =
+              (menuAgg[key]!['revenue'] as int) + item.subtotal;
+        } else {
+          menuAgg[key] = {
+            'name': item.menuItemName,
+            'menuItemId': item.menuItemId,
+            'quantity': item.quantity,
+            'revenue': item.subtotal,
+          };
+        }
+      }
+    }
+
+    // Sort by quantity descending
+    final bestSellers = menuAgg.values.toList()
+      ..sort((a, b) =>
+          (b['quantity'] as int).compareTo(a['quantity'] as int));
+
+    return {
+      'bestSellers': bestSellers,
+      'totalItemsSold': totalItemsSold,
+      'totalRevenue': totalRevenue,
+      'totalTransactions': completedOrders.length,
+    };
+  }
+
+  // ============================================================
   // BILLING / SUBSCRIPTION
   // ============================================================
 
