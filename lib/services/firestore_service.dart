@@ -667,4 +667,21 @@ class FirestoreService {
   Future<void> deleteSalaryPayment(String id) async {
     await _db.collection('salary_payments').doc(id).delete();
   }
+
+  /// Get total paid amount for a specific cashier in a month/year
+  Future<int> getTotalPaidForCashier(
+      String cashierName, int month, int year) async {
+    final snapshot = await _db
+        .collection('salary_payments')
+        .where('cashierName', isEqualTo: cashierName)
+        .where('month', isEqualTo: month)
+        .where('year', isEqualTo: year)
+        .get();
+
+    int total = 0;
+    for (final doc in snapshot.docs) {
+      total += (doc.data()['nominal'] as int? ?? 0);
+    }
+    return total;
+  }
 }
