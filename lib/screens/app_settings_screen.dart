@@ -7,6 +7,7 @@ import '../providers/theme_provider.dart';
 import '../utils/constants.dart';
 import 'admin_billing_screen.dart';
 import 'billing_history_screen.dart';
+import 'salary_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -195,6 +196,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const AdminBillingScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSettingsTile(
+                    icon: Icons.payments_rounded,
+                    title: 'Kelola Gaji Karyawan',
+                    subtitle: 'Cek hari kerja & bayar gaji kasir',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SalaryScreen()),
                       );
                     },
                   ),

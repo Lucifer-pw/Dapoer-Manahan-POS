@@ -589,4 +589,82 @@ class FirestoreService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  // ============================================================
+  // SALARY / GAJI KARYAWAN
+  // ============================================================
+
+  /// Count unique working days for a cashier in a date range
+  Future<Map<String, dynamic>> getWorkingDays(
+      String cashierName, DateTime start, DateTime end) async {
+    final snapshot = await _ordersRef
+        .where('cashierName', isEqualTo: cashierName)
+        .where('createdAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+        .where('createdAt', isLessThan: Timestamp.fromDate(end))
+        .get();
+
+    final completedOrders = snapshot.docs.where((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['status'] == 'completed';
+    }).toList();
+
+    // Count unique days
+    Set<String> uniqueDays = {};
+    for (final doc in completedOrders) {
+      final data = doc.data() as Map<String, dynamic>;
+      final ts = data['createdAt'] as Timestamp;
+      final date = ts.toDate();
+      uniqueDays.add("${date.year}-${date.month}-${date.day}");
+    }
+
+    return {
+      'workingDays': uniqueDays.length,
+      'totalTransactions': completedOrders.length,
+      'dates': uniqueDays.toList(),
+    };
+  }
+
+  /// Get all unique cashier names from orders
+  Future<List<String>> getAllCashierNames() async {
+    final snapshot = await _ordersRef
+        .where('status', isEqualTo: 'completed')
+        .get();
+
+    Set<String> names = {};
+    for (final doc in snapshot.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final name = data['cashierName'] as String?;
+      if (name != null && name.isNotEmpty) {
+        names.add(name);
+      }
+    }
+    return names.toList()..sort();
+  }
+
+  /// Save a salary payment record
+  Future<void> addSalaryPayment(Map<String, dynamic> data) async {
+    await _db.collection('salary_payments').add({
+      ...data,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Stream salary payments
+  Stream<List<Map<String, dynamic>>> streamSalaryPayments() {
+    return _db
+        .collection('salary_payments')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  /// Delete salary payment
+  Future<void> deleteSalaryPayment(String id) async {
+    await _db.collection('salary_payments').doc(id).delete();
+  }
 }

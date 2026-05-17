@@ -17,6 +17,7 @@ import 'printer_settings_screen.dart';
 import 'app_settings_screen.dart';
 import 'billing_screen.dart';
 import 'best_seller_screen.dart';
+import 'salary_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -198,7 +199,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildStatsSection(),
               const SizedBox(height: 20),
               _buildBestSellerBanner(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+              Consumer<AuthProvider>(builder: (context, auth, _) {
+                if (!auth.isAdmin) return const SizedBox.shrink();
+                return Column(children: [
+                  _buildSalaryBanner(),
+                  const SizedBox(height: 20),
+                ]);
+              }),
               if (_filterDate == null) ...[
                 _buildDynamicChart(),
                 const SizedBox(height: 20),
@@ -850,6 +858,74 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: AppColors.primary,
                 size: 16,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSalaryBanner() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SalaryScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xFF42A5F5).withOpacity(0.15),
+              const Color(0xFF66BB6A).withOpacity(0.08),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.info.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF42A5F5), Color(0xFF1E88E5)],
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.info.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.payments_rounded, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Gaji Karyawan 💰',
+                    style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 2),
+                  Text('Kelola gaji & cek hari kerja kasir',
+                    style: AppTextStyles.caption.copyWith(fontSize: 11)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.info, size: 16),
             ),
           ],
         ),
