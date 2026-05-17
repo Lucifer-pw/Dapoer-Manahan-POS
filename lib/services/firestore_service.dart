@@ -625,10 +625,28 @@ class FirestoreService {
     };
   }
 
-  /// Get all unique cashier names from orders
+  /// Get all unique cashier names (from users collection first, fallback to recent orders)
   Future<List<String>> getAllCashierNames() async {
+    try {
+      // Fast path: read from users collection (only a few docs)
+      final usersSnapshot = await _db.collection('users').get();
+      Set<String> names = {};
+      for (final doc in usersSnapshot.docs) {
+        final data = doc.data();
+        final name = data['name'] as String?;
+        if (name != null && name.isNotEmpty) {
+          names.add(name);
+        }
+      }
+      if (names.isNotEmpty) return names.toList()..sort();
+    } catch (e) {
+      debugPrint('Fallback to orders for cashier names: $e');
+    }
+
+    // Fallback: scan recent orders (limited)
     final snapshot = await _ordersRef
-        .where('status', isEqualTo: 'completed')
+        .orderBy('createdAt', descending: true)
+        .limit(200)
         .get();
 
     Set<String> names = {};

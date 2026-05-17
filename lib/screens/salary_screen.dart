@@ -59,11 +59,15 @@ class _SalaryScreenState extends State<SalaryScreen> {
     final start = DateTime(_selectedYear, _selectedMonth, 1);
     final end = DateTime(_selectedYear, _selectedMonth + 1, 1);
 
-    final workData = await _fs.getWorkingDays(_selectedCashier!, start, end);
-    final paid = await _fs.getTotalPaidForCashier(
-        _selectedCashier!, _selectedMonth, _selectedYear);
+    // Run both queries in parallel for speed
+    final results = await Future.wait([
+      _fs.getWorkingDays(_selectedCashier!, start, end),
+      _fs.getTotalPaidForCashier(_selectedCashier!, _selectedMonth, _selectedYear),
+    ]);
 
     if (!mounted) return;
+    final workData = results[0] as Map<String, dynamic>;
+    final paid = results[1] as int;
     setState(() {
       _totalWorkDays = workData['workingDays'] as int;
       _totalTransactions = workData['totalTransactions'] as int;
