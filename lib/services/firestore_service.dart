@@ -594,9 +594,74 @@ class FirestoreService {
   // SALARY / GAJI KARYAWAN
   // ============================================================
 
-  /// Count unique working days for a cashier in a date range
+  /// Record a working day for a cashier (called when order is completed)
+  /// Uses Firestore document per cashier per month for O(1) reads
+  Future<void> recordWorkingDay(String cashierName, DateTime date) async {
+    final month = date.month;
+    final year = date.year;
+    final dayStr = "${date.year}-${date.month}-${date.day}";
+    final docId = "${cashierName}_${year}_$month";
+
+    final docRef = _db.collection('attendance').doc(docId);
+    
+    await _db.runTransaction((transaction) async {
+      final doc = await transaction.get(docRef);
+      
+      if (doc.exists) {
+        final data = doc.data()!;
+        final dates = List<String>.from(data['dates'] ?? []);
+        if (!dates.contains(dayStr)) {
+          dates.add(dayStr);
+          transaction.update(docRef, {
+            'days': dates.length,
+            'dates': dates,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        }
+        // Also increment transaction count
+        transaction.update(docRef, {
+          'totalTransactions': (data['totalTransactions'] ?? 0) + 1,
+        });
+      } else {
+        transaction.set(docRef, {
+          'cashierName': cashierName,
+          'month': month,
+          'year': year,
+          'days': 1,
+          'dates': [dayStr],
+          'totalTransactions': 1,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      }
+    });
+  }
+
+  /// Get working days from pre-computed attendance doc (instant - reads 1 doc)
+  Future<Map<String, dynamic>> getWorkingDaysFast(
+      String cashierName, int month, int year) async {
+    final docId = "${cashierName}_${year}_$month";
+    final doc = await _db.collection('attendance').doc(docId).get();
+
+    if (doc.exists) {
+      final data = doc.data()!;
+      return {
+        'workingDays': data['days'] ?? 0,
+        'totalTransactions': data['totalTransactions'] ?? 0,
+        'dates': List<String>.from(data['dates'] ?? []),
+      };
+    }
+    return {'workingDays': 0, 'totalTransactions': 0, 'dates': []};
+  }
+
+  /// Fallback: Count working days by scanning orders (used for initial sync)
   Future<Map<String, dynamic>> getWorkingDays(
       String cashierName, DateTime start, DateTime end) async {
+    // Try fast path first
+    final fast = await getWorkingDaysFast(
+        cashierName, start.month, start.year);
+    if ((fast['workingDays'] as int) > 0) return fast;
+
+    // Fallback: scan orders and build attendance doc
     final snapshot = await _ordersRef
         .where('cashierName', isEqualTo: cashierName)
         .where('createdAt',
@@ -609,13 +674,26 @@ class FirestoreService {
       return data['status'] == 'completed';
     }).toList();
 
-    // Count unique days
     Set<String> uniqueDays = {};
     for (final doc in completedOrders) {
       final data = doc.data() as Map<String, dynamic>;
       final ts = data['createdAt'] as Timestamp;
       final date = ts.toDate();
       uniqueDays.add("${date.year}-${date.month}-${date.day}");
+    }
+
+    // Save to attendance doc so next time it's instant
+    if (uniqueDays.isNotEmpty) {
+      final docId = "${cashierName}_${start.year}_${start.month}";
+      await _db.collection('attendance').doc(docId).set({
+        'cashierName': cashierName,
+        'month': start.month,
+        'year': start.year,
+        'days': uniqueDays.length,
+        'dates': uniqueDays.toList(),
+        'totalTransactions': completedOrders.length,
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
     }
 
     return {

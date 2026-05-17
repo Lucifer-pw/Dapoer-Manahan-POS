@@ -110,6 +110,10 @@ class OrderProvider extends ChangeNotifier {
     
     final orderId = await _firestoreService.createOrder(orderWithSeq);
     await loadStats(); // Refresh stats
+
+    // Record attendance for salary tracking (non-blocking)
+    _firestoreService.recordWorkingDay(
+        orderWithSeq.cashierName, orderWithSeq.createdAt);
     
     // Return the full order with the new ID and sequence number
     return Order(
