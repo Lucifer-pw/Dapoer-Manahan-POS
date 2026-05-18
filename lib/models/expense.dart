@@ -6,6 +6,7 @@ class Expense {
   final String unit; // e.g. "5 Kg", "10 Pcs"
   final int price;
   final DateTime date;
+  final String paymentMethod;
 
   Expense({
     required this.id,
@@ -13,6 +14,7 @@ class Expense {
     required this.unit,
     required this.price,
     required this.date,
+    this.paymentMethod = 'Cash',
   });
 
   factory Expense.fromMap(Map<String, dynamic> map, String id) {
@@ -22,6 +24,7 @@ class Expense {
       unit: map['unit'] ?? '',
       price: map['price'] ?? 0,
       date: (map['date'] as Timestamp).toDate(),
+      paymentMethod: map['paymentMethod'] ?? 'Cash',
     );
   }
 
@@ -31,6 +34,7 @@ class Expense {
       'unit': unit,
       'price': price,
       'date': Timestamp.fromDate(date),
+      'paymentMethod': paymentMethod,
     };
   }
 }

@@ -29,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   DateTime? _filterDate;
   Map<String, dynamic>? _filteredStats;
   int _filteredExpense = 0;
+  int _filteredExpenseCash = 0;
   bool _isSearching = false;
 
   @override
@@ -89,10 +90,12 @@ class _HomeScreenState extends State<HomeScreen> {
         final expenses = await expenseProv.getExpensesByDateRange(start, end);
         if (!mounted) return;
         final totalExpense = expenses.fold(0, (sum, e) => sum + e.price);
+        final totalExpenseCash = expenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price);
 
         setState(() {
           _filteredStats = stats;
           _filteredExpense = totalExpense;
+          _filteredExpenseCash = totalExpenseCash;
           _isSearching = false;
         });
       } catch (e) {
@@ -106,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _filterDate = null;
       _filteredStats = null;
       _filteredExpense = 0;
+      _filteredExpenseCash = 0;
     });
     Provider.of<StartingCashProvider>(context, listen: false)
         .loadStartingCash(DateTime.now());
@@ -435,7 +439,13 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
 
-      final grandTotalTunai = modalAwal + cashPayments - totalExpense;
+      final totalExpenseCash = _filterDate != null
+          ? _filteredExpenseCash
+          : (orderProv.currentPeriod == ReportPeriod.daily
+              ? expenseProv.todayExpenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price)
+              : expenseProv.periodTotalCash);
+
+      final grandTotalTunai = modalAwal + cashPayments - totalExpenseCash;
       final walletCash = grandTotalTunai - 50000;
 
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -496,6 +506,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: AppFormatter.formatRupiah(totalExpense),
                   icon: Icons.shopping_bag,
                   onTap: () {
+                    if (_filterDate != null) {
+                      Provider.of<ExpenseProvider>(context, listen: false).setFilterDate(_filterDate);
+                    }
                     Provider.of<NavigationProvider>(context, listen: false).setIndex(4);
                   },
                   iconColor: AppColors.error)),
@@ -515,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen> {
               value: AppFormatter.formatRupiah(grandTotalTunai),
               icon: Icons.point_of_sale,
               iconColor: AppColors.success,
-              subtitle: '(Modal + Total Tunai - Belanja)',
+              subtitle: '(Modal + Total Tunai - Belanja Cash)',
             ),
           ),
           const SizedBox(width: 12),

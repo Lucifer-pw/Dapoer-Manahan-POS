@@ -20,6 +20,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   DateTime? _filterDate;
   List<Expense>? _searchResults;
   bool _isSearching = false;
+  String _paymentMethod = 'Cash';
 
   @override
   void dispose() {
@@ -27,6 +28,41 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     _unitController.dispose();
     _priceController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final provider = Provider.of<ExpenseProvider>(context);
+    if (provider.filterDate != null && provider.filterDate != _filterDate) {
+      final dateToApply = provider.filterDate!;
+      Future.microtask(() {
+        if (mounted) {
+          provider.setFilterDate(null);
+          _applyFilterDate(dateToApply);
+        }
+      });
+    }
+  }
+
+  Future<void> _applyFilterDate(DateTime picked) async {
+    setState(() {
+      _filterDate = picked;
+      _isSearching = true;
+    });
+
+    final start = DateTime(picked.year, picked.month, picked.day);
+    final end = start.add(const Duration(days: 1));
+    
+    final provider = Provider.of<ExpenseProvider>(context, listen: false);
+    final results = await provider.getExpensesByDateRange(start, end);
+    
+    if (mounted) {
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -51,21 +87,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
 
     if (picked != null && picked != _filterDate) {
-      setState(() {
-        _filterDate = picked;
-        _isSearching = true;
-      });
-
-      final start = DateTime(picked.year, picked.month, picked.day);
-      final end = start.add(const Duration(days: 1));
-      
-      final provider = Provider.of<ExpenseProvider>(context, listen: false);
-      final results = await provider.getExpensesByDateRange(start, end);
-      
-      setState(() {
-        _searchResults = results;
-        _isSearching = false;
-      });
+      await _applyFilterDate(picked);
     }
   }
 
@@ -77,38 +99,91 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
   }
 
   void _showAddDialog() {
+    _paymentMethod = 'Cash'; // reset to default
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('Tambah Belanja', style: AppTextStyles.heading3),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTextField(
-                  _nameController, 'Nama Bahan', Icons.shopping_basket),
-              const SizedBox(height: 12),
-              _buildTextField(
-                  _unitController, 'Ukuran (Pcs/Kg/Liter)', Icons.scale),
-              const SizedBox(height: 12),
-              _buildTextField(_priceController, 'Harga Total', Icons.payments,
-                  isNumber: true),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text('Tambah Belanja', style: AppTextStyles.heading3),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTextField(
+                    _nameController, 'Nama Bahan', Icons.shopping_basket),
+                const SizedBox(height: 12),
+                _buildTextField(
+                    _unitController, 'Ukuran (Pcs/Kg/Liter)', Icons.scale),
+                const SizedBox(height: 12),
+                _buildTextField(_priceController, 'Harga Total', Icons.payments,
+                    isNumber: true),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setStateDialog(() => _paymentMethod = 'Cash');
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _paymentMethod == 'Cash' ? AppColors.primary : AppColors.card,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: _paymentMethod == 'Cash' ? AppColors.primary : AppColors.border.withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: Text('Cash', style: TextStyle(
+                              color: _paymentMethod == 'Cash' ? Colors.white : AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setStateDialog(() => _paymentMethod = 'QRIS');
+                          setState(() {});
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _paymentMethod == 'QRIS' ? AppColors.primary : AppColors.card,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: _paymentMethod == 'QRIS' ? AppColors.primary : AppColors.border.withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: Text('QRIS', style: TextStyle(
+                              color: _paymentMethod == 'QRIS' ? Colors.white : AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child:
+                  Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: _submitExpense,
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child:
-                Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          ElevatedButton(
-            onPressed: _submitExpense,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -143,6 +218,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         name: _nameController.text,
         unit: _unitController.text,
         price: int.parse(_priceController.text),
+        paymentMethod: _paymentMethod,
       );
 
       if (mounted) {
@@ -191,13 +267,13 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
           }
 
           final expenses = _filterDate != null ? (_searchResults ?? []) : provider.todayExpenses;
-          final total = _filterDate != null 
-              ? expenses.fold(0, (sum, e) => sum + e.price) 
-              : provider.dailyTotal;
+          final totalCash = expenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price);
+          final totalQris = expenses.where((e) => e.paymentMethod == 'QRIS').fold(0, (sum, e) => sum + e.price);
+          final total = totalCash + totalQris;
 
           return Column(
             children: [
-              _buildDailyTotal(total, _filterDate != null ? AppFormatter.formatDate(_filterDate!) : 'Hari Ini'),
+              _buildDailyTotal(totalCash, totalQris, total, _filterDate != null ? AppFormatter.formatDate(_filterDate!) : 'Hari Ini'),
               Expanded(
                 child: expenses.isEmpty
                     ? _buildEmptyState()
@@ -222,7 +298,7 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
     );
   }
 
-  Widget _buildDailyTotal(int total, String label) {
+  Widget _buildDailyTotal(int totalCash, int totalQris, int total, String label) {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.lg),
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -231,21 +307,54 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: AppShadows.card,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Belanja ($label)',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
-              const SizedBox(height: 4),
-              Text(AppFormatter.formatRupiah(total),
-                  style: AppTextStyles.heading2.copyWith(color: Colors.white)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Belanja (Cash + QRIS)',
+                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(AppFormatter.formatRupiah(total),
+                      style: AppTextStyles.heading2.copyWith(color: Colors.white)),
+                  Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                ],
+              ),
+              const Icon(Icons.shopping_cart_checkout,
+                  color: Colors.white30, size: 40),
             ],
           ),
-          const Icon(Icons.shopping_cart_checkout,
-              color: Colors.white30, size: 40),
+          const SizedBox(height: 16),
+          const Divider(color: Colors.white24, height: 1),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Belanja (Cash)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Text(AppFormatter.formatRupiah(totalCash), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total Belanja (QRIS)', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                    const SizedBox(height: 4),
+                    Text(AppFormatter.formatRupiah(totalQris), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -307,6 +416,22 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
             children: [
               Text(AppFormatter.formatRupiah(expense.price),
                   style: AppTextStyles.priceSmall),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: expense.paymentMethod == 'QRIS' ? AppColors.info.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  expense.paymentMethod,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: expense.paymentMethod == 'QRIS' ? AppColors.info : AppColors.success,
+                  ),
+                ),
+              ),
             ],
           ),
         ],

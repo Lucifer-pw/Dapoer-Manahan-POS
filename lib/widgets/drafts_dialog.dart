@@ -34,10 +34,32 @@ class DraftsDialog extends StatelessWidget {
               );
             }
 
-            return ListView.builder(
-              shrinkWrap: true,
-              itemCount: draftProv.drafts.length,
-              itemBuilder: (context, index) {
+            final grandTotal = draftProv.drafts.fold(0, (sum, draft) => sum + draft.total);
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Total di Keranjang', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+                      Text(AppFormatter.formatRupiah(grandTotal), style: AppTextStyles.heading3.copyWith(color: AppColors.primary)),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: draftProv.drafts.length,
+                    itemBuilder: (context, index) {
                 final draft = draftProv.drafts[index];
                 return Card(
                   color: AppColors.card,
@@ -69,9 +91,12 @@ class DraftsDialog extends StatelessWidget {
                   ),
                 );
               },
-            );
-          },
-        ),
+            ),
+          ),
+        ],
+      );
+    },
+  ),
       ),
       actions: [
         TextButton(
