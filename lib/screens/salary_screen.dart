@@ -198,6 +198,8 @@ class _SalaryScreenState extends State<SalaryScreen> {
   void _showPaySalaryDialog() {
     if (_selectedCashier == null || _remainingDays <= 0) return;
     final nominalCtrl = TextEditingController();
+    String selectedMethod = 'Transfer';
+    DateTime selectedDate = DateTime.now();
 
     showDialog(
       context: context,
@@ -234,7 +236,84 @@ class _SalaryScreenState extends State<SalaryScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       borderSide: BorderSide.none)),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                Text('Metode Pembayaran', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setD(() => selectedMethod = 'Cash'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selectedMethod == 'Cash' ? AppColors.primary : AppColors.card,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: selectedMethod == 'Cash' ? AppColors.primary : AppColors.border.withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: Text('Cash', style: TextStyle(
+                              color: selectedMethod == 'Cash' ? Colors.white : AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setD(() => selectedMethod = 'Transfer'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: selectedMethod == 'Transfer' ? AppColors.primary : AppColors.card,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: selectedMethod == 'Transfer' ? AppColors.primary : AppColors.border.withOpacity(0.3)),
+                          ),
+                          child: Center(
+                            child: Text('Transfer', style: TextStyle(
+                              color: selectedMethod == 'Transfer' ? Colors.white : AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text('Tanggal Pembayaran', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setD(() => selectedDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.card,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(AppFormatter.formatDate(selectedDate), style: AppTextStyles.body),
+                        Icon(Icons.calendar_month_rounded, color: AppColors.textHint, size: 20),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 // Live calculation
                 Container(
                   width: double.infinity, padding: const EdgeInsets.all(12),
@@ -267,10 +346,10 @@ class _SalaryScreenState extends State<SalaryScreen> {
                       Text('Masukkan nominal untuk menghitung',
                           style: AppTextStyles.caption.copyWith(fontSize: 11)),
                     const SizedBox(height: 6),
-                    Text('Via Transfer Bank BCA',
+                    Text('Via $selectedMethod',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textHint, fontSize: 11)),
-                    Text('Tanggal: ${AppFormatter.formatDate(DateTime.now())}',
+                    Text('Tanggal: ${AppFormatter.formatDate(selectedDate)}',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.textHint, fontSize: 11)),
                   ]),
@@ -283,6 +362,11 @@ class _SalaryScreenState extends State<SalaryScreen> {
                 child: Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
               ElevatedButton(
                 onPressed: isValid ? () async {
+                  DateTime finalDate = selectedDate;
+                  if (selectedDate.year != DateTime.now().year || selectedDate.month != DateTime.now().month || selectedDate.day != DateTime.now().day) {
+                    finalDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, 12, 0);
+                  }
+                  
                   await _fs.addSalaryPayment({
                     'cashierName': _selectedCashier,
                     'month': _selectedMonth,
@@ -291,13 +375,14 @@ class _SalaryScreenState extends State<SalaryScreen> {
                     'ratePerDay': _ratePerDay,
                     'nominal': nominal,
                     'paidDays': calcDays,
-                    'paidAt': Timestamp.fromDate(DateTime.now()),
-                    'paymentMethod': 'Transfer Bank BCA',
+                    'paidAt': Timestamp.fromDate(finalDate),
+                    'paymentMethod': selectedMethod,
                   });
                   if (!ctx.mounted) return;
                   Navigator.pop(ctx);
+                  if (!mounted) return;
                   _loadWorkingDays(); // refresh data
-                  ScaffoldMessenger.of(this.context).showSnackBar(SnackBar(
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Gaji ${AppFormatter.formatRupiah(nominal)} ($calcDays hari) berhasil dicatat'),
                     backgroundColor: AppColors.success));
                 } : null,
