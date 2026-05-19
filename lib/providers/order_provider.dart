@@ -14,6 +14,7 @@ class OrderProvider extends ChangeNotifier {
   
   Map<String, dynamic> _stats = {};
   ReportPeriod _currentPeriod = ReportPeriod.daily;
+  DateTime _targetDate = DateTime.now();
   DateTime _currentStart = DateTime.now();
   DateTime _currentEnd = DateTime.now();
 
@@ -26,6 +27,7 @@ class OrderProvider extends ChangeNotifier {
   
   Map<String, dynamic> get todayStats => _stats;
   ReportPeriod get currentPeriod => _currentPeriod;
+  DateTime get targetDate => _targetDate;
   DateTime get currentStart => _currentStart;
   DateTime get currentEnd => _currentEnd;
   List<Map<String, dynamic>> get weeklyRevenue => 
@@ -64,25 +66,34 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setTargetDate(DateTime date) async {
+    _targetDate = date;
+    _isLoading = true;
+    notifyListeners();
+    await loadStats();
+    _isLoading = false;
+    notifyListeners();
+  }
+
   Future<void> loadStats() async {
     try {
-      final now = DateTime.now();
+      final target = _targetDate;
       DateTime start, end;
 
       switch (_currentPeriod) {
         case ReportPeriod.daily:
-          start = DateTime(now.year, now.month, now.day);
+          start = DateTime(target.year, target.month, target.day);
           end = start.add(const Duration(days: 1));
           break;
         case ReportPeriod.weekly:
           // Start of last 7 days
-          start = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
-          end = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+          start = DateTime(target.year, target.month, target.day).subtract(const Duration(days: 6));
+          end = DateTime(target.year, target.month, target.day).add(const Duration(days: 1));
           break;
         case ReportPeriod.monthly:
-          // Start of current month
-          start = DateTime(now.year, now.month, 1);
-          end = DateTime(now.year, now.month + 1, 1);
+          // Start of target date's month
+          start = DateTime(target.year, target.month, 1);
+          end = DateTime(target.year, target.month + 1, 1);
           break;
       }
 

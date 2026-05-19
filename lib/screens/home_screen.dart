@@ -26,10 +26,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  DateTime? _filterDate;
-  Map<String, dynamic>? _filteredStats;
-  int _filteredExpense = 0;
-  int _filteredExpenseCash = 0;
   bool _isSearching = false;
 
   @override
@@ -47,9 +43,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    final orderProv = Provider.of<OrderProvider>(context, listen: false);
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _filterDate ?? DateTime.now(),
+      initialDate: orderProv.targetDate,
       firstDate: DateTime(2023),
       lastDate: DateTime.now(),
       builder: (context, child) {
@@ -67,62 +64,62 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (picked != null && picked != _filterDate) {
+    if (picked != null && picked != orderProv.targetDate) {
       setState(() {
-        _filterDate = picked;
         _isSearching = true;
       });
 
       try {
-        final orderProv = Provider.of<OrderProvider>(context, listen: false);
-        final expenseProv =
-            Provider.of<ExpenseProvider>(context, listen: false);
-        final cashProv =
-            Provider.of<StartingCashProvider>(context, listen: false);
-
-        final stats = await orderProv.getStatsForDate(picked);
+        await orderProv.setTargetDate(picked);
         if (!mounted) return;
+        final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+        await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
+        if (!mounted) return;
+        final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
         await cashProv.loadStartingCash(picked);
         if (!mounted) return;
 
-        final start = DateTime(picked.year, picked.month, picked.day);
-        final end = start.add(const Duration(days: 1));
-        final expenses = await expenseProv.getExpensesByDateRange(start, end);
-        if (!mounted) return;
-        final totalExpense = expenses.fold(0, (sum, e) => sum + e.price);
-        final totalExpenseCash = expenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price);
-
         setState(() {
-          _filteredStats = stats;
-          _filteredExpense = totalExpense;
-          _filteredExpenseCash = totalExpenseCash;
           _isSearching = false;
         });
       } catch (e) {
-        setState(() => _isSearching = false);
+        if (mounted) setState(() => _isSearching = false);
       }
     }
   }
 
-  void _clearFilter() {
+  void _clearFilter() async {
     setState(() {
-      _filterDate = null;
-      _filteredStats = null;
-      _filteredExpense = 0;
-      _filteredExpenseCash = 0;
+      _isSearching = true;
     });
-    Provider.of<StartingCashProvider>(context, listen: false)
-        .loadStartingCash(DateTime.now());
+
+    try {
+      final orderProv = Provider.of<OrderProvider>(context, listen: false);
+      await orderProv.setTargetDate(DateTime.now());
+      if (!mounted) return;
+      final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+      await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
+      if (!mounted) return;
+      final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
+      await cashProv.loadStartingCash(DateTime.now());
+      if (!mounted) return;
+
+      setState(() {
+        _isSearching = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isSearching = false);
+    }
   }
 
-  void _showStartingCashDialog(int currentAmount) {
+  void _showStartingCashDialog(int currentAmount, DateTime targetDate) {
     final controller = TextEditingController(
         text: currentAmount > 0 ? currentAmount.toString() : '');
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Modal Awal Hari Ini', style: AppTextStyles.heading3),
+        title: Text('Modal Awal', style: AppTextStyles.heading3),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
@@ -148,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (controller.text.isNotEmpty) {
                 final amount = int.tryParse(controller.text) ?? 0;
                 await Provider.of<StartingCashProvider>(context, listen: false)
-                    .updateStartingCash(_filterDate ?? DateTime.now(), amount);
+                    .updateStartingCash(targetDate, amount);
                 if (mounted) Navigator.pop(ctx);
               }
             },
@@ -169,16 +166,13 @@ class _HomeScreenState extends State<HomeScreen> {
           color: AppColors.primary,
           backgroundColor: AppColors.surface,
           onRefresh: () async {
-            if (_filterDate == null) {
-              await Provider.of<OrderProvider>(context, listen: false)
-                  .loadStats();
-              if (mounted) {
-                await Provider.of<StartingCashProvider>(context, listen: false)
-                    .loadStartingCash(DateTime.now());
-              }
+            final orderProv = Provider.of<OrderProvider>(context, listen: false);
+            await orderProv.loadStats();
+            if (mounted) {
+              await Provider.of<StartingCashProvider>(context, listen: false)
+                  .loadStartingCash(orderProv.targetDate);
             }
             if (mounted) {
-              final orderProv = Provider.of<OrderProvider>(context, listen: false);
               final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
               await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
               await Provider.of<SubscriptionProvider>(context, listen: false)
@@ -211,10 +205,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
                 ]);
               }),
-              if (_filterDate == null) ...[
-                _buildDynamicChart(),
-                const SizedBox(height: 20),
-              ],
+              _buildDynamicChart(),
+              const SizedBox(height: 20),
               _buildOrdersSection(),
               const SizedBox(height: 20),
             ],
@@ -225,7 +217,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppBar() {
-    return Consumer<AuthProvider>(builder: (context, auth, _) {
+    return Consumer2<AuthProvider, OrderProvider>(builder: (context, auth, orderProv, _) {
+      final isToday = orderProv.targetDate.year == DateTime.now().year &&
+          orderProv.targetDate.month == DateTime.now().month &&
+          orderProv.targetDate.day == DateTime.now().day;
+
       return Row(children: [
         Container(
           width: 44,
@@ -249,12 +245,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
           Text(
-              _filterDate != null
-                  ? 'Laporan: ${AppFormatter.formatDate(_filterDate!)}'
+              !isToday
+                  ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
                   : AppFormatter.formatDate(DateTime.now()),
               style: AppTextStyles.caption),
         ])),
-        if (_filterDate != null)
+        if (!isToday)
           IconButton(
             onPressed: _clearFilter,
             icon: const Icon(Icons.close, color: AppColors.error, size: 22),
@@ -275,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () => _selectDate(context),
           icon: Icon(Icons.calendar_month_rounded,
               color:
-                  _filterDate != null ? AppColors.primary : AppColors.textHint,
+                  !isToday ? AppColors.primary : AppColors.textHint,
               size: 22),
           tooltip: 'Filter Tanggal',
         ),
@@ -326,8 +322,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildPeriodSelector() {
-    if (_filterDate != null) return const SizedBox.shrink();
-    
     return Consumer<OrderProvider>(builder: (context, orderProv, _) {
       return Container(
         height: 48,
@@ -402,20 +396,31 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStatsSection() {
     return Consumer3<OrderProvider, ExpenseProvider, StartingCashProvider>(
         builder: (context, orderProv, expenseProv, cashProv, _) {
-      final stats =
-          _filterDate != null ? (_filteredStats ?? {}) : orderProv.todayStats;
+      final stats = orderProv.todayStats;
       
-      final currentPeriod = _filterDate != null ? 'Filter' : (orderProv.currentPeriod == ReportPeriod.daily ? 'Hari Ini' : (orderProv.currentPeriod == ReportPeriod.weekly ? 'Minggu Ini' : 'Bulan Ini'));
+      final isToday = orderProv.targetDate.year == DateTime.now().year &&
+          orderProv.targetDate.month == DateTime.now().month &&
+          orderProv.targetDate.day == DateTime.now().day;
+
+      String currentPeriod = '';
+      if (orderProv.currentPeriod == ReportPeriod.daily) {
+        currentPeriod = isToday ? 'Hari Ini' : 'Harian (${AppFormatter.formatDate(orderProv.targetDate)})';
+      } else if (orderProv.currentPeriod == ReportPeriod.weekly) {
+        currentPeriod = isToday ? 'Minggu Ini' : 'Mingguan (7 Hari)';
+      } else {
+        final monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        currentPeriod = isToday ? 'Bulan Ini' : 'Bulan ${monthNames[orderProv.targetDate.month - 1]} ${orderProv.targetDate.year}';
+      }
 
       final grossRevenue = stats['totalRevenue'] ?? 0;
-      final totalExpense =
-          _filterDate != null ? _filteredExpense : expenseProv.periodTotal;
+      final isDailyToday = orderProv.currentPeriod == ReportPeriod.daily && isToday;
+      final totalExpense = isDailyToday ? expenseProv.dailyTotal : expenseProv.periodTotal;
       
       final netRevenue = grossRevenue - totalExpense;
       final transactions = stats['totalTransactions'] ?? 0;
       final average = stats['averageTransaction'] ?? 0;
       final avgDaily = stats['averageDailyRevenue'] ?? 0;
-      final showAvgDaily = _filterDate == null && orderProv.currentPeriod != ReportPeriod.daily;
+      final showAvgDaily = orderProv.currentPeriod != ReportPeriod.daily;
 
       final modalAwal = cashProv.startingCash;
 
@@ -439,22 +444,19 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       });
 
-      final totalExpenseCash = _filterDate != null
-          ? _filteredExpenseCash
-          : (orderProv.currentPeriod == ReportPeriod.daily
-              ? expenseProv.todayExpenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price)
-              : expenseProv.periodTotalCash);
+      final totalExpenseCash = isDailyToday
+          ? expenseProv.todayExpenses.where((e) => e.paymentMethod == 'Cash').fold(0, (sum, e) => sum + e.price)
+          : expenseProv.periodTotalCash;
 
       final grandTotalTunai = modalAwal + cashPayments - totalExpenseCash;
       final walletCash = grandTotalTunai - 50000;
 
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(_filterDate != null ? 'Data Terfilter' : currentPeriod,
-              style: AppTextStyles.heading3),
-          if (_filterDate == null && orderProv.currentPeriod == ReportPeriod.daily)
+          Text(currentPeriod, style: AppTextStyles.heading3),
+          if (orderProv.currentPeriod == ReportPeriod.daily)
             TextButton.icon(
-              onPressed: () => _showStartingCashDialog(modalAwal),
+              onPressed: () => _showStartingCashDialog(modalAwal, orderProv.targetDate),
               icon: const Icon(Icons.edit, size: 14, color: AppColors.primary),
               label: Text(modalAwal > 0 ? 'Edit Modal' : 'Input Modal',
                   style:
@@ -506,8 +508,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   value: AppFormatter.formatRupiah(totalExpense),
                   icon: Icons.shopping_bag,
                   onTap: () {
-                    if (_filterDate != null) {
-                      Provider.of<ExpenseProvider>(context, listen: false).setFilterDate(_filterDate);
+                    if (!isToday) {
+                      Provider.of<ExpenseProvider>(context, listen: false).setFilterDate(orderProv.targetDate);
+                    } else {
+                      Provider.of<ExpenseProvider>(context, listen: false).setFilterDate(null);
                     }
                     Provider.of<NavigationProvider>(context, listen: false).setIndex(4);
                   },
@@ -632,6 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDynamicChart() {
     return Consumer<OrderProvider>(builder: (context, orderProv, _) {
+      if (orderProv.currentPeriod == ReportPeriod.daily) return const SizedBox.shrink();
       final chartData = orderProv.weeklyRevenue;
       if (chartData.isEmpty) return const SizedBox.shrink();
 
@@ -641,7 +646,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       String title = 'Penjualan 7 Hari';
       if (orderProv.currentPeriod == ReportPeriod.monthly) {
-        title = 'Penjualan Bulan Ini';
+        final monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        title = 'Penjualan Bulan ${monthNames[orderProv.targetDate.month - 1]} ${orderProv.targetDate.year}';
       }
 
       return Container(
@@ -721,22 +727,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildOrdersSection() {
     return Consumer<OrderProvider>(builder: (context, orderProv, _) {
-      final orders = _filterDate != null
-          ? (_filteredStats?['orders'] as List?)
-                  ?.where((o) => o.status == OrderStatus.completed)
-                  .toList() ??
-              []
-          : orderProv.todayOrders
-              .where((o) => o.status == OrderStatus.completed)
-              .toList();
+      final isToday = orderProv.targetDate.year == DateTime.now().year &&
+          orderProv.targetDate.month == DateTime.now().month &&
+          orderProv.targetDate.day == DateTime.now().day;
+      final isDailyToday = orderProv.currentPeriod == ReportPeriod.daily && isToday;
+
+      final rawOrders = isDailyToday ? orderProv.todayOrders : (orderProv.todayStats['orders'] as List? ?? []);
+      final orders = rawOrders.where((o) {
+        if (o is Order) return o.status == OrderStatus.completed;
+        return false;
+      }).map((o) => o as Order).toList();
+
+      String title = 'Transaksi Terakhir';
+      if (!isDailyToday) {
+        if (orderProv.currentPeriod == ReportPeriod.daily) {
+          title = 'Transaksi (${AppFormatter.formatDate(orderProv.targetDate)})';
+        } else if (orderProv.currentPeriod == ReportPeriod.weekly) {
+          title = 'Transaksi (Mingguan)';
+        } else {
+          title = 'Transaksi (Bulanan)';
+        }
+      }
 
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(
-              _filterDate != null
-                  ? 'Transaksi Tanggal Tersebut'
-                  : 'Transaksi Terakhir',
-              style: AppTextStyles.heading3),
+          Text(title, style: AppTextStyles.heading3),
           Text('${orders.length} transaksi', style: AppTextStyles.caption),
         ]),
         const SizedBox(height: 12),
