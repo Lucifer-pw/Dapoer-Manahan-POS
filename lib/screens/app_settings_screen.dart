@@ -19,19 +19,29 @@ class AppSettingsScreen extends StatefulWidget {
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
   final _ssidController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _bankAccountController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     _ssidController.text = settings.wifiSsid;
     _passwordController.text = settings.wifiPassword;
+    _nameController.text = auth.cashierName;
+    _bankNameController.text = auth.bankName;
+    _bankAccountController.text = auth.bankAccountNumber;
   }
 
   @override
   void dispose() {
     _ssidController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
+    _bankNameController.dispose();
+    _bankAccountController.dispose();
     super.dispose();
   }
 
@@ -48,6 +58,26 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal menyimpan: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final success = await auth.updateProfile(
+      _nameController.text,
+      _bankNameController.text,
+      _bankAccountController.text,
+    );
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil berhasil disimpan'), backgroundColor: AppColors.success),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan profil: ${auth.error}'), backgroundColor: AppColors.error),
         );
       }
     }
@@ -84,6 +114,64 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildSectionHeader('Profil Saya'),
+            const SizedBox(height: 16),
+            Consumer<AuthProvider>(builder: (context, auth, _) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border.withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTextField(
+                      controller: _nameController,
+                      label: 'Nama Lengkap / Kasir',
+                      icon: Icons.person_rounded,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Email: ${auth.user?.email ?? "-"}',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontStyle: FontStyle.italic),
+                    ),
+                    const Divider(height: 24),
+                    Text('Informasi Rekening Bank (Untuk Gaji)', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _bankNameController,
+                      label: 'Nama Bank (Contoh: BCA, Mandiri, BRI)',
+                      icon: Icons.account_balance_rounded,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _bankAccountController,
+                      label: 'Nomor Rekening',
+                      icon: Icons.numbers_rounded,
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: auth.isLoading ? null : _saveProfile,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                        child: auth.isLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('SIMPAN PROFIL', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 32),
             _buildSectionHeader('Tampilan'),
             const SizedBox(height: 16),
             Consumer<ThemeProvider>(

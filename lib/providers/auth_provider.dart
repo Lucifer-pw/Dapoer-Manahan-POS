@@ -12,12 +12,16 @@ class AuthProvider extends ChangeNotifier {
 
   User? _user;
   String _role = 'kasir';
+  String _bankName = '';
+  String _bankAccountNumber = '';
   bool _isLoading = true; // Start with loading to check auth state
   String? _error;
   bool _isAuthChecked = false;
 
   User? get user => _user;
   String get role => _role;
+  String get bankName => _bankName;
+  String get bankAccountNumber => _bankAccountNumber;
   bool get isAdmin => _role == 'admin';
   bool get isOwner => _role == 'owner';
   bool get isLoading => _isLoading;
@@ -51,7 +55,10 @@ class AuthProvider extends ChangeNotifier {
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
-        _role = doc.data()?['role'] ?? 'kasir';
+        final data = doc.data() ?? {};
+        _role = data['role'] ?? 'kasir';
+        _bankName = data['bankName'] ?? '';
+        _bankAccountNumber = data['bankAccountNumber'] ?? '';
       }
     } catch (e) {
       debugPrint('Error fetching role: $e');
@@ -179,6 +186,33 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _authService.signOut();
+  }
+
+  Future<bool> updateProfile(String name, String bankName, String bankAccountNumber) async {
+    if (_user == null) return false;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      await _authService.updateDisplayName(name);
+      await FirebaseFirestore.instance.collection('users').doc(_user!.uid).set({
+        'name': name,
+        'bankName': bankName,
+        'bankAccountNumber': bankAccountNumber,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      _bankName = bankName;
+      _bankAccountNumber = bankAccountNumber;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
   }
 
   void clearError() {

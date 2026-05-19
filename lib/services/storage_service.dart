@@ -65,6 +65,33 @@ class StorageService {
     }
   }
 
+  /// Upload salary payment proof image to Firebase Storage
+  Future<String> uploadSalaryProofImage(File file, String cashierName, {Function(double)? onProgress}) async {
+    try {
+      final fileName = 'proof_${cashierName}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('salary_proofs').child(fileName);
+      
+      final uploadTask = ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      if (onProgress != null) {
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          onProgress(progress);
+        });
+      }
+      
+      await uploadTask;
+      await Future.delayed(const Duration(milliseconds: 500));
+      return await ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading salary proof: $e');
+      rethrow;
+    }
+  }
+
   /// Delete image from Firebase Storage by URL
   Future<void> deleteImageByUrl(String url) async {
     if (url.isEmpty || !url.contains('firebase')) return;

@@ -738,6 +738,24 @@ class FirestoreService {
     return names.toList()..sort();
   }
 
+  /// Get cashier bank details (bankName, bankAccountNumber, email)
+  Future<Map<String, String>> getCashierBankDetails(String cashierName) async {
+    try {
+      final snapshot = await _db.collection('users').where('name', isEqualTo: cashierName).limit(1).get();
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+        return {
+          'bankName': data['bankName'] as String? ?? '',
+          'bankAccountNumber': data['bankAccountNumber'] as String? ?? '',
+          'email': data['email'] as String? ?? '',
+        };
+      }
+    } catch (e) {
+      debugPrint('Error getting cashier bank details: $e');
+    }
+    return {'bankName': '', 'bankAccountNumber': '', 'email': ''};
+  }
+
   /// Save a salary payment record
   Future<void> addSalaryPayment(Map<String, dynamic> data) async {
     await _db.collection('salary_payments').add({
