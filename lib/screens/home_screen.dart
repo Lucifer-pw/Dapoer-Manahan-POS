@@ -776,9 +776,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                        Text(order.orderNumber,
-                            style: AppTextStyles.body.copyWith(
-                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        Row(
+                          children: [
+                            Text(order.orderNumber,
+                                style: AppTextStyles.body.copyWith(
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: order.paymentMethod == 'QRIS' ? AppColors.info.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                order.paymentMethod == 'Tunai' ? 'Cash' : order.paymentMethod,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: order.paymentMethod == 'QRIS' ? AppColors.info : AppColors.success,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
                         Text(
                             'Meja ${order.tableNumber} • ${order.items.length} item',
                             style: AppTextStyles.caption),

@@ -248,7 +248,27 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(order.orderNumber, style: AppTextStyles.heading3.copyWith(fontSize: 16)),
+                Row(
+                  children: [
+                    Text(order.orderNumber, style: AppTextStyles.heading3.copyWith(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: order.paymentMethod == 'QRIS' ? AppColors.info.withOpacity(0.2) : AppColors.success.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        order.paymentMethod == 'Tunai' ? 'Cash' : order.paymentMethod,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: order.paymentMethod == 'QRIS' ? AppColors.info : AppColors.success,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
