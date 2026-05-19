@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/firestore_service.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
@@ -586,24 +588,47 @@ class _SalaryScreenState extends State<SalaryScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Pay button
-        SizedBox(
-          width: double.infinity, height: 48,
-          child: ElevatedButton.icon(
-            onPressed: _remainingDays > 0 ? _showPaySalaryDialog : null,
-            icon: const Icon(Icons.payment_rounded, size: 20),
-            label: Text(
-              _remainingDays > 0
-                  ? 'Input Gaji (Sisa ${AppFormatter.formatRupiah(_remainingSalary)})'
-                  : 'Gaji Sudah Lunas ✓',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _remainingDays > 0 ? AppColors.primary : AppColors.success,
-              foregroundColor: Colors.white, elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.md))),
-          ),
-        ),
+        // Pay button (khusus admin)
+        Consumer<AuthProvider>(builder: (context, auth, _) {
+          if (!auth.isAdmin) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.card,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border.withOpacity(0.2)),
+              ),
+              child: Center(
+                child: Text(
+                  'Hak Akses Input Gaji Khusus Admin',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textHint,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return SizedBox(
+            width: double.infinity, height: 48,
+            child: ElevatedButton.icon(
+              onPressed: _remainingDays > 0 ? _showPaySalaryDialog : null,
+              icon: const Icon(Icons.payment_rounded, size: 20),
+              label: Text(
+                _remainingDays > 0
+                    ? 'Input Gaji (Sisa ${AppFormatter.formatRupiah(_remainingSalary)})'
+                    : 'Gaji Sudah Lunas ✓',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _remainingDays > 0 ? AppColors.primary : AppColors.success,
+                foregroundColor: Colors.white, elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md))),
+            ),
+          );
+        }),
       ]),
     );
   }

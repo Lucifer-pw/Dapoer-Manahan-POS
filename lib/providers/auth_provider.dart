@@ -19,6 +19,7 @@ class AuthProvider extends ChangeNotifier {
   User? get user => _user;
   String get role => _role;
   bool get isAdmin => _role == 'admin';
+  bool get isOwner => _role == 'owner';
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _user != null;
   bool get isAuthChecked => _isAuthChecked;

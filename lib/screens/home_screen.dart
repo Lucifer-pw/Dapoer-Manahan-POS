@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildBestSellerBanner(),
               const SizedBox(height: 12),
               Consumer<AuthProvider>(builder: (context, auth, _) {
-                if (!auth.isAdmin) return const SizedBox.shrink();
+                if (!auth.isAdmin && !auth.isOwner) return const SizedBox.shrink();
                 return Column(children: [
                   _buildSalaryBanner(),
                   const SizedBox(height: 20),

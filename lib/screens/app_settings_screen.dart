@@ -178,32 +178,34 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
               },
             ),
             
-            // Admin Section
+            // Admin & Owner Section
             Consumer<AuthProvider>(builder: (context, auth, _) {
-              if (!auth.isAdmin) return const SizedBox.shrink();
+              if (!auth.isAdmin && !auth.isOwner) return const SizedBox.shrink();
               
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-                  _buildSectionHeader('Administrator'),
+                  _buildSectionHeader(auth.isAdmin ? 'Administrator' : 'Owner'),
                   const SizedBox(height: 16),
-                  _buildSettingsTile(
-                    icon: Icons.admin_panel_settings_rounded,
-                    title: 'Kelola Billing (Admin)',
-                    subtitle: 'Update status pembayaran toko',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AdminBillingScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
+                  if (auth.isAdmin) ...[
+                    _buildSettingsTile(
+                      icon: Icons.admin_panel_settings_rounded,
+                      title: 'Kelola Billing (Admin)',
+                      subtitle: 'Update status pembayaran toko',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AdminBillingScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                   _buildSettingsTile(
                     icon: Icons.payments_rounded,
                     title: 'Kelola Gaji Karyawan',
-                    subtitle: 'Cek hari kerja & bayar gaji kasir',
+                    subtitle: auth.isAdmin ? 'Cek hari kerja & bayar gaji kasir' : 'Cek hari kerja & riwayat gaji kasir',
                     onTap: () {
                       Navigator.push(
                         context,
