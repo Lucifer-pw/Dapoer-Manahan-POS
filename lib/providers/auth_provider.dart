@@ -13,6 +13,7 @@ class AuthProvider extends ChangeNotifier {
   String _role = 'kasir';
   String _bankName = '';
   String _bankAccountNumber = '';
+  String _bankAccountName = '';
   bool _isLoading = true; // Start with loading to check auth state
   String? _error;
   bool _isAuthChecked = false;
@@ -21,6 +22,7 @@ class AuthProvider extends ChangeNotifier {
   String get role => _role;
   String get bankName => _bankName;
   String get bankAccountNumber => _bankAccountNumber;
+  String get bankAccountName => _bankAccountName;
   bool get isAdmin => _role == 'admin';
   bool get isOwner => _role == 'owner';
   bool get isLoading => _isLoading;
@@ -58,6 +60,7 @@ class AuthProvider extends ChangeNotifier {
         _role = data['role'] ?? 'kasir';
         _bankName = data['bankName'] ?? '';
         _bankAccountNumber = data['bankAccountNumber'] ?? '';
+        _bankAccountName = data['bankAccountName'] ?? '';
       }
     } catch (e) {
       debugPrint('Error fetching role: $e');
@@ -187,7 +190,7 @@ class AuthProvider extends ChangeNotifier {
     await _authService.signOut();
   }
 
-  Future<bool> updateProfile(String name, String bankName, String bankAccountNumber) async {
+  Future<bool> updateProfile(String name, String bankName, String bankAccountNumber, String bankAccountName) async {
     if (_user == null) return false;
     _isLoading = true;
     notifyListeners();
@@ -198,11 +201,13 @@ class AuthProvider extends ChangeNotifier {
         'name': name,
         'bankName': bankName,
         'bankAccountNumber': bankAccountNumber,
+        'bankAccountName': bankAccountName,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
       _bankName = bankName;
       _bankAccountNumber = bankAccountNumber;
+      _bankAccountName = bankAccountName;
       _isLoading = false;
       notifyListeners();
       return true;

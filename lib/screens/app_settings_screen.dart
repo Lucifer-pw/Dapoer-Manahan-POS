@@ -22,6 +22,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
   final _nameController = TextEditingController();
   final _bankNameController = TextEditingController();
   final _bankAccountController = TextEditingController();
+  final _bankAccountNameController = TextEditingController();
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _nameController.text = auth.cashierName;
     _bankNameController.text = auth.bankName;
     _bankAccountController.text = auth.bankAccountNumber;
+    _bankAccountNameController.text = auth.bankAccountName;
   }
 
   @override
@@ -42,6 +44,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     _nameController.dispose();
     _bankNameController.dispose();
     _bankAccountController.dispose();
+    _bankAccountNameController.dispose();
     super.dispose();
   }
 
@@ -69,6 +72,7 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
       _nameController.text,
       _bankNameController.text,
       _bankAccountController.text,
+      _bankAccountNameController.text,
     );
     if (mounted) {
       if (success) {
@@ -150,6 +154,12 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                       controller: _bankAccountController,
                       label: 'Nomor Rekening',
                       icon: Icons.numbers_rounded,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                      controller: _bankAccountNameController,
+                      label: 'Nama Pemilik Rekening (Nama Asli/BCA)',
+                      icon: Icons.person_pin_rounded,
                     ),
                     const SizedBox(height: 20),
                     SizedBox(

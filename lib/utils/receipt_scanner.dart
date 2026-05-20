@@ -4,13 +4,13 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 
 class ReceiptScanner {
   /// Memindai file gambar bukti transfer menggunakan Google MLKit dan mengembalikan detail parsing.
-  /// Mendukung pencocokan inputAmount (opsional) untuk meningkatkan akurasi nominal.
-  static Future<Map<String, dynamic>?> scanReceipt(File file, {int? inputAmount}) async {
+  /// Mendukung pencocokan inputAmount dan verifikasi bankAccountName (opsional).
+  static Future<Map<String, dynamic>?> scanReceipt(File file, {int? inputAmount, String? bankAccountName}) async {
     final inputImage = InputImage.fromFile(file);
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
-      return parseText(recognizedText.text, inputAmount: inputAmount);
+      return parseText(recognizedText.text, inputAmount: inputAmount, bankAccountName: bankAccountName);
     } catch (e) {
       debugPrint("OCR Processing Error: $e");
       return null;
@@ -19,8 +19,8 @@ class ReceiptScanner {
     }
   }
 
-  /// Mengekstraksi tanggal dan nominal transfer dari teks mentah secara cerdas.
-  static Map<String, dynamic> parseText(String text, {int? inputAmount}) {
+  /// Mengekstraksi tanggal, nominal, dan verifikasi nama pemilik rekening dari teks mentah.
+  static Map<String, dynamic> parseText(String text, {int? inputAmount, String? bankAccountName}) {
     debugPrint("=== SCAN RECEIPT RAW TEXT ===\n$text\n=============================");
     
     final normalizedText = text.toLowerCase();
@@ -205,10 +205,30 @@ class ReceiptScanner {
       }
     }
 
+    // 5. VERIFIKASI NAMA PENERIMA REKENING
+    bool? isNameMatched;
+    if (bankAccountName != null && bankAccountName.trim().isNotEmpty) {
+      final cleanName = bankAccountName.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), ' ').trim();
+      final cleanProcessedText = processedText.replaceAll(RegExp(r'[^\w\s]'), ' ');
+      
+      if (cleanProcessedText.contains(cleanName)) {
+        isNameMatched = true;
+      } else {
+        // Fallback: pecah kata per kata dan pastikan setiap kata dengan panjang > 2 karakter ada dalam teks
+        final words = cleanName.split(RegExp(r'\s+')).where((w) => w.length > 2).toList();
+        if (words.isNotEmpty) {
+          isNameMatched = words.every((word) => cleanProcessedText.contains(word));
+        } else {
+          isNameMatched = false;
+        }
+      }
+    }
+
     return {
       'rawText': text,
       'date': date,
       'amount': amount,
+      'isNameMatched': isNameMatched,
     };
   }
 
