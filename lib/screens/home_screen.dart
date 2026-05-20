@@ -18,6 +18,7 @@ import 'app_settings_screen.dart';
 import 'billing_screen.dart';
 import 'best_seller_screen.dart';
 import 'salary_screen.dart';
+import 'user_guide_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -178,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildBillingBanner(),
               _buildAppBar(),
+              _buildUserGuideBanner(),
               const SizedBox(height: 20),
               _buildPeriodSelector(),
               const SizedBox(height: 20),
@@ -269,6 +271,20 @@ class _HomeScreenState extends State<HomeScreen> {
               size: 22),
           tooltip: 'Filter Tanggal',
         ),
+        if (!auth.isAdmin)
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserGuideScreen(role: auth.role),
+                ),
+              );
+            },
+            icon: const Icon(Icons.menu_book_rounded,
+                color: AppColors.primary, size: 22),
+            tooltip: 'Panduan Penggunaan',
+          ),
         IconButton(
           onPressed: () {
             Navigator.push(context,
@@ -1079,6 +1095,108 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: AppColors.error, fontWeight: FontWeight.bold)),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildUserGuideBanner() {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        if (auth.isAdmin) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppColors.primary.withOpacity(0.08),
+                AppColors.secondary.withOpacity(0.04),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.18),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.02),
+                blurRadius: 15,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => UserGuideScreen(role: auth.role),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withOpacity(0.1),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          )
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.menu_book_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Butuh Bantuan? Pelajari Panduan',
+                            style: AppTextStyles.body.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13.5,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Tata cara dan alur operasional lengkap untuk role ${auth.role.toUpperCase()}',
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 11,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: AppColors.primary.withOpacity(0.8),
+                      size: 14,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
       },
