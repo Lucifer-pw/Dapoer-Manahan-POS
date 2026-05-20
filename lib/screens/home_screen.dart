@@ -237,33 +237,49 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(width: 14),
         Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
-          Text(
-              !isToday
-                  ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
-                  : AppFormatter.formatDate(DateTime.now()),
-              style: AppTextStyles.caption),
-        ])),
-        if (!isToday)
-          IconButton(
-            onPressed: _clearFilter,
-            icon: const Icon(Icons.close, color: AppColors.error, size: 22),
-            tooltip: 'Hapus Filter',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
+              const SizedBox(height: 2),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      !isToday
+                          ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
+                          : AppFormatter.formatDate(DateTime.now()),
+                      style: AppTextStyles.caption,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (!isToday) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: _clearFilter,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: AppColors.error,
+                          size: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
           ),
-        IconButton(
-          onPressed: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PrinterSettingsScreen()));
-          },
-          icon: Icon(Icons.print_rounded,
-              color: AppColors.textHint, size: 22),
-          tooltip: 'Pengaturan Printer',
         ),
         IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           onPressed: () => _selectDate(context),
           icon: Icon(Icons.calendar_month_rounded,
               color:
@@ -271,60 +287,104 @@ class _HomeScreenState extends State<HomeScreen> {
               size: 22),
           tooltip: 'Filter Tanggal',
         ),
-        if (!auth.isAdmin)
-          IconButton(
-            onPressed: () {
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert_rounded, color: AppColors.textHint, size: 22),
+          color: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            side: BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
+          ),
+          onSelected: (value) async {
+            if (value == 'printer') {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const PrinterSettingsScreen()));
+            } else if (value == 'guide') {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => UserGuideScreen(role: auth.role),
                 ),
               );
-            },
-            icon: const Icon(Icons.menu_book_rounded,
-                color: AppColors.primary, size: 22),
-            tooltip: 'Panduan Penggunaan',
-          ),
-        IconButton(
-          onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
-          },
-          icon: Icon(Icons.settings_rounded,
-              color: AppColors.textHint, size: 22),
-          tooltip: 'Pengaturan Aplikasi',
-        ),
-        IconButton(
-          onPressed: () async {
-            final navigator = Navigator.of(context);
-            final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                      backgroundColor: AppColors.surface,
-                      title: Text('Logout', style: AppTextStyles.heading3),
-                      content: Text('Yakin ingin keluar?',
-                          style: AppTextStyles.body),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text('Batal',
-                                style:
-                                    TextStyle(color: AppColors.textSecondary))),
-                        TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('Logout',
-                                style: TextStyle(color: AppColors.error))),
-                      ],
-                    ));
-            if (confirm == true && mounted) {
-              await auth.signOut();
-              navigator.pushReplacement(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()));
+            } else if (value == 'settings') {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
+            } else if (value == 'logout') {
+              final navigator = Navigator.of(context);
+              final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                        backgroundColor: AppColors.surface,
+                        title: Text('Logout', style: AppTextStyles.heading3),
+                        content: Text('Yakin ingin keluar?',
+                            style: AppTextStyles.body),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text('Batal',
+                                  style:
+                                      TextStyle(color: AppColors.textSecondary))),
+                          TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Logout',
+                                  style: TextStyle(color: AppColors.error))),
+                        ],
+                      ));
+              if (confirm == true && mounted) {
+                await auth.signOut();
+                navigator.pushReplacement(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+              }
             }
           },
-          icon: Icon(Icons.logout_rounded,
-              color: AppColors.textHint, size: 22),
-          tooltip: 'Keluar',
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            PopupMenuItem<String>(
+              value: 'printer',
+              child: Row(
+                children: [
+                  Icon(Icons.print_rounded, color: AppColors.textHint, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Printer Settings', style: AppTextStyles.body),
+                ],
+              ),
+            ),
+            if (!auth.isAdmin)
+              PopupMenuItem<String>(
+                value: 'guide',
+                child: Row(
+                  children: [
+                    const Icon(Icons.menu_book_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Panduan', style: AppTextStyles.body),
+                  ],
+                ),
+              ),
+            PopupMenuItem<String>(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings_rounded, color: AppColors.textHint, size: 20),
+                  const SizedBox(width: 12),
+                  Text('Pengaturan', style: AppTextStyles.body),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<String>(
+              value: 'logout',
+              child: Row(
+                children: [
+                  Icon(Icons.logout_rounded, color: AppColors.error, size: 20),
+                  SizedBox(width: 12),
+                  Text('Logout', style: TextStyle(color: AppColors.error, fontSize: 14, fontWeight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ],
         ),
       ]);
     });
