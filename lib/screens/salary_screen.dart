@@ -591,7 +591,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                 scannedDate = null;
                                 scannedAmount = null;
                               });
-                              final result = await ReceiptScanner.scanReceipt(file);
+                              final result = await ReceiptScanner.scanReceipt(file, inputAmount: nominal);
                               setD(() {
                                 isScanning = false;
                                 if (result != null) {
@@ -618,7 +618,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                 scannedDate = null;
                                 scannedAmount = null;
                               });
-                              final result = await ReceiptScanner.scanReceipt(file);
+                              final result = await ReceiptScanner.scanReceipt(file, inputAmount: nominal);
                               setD(() {
                                 isScanning = false;
                                 if (result != null) {
