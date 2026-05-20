@@ -105,8 +105,8 @@ class ReceiptScreen extends StatelessWidget {
                   ),
                   
                   const SizedBox(height: 16),
-                  Text('Terima kasih!', style: TextStyle(color: Colors.black54, fontSize: 12, fontStyle: FontStyle.italic)),
-                  Text('${DefaultData.restaurantName}', style: TextStyle(color: Colors.black45, fontSize: 10)),
+                  const Text('Terima kasih!', style: TextStyle(color: Colors.black54, fontSize: 12, fontStyle: FontStyle.italic)),
+                  const Text(DefaultData.restaurantName, style: TextStyle(color: Colors.black45, fontSize: 10)),
                 ]),
               ),
               const SizedBox(height: 24),
@@ -147,7 +147,7 @@ class ReceiptScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(color: Colors.black54, fontSize: 12)),
+        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 12)),
         Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
       ]),
     );

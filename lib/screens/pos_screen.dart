@@ -59,7 +59,7 @@ class _PosScreenState extends State<PosScreen> {
         .toList();
 
     // Gabungkan dengan opsi tetap (Teh Anget, Esteh)
-    final options = ['Teh Anget', 'Esteh', ...dynamicOptions].toSet().toList();
+    final options = {'Teh Anget', 'Esteh', ...dynamicOptions}.toList();
     
     showDialog(
       context: context,
@@ -180,7 +180,7 @@ class _PosScreenState extends State<PosScreen> {
         child: Consumer2<MenuProvider, CartProvider>(builder: (context, menuProv, cartProv, _) {
           final items = menuProv.availableMenuItems;
           if (menuProv.isLoading) {
-            return Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
           if (items.isEmpty) {
             return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -228,7 +228,7 @@ class _PosScreenState extends State<PosScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(children: [
-              Icon(Icons.shopping_cart, color: AppColors.primary, size: 20),
+              const Icon(Icons.shopping_cart, color: AppColors.primary, size: 20),
               const SizedBox(width: 8),
               Text('Pesanan', style: AppTextStyles.heading3),
               const Spacer(),
@@ -256,7 +256,7 @@ class _PosScreenState extends State<PosScreen> {
                     DropdownMenuItem(
                       value: -1,
                       child: Row(children: [
-                        Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
+                        const Icon(Icons.shopping_bag_outlined, size: 16, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Text('Dibawa Pulang (Take Away)', style: AppTextStyles.subtitle.copyWith(fontSize: 13, color: AppColors.primary)),
                       ]),

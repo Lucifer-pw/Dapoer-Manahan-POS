@@ -19,6 +19,7 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   bool _isSearching = false;
 
   Future<void> _selectDate(BuildContext context) async {
+    final provider = Provider.of<OrderProvider>(context, listen: false);
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _filterDate ?? DateTime.now(),
@@ -49,13 +50,14 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
       final start = DateTime(picked.year, picked.month, picked.day);
       final end = start.add(const Duration(days: 1));
       
-      final provider = Provider.of<OrderProvider>(context, listen: false);
       final results = await provider.getOrdersByDateRange(start, end);
       
-      setState(() {
-        _searchResults = results;
-        _isSearching = false;
-      });
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
     }
   }
 

@@ -212,26 +212,31 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
         _unitController.text.isEmpty ||
         _priceController.text.isEmpty) return;
 
+    final provider = Provider.of<ExpenseProvider>(context, listen: false);
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     try {
-      final provider = Provider.of<ExpenseProvider>(context, listen: false);
       await provider.addExpense(
         name: _nameController.text,
         unit: _unitController.text,
-        price: int.parse(_priceController.text),
+        price: int.tryParse(_priceController.text) ?? 0,
         paymentMethod: _paymentMethod,
       );
 
       if (mounted) {
-        Navigator.pop(context);
+        navigator.pop();
         _nameController.clear();
         _unitController.clear();
         _priceController.clear();
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
             const SnackBar(content: Text('Berhasil menyimpan belanja')));
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: $e'), backgroundColor: AppColors.error));
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(SnackBar(
+            content: Text('Error: $e'), backgroundColor: AppColors.error));
+      }
     }
   }
 
@@ -316,8 +321,8 @@ class _ExpenseScreenState extends State<ExpenseScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total Belanja (Cash + QRIS)',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  const Text('Total Belanja (Cash + QRIS)',
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
                   const SizedBox(height: 4),
                   Text(AppFormatter.formatRupiah(total),
                       style: AppTextStyles.heading2.copyWith(color: Colors.white)),

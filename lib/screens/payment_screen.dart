@@ -161,7 +161,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(color: AppColors.success.withOpacity(0.15), borderRadius: BorderRadius.circular(AppRadius.full)),
-                    child: Text('Kembalian: ${AppFormatter.formatRupiah(change)}', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 14)),
+                    child: Text('Kembalian: ${AppFormatter.formatRupiah(change)}', style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 14)),
                   ),
                 ],
               ]),
@@ -181,7 +181,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 16),
 
               CustomNumpad(
-                onNumberTap: (num) => setState(() => _amountStr += num),
+                onNumberTap: (val) => setState(() => _amountStr += val),
                 onDelete: () => setState(() { if (_amountStr.isNotEmpty) _amountStr = _amountStr.substring(0, _amountStr.length - 1); }),
                 onClear: () => setState(() => _amountStr = ''),
               ),
@@ -258,8 +258,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
     final orderProv = Provider.of<OrderProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final tableProv = Provider.of<TableProvider>(context, listen: false);
-
     final draftProv = Provider.of<DraftProvider>(context, listen: false);
+    final navigator = Navigator.of(context);
 
     // Hitung nomor urut yang benar (Database vs Draf)
     int finalSequenceNumber = cart.activeDraftNumber ?? 0;
@@ -308,15 +308,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     // Delete draft if this was a resumed order
     if (cart.activeDraftId != null) {
-      if (mounted) {
-        await Provider.of<DraftProvider>(context, listen: false).deleteDraft(cart.activeDraftId!);
-      }
+      await draftProv.deleteDraft(cart.activeDraftId!);
     }
 
     cart.clear();
 
     if (mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => ReceiptScreen(order: completedOrder)));
+      navigator.pushReplacement(MaterialPageRoute(builder: (_) => ReceiptScreen(order: completedOrder)));
     }
   }
 }

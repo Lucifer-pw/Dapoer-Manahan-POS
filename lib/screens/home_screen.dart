@@ -44,6 +44,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _selectDate(BuildContext context) async {
     final orderProv = Provider.of<OrderProvider>(context, listen: false);
+    final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+    final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: orderProv.targetDate,
@@ -71,14 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
       try {
         await orderProv.setTargetDate(picked);
-        if (!mounted) return;
-        final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
         await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
-        if (!mounted) return;
-        final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
         await cashProv.loadStartingCash(picked);
-        if (!mounted) return;
 
+        if (!mounted) return;
         setState(() {
           _isSearching = false;
         });
@@ -95,15 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final orderProv = Provider.of<OrderProvider>(context, listen: false);
-      await orderProv.setTargetDate(DateTime.now());
-      if (!mounted) return;
       final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
-      await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
-      if (!mounted) return;
       final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
+      await orderProv.setTargetDate(DateTime.now());
+      await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
       await cashProv.loadStartingCash(DateTime.now());
-      if (!mounted) return;
 
+      if (!mounted) return;
       setState(() {
         _isSearching = false;
       });
@@ -144,9 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               if (controller.text.isNotEmpty) {
                 final amount = int.tryParse(controller.text) ?? 0;
-                await Provider.of<StartingCashProvider>(context, listen: false)
-                    .updateStartingCash(targetDate, amount);
-                if (mounted) Navigator.pop(ctx);
+                final cashProv = Provider.of<StartingCashProvider>(context, listen: false);
+                final navigator = Navigator.of(ctx);
+                await cashProv.updateStartingCash(targetDate, amount);
+                navigator.pop();
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
@@ -167,17 +164,14 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: AppColors.surface,
           onRefresh: () async {
             final orderProv = Provider.of<OrderProvider>(context, listen: false);
+            final startingCashProv = Provider.of<StartingCashProvider>(context, listen: false);
+            final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
+            final subProv = Provider.of<SubscriptionProvider>(context, listen: false);
+
             await orderProv.loadStats();
-            if (mounted) {
-              await Provider.of<StartingCashProvider>(context, listen: false)
-                  .loadStartingCash(orderProv.targetDate);
-            }
-            if (mounted) {
-              final expenseProv = Provider.of<ExpenseProvider>(context, listen: false);
-              await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
-              await Provider.of<SubscriptionProvider>(context, listen: false)
-                  .checkStatus();
-            }
+            await startingCashProv.loadStartingCash(orderProv.targetDate);
+            await expenseProv.loadPeriodTotal(orderProv.currentStart, orderProv.currentEnd);
+            await subProv.checkStatus();
           },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.xl),
@@ -286,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         IconButton(
           onPressed: () async {
+            final navigator = Navigator.of(context);
             final confirm = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -307,10 +302,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ));
             if (confirm == true && mounted) {
               await auth.signOut();
-              if (mounted) {
-                Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()));
-              }
+              navigator.pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()));
             }
           },
           icon: Icon(Icons.logout_rounded,
@@ -682,8 +675,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           interval: orderProv.currentPeriod == ReportPeriod.monthly ? 5 : 1,
                           getTitlesWidget: (value, meta) {
                             final i = value.toInt();
-                            if (i < 0 || i >= chartData.length)
-                              return const SizedBox();
+                             if (i < 0 || i >= chartData.length) {
+                               return const SizedBox();
+                             }
                             final date = chartData[i]['date'] as DateTime;
                             
                             String label;

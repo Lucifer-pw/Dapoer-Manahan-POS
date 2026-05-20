@@ -15,7 +15,7 @@ class BillingScreen extends StatelessWidget {
   static const String adminWhatsApp = "6281328580511";
 
   Future<void> _launchWhatsApp(BuildContext context) async {
-    final String message =
+    const String message =
         "Halo Admin, saya sudah melakukan pembayaran aplikasi POS.";
 
     final Uri whatsappUrl = Uri.parse(
@@ -101,7 +101,7 @@ class BillingScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline,
+                            const Icon(Icons.info_outline,
                                 color: AppColors.primary, size: 18),
                             const SizedBox(width: 10),
                             Expanded(

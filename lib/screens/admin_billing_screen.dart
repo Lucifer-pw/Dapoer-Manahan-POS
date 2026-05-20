@@ -137,20 +137,21 @@ class _AdminBillingScreenState extends State<AdminBillingScreen> {
 
   Future<void> _saveStatus() async {
     setState(() => _isSaving = true);
+    final subProv = Provider.of<SubscriptionProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
     try {
       await _firestoreService.updateBillingStatus(_selectedMonth, _selectedYear);
       
+      await subProv.checkStatus();
+      
       if (mounted) {
-        // Refresh subscription status locally
-        await Provider.of<SubscriptionProvider>(context, listen: false).checkStatus();
-        
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           const SnackBar(content: Text('Status billing berhasil diperbarui!')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(content: Text('Gagal: $e'), backgroundColor: AppColors.error),
         );
       }

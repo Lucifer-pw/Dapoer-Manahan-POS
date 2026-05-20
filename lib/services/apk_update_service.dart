@@ -9,6 +9,11 @@ class ApkUpdateService {
     BuildContext context,
     String apkUrl,
   ) async {
+    // Progress download
+    double progress = 0;
+    void Function(void Function())? setDialogState;
+    bool isDialogOpen = false;
+
     try {
       // Request permission (hanya jika diperlukan)
       if (Platform.isAndroid) {
@@ -30,12 +35,9 @@ class ApkUpdateService {
         await file.delete();
       }
 
-      // Progress download
-      double progress = 0;
-      void Function(void Function())? setDialogState;
-
       // Loading dialog dengan progress
       if (context.mounted) {
+        isDialogOpen = true;
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -64,7 +66,9 @@ class ApkUpdateService {
               );
             },
           ),
-        );
+        ).then((_) {
+          isDialogOpen = false;
+        });
       }
 
       // Download APK
@@ -81,7 +85,7 @@ class ApkUpdateService {
       ).timeout(const Duration(minutes: 5));
 
       // Tutup loading
-      if (context.mounted) {
+      if (context.mounted && isDialogOpen) {
         Navigator.pop(context);
       }
 
@@ -96,8 +100,10 @@ class ApkUpdateService {
     } catch (e) {
       debugPrint('❌ Update Error: $e');
       if (context.mounted) {
-        // Cek jika dialog masih terbuka
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Cek jika dialog masih terbuka, tutup secara aman
+        if (isDialogOpen) {
+          Navigator.pop(context);
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

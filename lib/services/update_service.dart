@@ -46,12 +46,7 @@ class UpdateService {
   /// GitHub repository name
   static const String _repoName = 'Dapoer-Manahan-POS';
 
-  /// Branch utama (main/master)
-  static const String _branch = 'main';
 
-  /// URL raw pubspec.yaml dari GitHub
-  static String get _pubspecUrl =>
-      'https://raw.githubusercontent.com/$_repoOwner/$_repoName/$_branch/pubspec.yaml';
 
   /// URL GitHub Releases API
   static String get _releasesUrl =>
@@ -190,11 +185,15 @@ class UpdateService {
       final latestVer = latestFull[0];
       
       // 1. Bandingkan versi utama (major.minor.patch)
-      final currentParts = currentVer.split('.').map(int.parse).toList();
-      final latestParts = latestVer.split('.').map(int.parse).toList();
+      final currentParts = currentVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final latestParts = latestVer.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
-      while (currentParts.length < 3) currentParts.add(0);
-      while (latestParts.length < 3) latestParts.add(0);
+      while (currentParts.length < 3) {
+        currentParts.add(0);
+      }
+      while (latestParts.length < 3) {
+        latestParts.add(0);
+      }
 
       for (int i = 0; i < 3; i++) {
         if (latestParts[i] > currentParts[i]) return true;

@@ -57,7 +57,7 @@ class MenuGridItem extends StatelessWidget {
                           ? CachedNetworkImage(
                               imageUrl: menuItem.imageUrl,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Center(
+                              placeholder: (context, url) => const Center(
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: AppColors.primary,

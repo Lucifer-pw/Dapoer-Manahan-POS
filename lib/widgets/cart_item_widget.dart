@@ -163,7 +163,7 @@ class CartItemWidget extends StatelessWidget {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  Icon(Icons.notes, size: 14, color: AppColors.secondary),
+                  const Icon(Icons.notes, size: 14, color: AppColors.secondary),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(

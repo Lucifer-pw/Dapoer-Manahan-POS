@@ -8,6 +8,7 @@ import '../services/firestore_service.dart';
 import '../services/storage_service.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
+import '../utils/receipt_scanner.dart';
 
 class SalaryScreen extends StatefulWidget {
   const SalaryScreen({super.key});
@@ -245,6 +246,11 @@ class _SalaryScreenState extends State<SalaryScreen> {
     File? proofImage;
     bool isUploading = false;
 
+    // State pemindaian OCR
+    bool isScanning = false;
+    DateTime? scannedDate;
+    int? scannedAmount;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -363,167 +369,325 @@ class _SalaryScreenState extends State<SalaryScreen> {
                     ),
                   ),
                 ),
-                    const SizedBox(height: 16),
-                    // Live calculation
+                const SizedBox(height: 16),
+                // Live calculation
+                Container(
+                  width: double.infinity, padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (isValid ? AppColors.info : AppColors.error).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    border: Border.all(
+                      color: (isValid ? AppColors.info : AppColors.error).withOpacity(0.3))),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (nominal > 0) ...[
+                      Text(
+                        'Setara $calcDays hari kerja',
+                        style: AppTextStyles.body.copyWith(
+                          color: isValid ? AppColors.info : AppColors.error,
+                          fontWeight: FontWeight.bold, fontSize: 14)),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${AppFormatter.formatRupiah(nominal)} ÷ ${AppFormatter.formatRupiah(_ratePerDay)} = $calcDays hari',
+                        style: AppTextStyles.caption.copyWith(
+                          color: isValid ? AppColors.info : AppColors.error, fontSize: 11)),
+                      if (!isValid && calcDays > _remainingDays)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '⚠ Melebihi sisa hari ($_remainingDays hari)',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.error, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                      if (isValid && datesToPay.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Membayar untuk tanggal:\n${datesToPay.map((d) => AppFormatter.formatDate(_parseCustomDate(d))).join(", ")}',
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                    ] else
+                      Text('Masukkan nominal untuk menghitung',
+                          style: AppTextStyles.caption.copyWith(fontSize: 11)),
+                    const SizedBox(height: 6),
+                    Text('Via $selectedMethod',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textHint, fontSize: 11)),
+                    Text('Tanggal: ${AppFormatter.formatDate(selectedDate)}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textHint, fontSize: 11)),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+                Text('Bukti Pembayaran (Opsional)', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (proofImage != null) ...[
+                  Stack(
+                    children: [
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          image: DecorationImage(
+                            image: FileImage(proofImage!),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 4, right: 4,
+                        child: GestureDetector(
+                          onTap: () => setD(() {
+                            proofImage = null;
+                            scannedDate = null;
+                            scannedAmount = null;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                            child: const Icon(Icons.close, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (isScanning)
                     Container(
-                      width: double.infinity, padding: const EdgeInsets.all(12),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: (isValid ? AppColors.info : AppColors.error).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        border: Border.all(
-                          color: (isValid ? AppColors.info : AppColors.error).withOpacity(0.3))),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (nominal > 0) ...[
-                          Text(
-                            'Setara $calcDays hari kerja',
-                            style: AppTextStyles.body.copyWith(
-                              color: isValid ? AppColors.info : AppColors.error,
-                              fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${AppFormatter.formatRupiah(nominal)} ÷ ${AppFormatter.formatRupiah(_ratePerDay)} = $calcDays hari',
-                            style: AppTextStyles.caption.copyWith(
-                              color: isValid ? AppColors.info : AppColors.error, fontSize: 11)),
-                          if (!isValid && calcDays > _remainingDays)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(
-                                '⚠ Melebihi sisa hari ($_remainingDays hari)',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.error, fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                          if (isValid && datesToPay.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                'Membayar untuk tanggal:\n${datesToPay.map((d) => AppFormatter.formatDate(_parseCustomDate(d))).join(", ")}',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
-                            ),
-                        ] else
-                          Text('Masukkan nominal untuk menghitung',
-                              style: AppTextStyles.caption.copyWith(fontSize: 11)),
-                        const SizedBox(height: 6),
-                        Text('Via $selectedMethod',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textHint, fontSize: 11)),
-                        Text('Tanggal: ${AppFormatter.formatDate(selectedDate)}',
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textHint, fontSize: 11)),
-                      ]),
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Bukti Pembayaran (Opsional)', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    if (proofImage != null)
-                      Stack(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                      ),
+                      child: Row(
                         children: [
-                          Container(
-                            height: 120,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
-                              image: DecorationImage(
-                                image: FileImage(proofImage!),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
+                          const SizedBox(
+                            width: 14, height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.info),
                           ),
-                          Positioned(
-                            top: 4, right: 4,
-                            child: GestureDetector(
-                              onTap: () => setD(() => proofImage = null),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                child: const Icon(Icons.close, color: Colors.white, size: 16),
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final storageService = StorageService();
-                                final file = await storageService.takePhoto();
-                                if (file != null) setD(() => proofImage = file);
-                              },
-                              icon: const Icon(Icons.camera_alt_rounded, size: 18),
-                              label: const Text('Kamera', style: TextStyle(fontSize: 12)),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () async {
-                                final storageService = StorageService();
-                                final file = await storageService.pickImage();
-                                if (file != null) setD(() => proofImage = file);
-                              },
-                              icon: const Icon(Icons.image_rounded, size: 18),
-                              label: const Text('Galeri', style: TextStyle(fontSize: 12)),
-                            ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Memindai bukti transfer...',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.info, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
-                  ],
-                )),
-                actions: [
-                  if (!isUploading)
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
-                  ElevatedButton(
-                    onPressed: (isValid && !isUploading) ? () async {
-                      setD(() => isUploading = true);
-                      
-                      String? proofUrl;
-                      if (proofImage != null) {
-                        try {
-                          final storageService = StorageService();
-                          proofUrl = await storageService.uploadSalaryProofImage(proofImage!, _selectedCashier!);
-                        } catch (e) {
-                          setD(() => isUploading = false);
-                          if (!ctx.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('Gagal mengupload foto: $e'), backgroundColor: AppColors.error));
-                          return;
+                    )
+                  else if (scannedDate != null || scannedAmount != null) ...[
+                    Builder(
+                      builder: (context) {
+                        final isDateMatched = scannedDate == null || (scannedDate!.year == selectedDate.year && scannedDate!.month == selectedDate.month && scannedDate!.day == selectedDate.day);
+                        final isAmountMatched = scannedAmount == null || scannedAmount == nominal;
+                        final isFullyMatched = isDateMatched && isAmountMatched;
+
+                        if (isFullyMatched) {
+                          return Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Bukti Transfer Valid & Riil!',
+                                      style: AppTextStyles.caption.copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}).',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.success, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          );
                         }
+
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 16),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Detail Bukti Transfer Berbeda:',
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              if (scannedDate != null && !isDateMatched)
+                                Text(
+                                  '• Tanggal struk: ${AppFormatter.formatDate(scannedDate!)} (Input: ${AppFormatter.formatDate(selectedDate)})',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
+                                ),
+                              if (scannedAmount != null && !isAmountMatched)
+                                Text(
+                                  '• Nominal struk: ${AppFormatter.formatRupiah(scannedAmount!)} (Input: ${AppFormatter.formatRupiah(nominal)})',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
+                                ),
+                              const SizedBox(height: 8),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 32,
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    setD(() {
+                                      if (scannedDate != null) selectedDate = scannedDate!;
+                                      if (scannedAmount != null) {
+                                        nominalCtrl.text = scannedAmount!.toString();
+                                      }
+                                    });
+                                  },
+                                  icon: const Icon(Icons.flash_on_rounded, size: 14, color: Colors.white),
+                                  label: const Text('Terapkan dari Struk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.warning,
+                                    padding: EdgeInsets.zero,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
                       }
-                      DateTime finalDate = selectedDate;
-                      if (selectedDate.year != DateTime.now().year || selectedDate.month != DateTime.now().month || selectedDate.day != DateTime.now().day) {
-                        finalDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, 12, 0);
-                      }
-                      
-                      await _fs.addSalaryPayment({
-                        'cashierName': _selectedCashier,
-                        'month': _selectedMonth,
-                        'year': _selectedYear,
-                        'workingDays': _totalWorkDays,
-                        'ratePerDay': _ratePerDay,
-                        'nominal': nominal,
-                        'paidDays': calcDays,
-                        'paidAt': Timestamp.fromDate(finalDate),
-                        'paymentMethod': selectedMethod,
-                        if (proofUrl != null) 'proofUrl': proofUrl,
-                      });
-                      if (!ctx.mounted) return;
-                      Navigator.pop(ctx);
-                      if (!mounted) return;
-                      _loadWorkingDays(); // refresh data
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('Gaji ${AppFormatter.formatRupiah(nominal)} ($calcDays hari) berhasil dicatat'),
-                        backgroundColor: AppColors.success));
-                    } : null,
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                    child: isUploading 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Bayar', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final storageService = StorageService();
+                            final file = await storageService.takePhoto();
+                            if (file != null) {
+                              setD(() {
+                                proofImage = file;
+                                isScanning = true;
+                                scannedDate = null;
+                                scannedAmount = null;
+                              });
+                              final result = await ReceiptScanner.scanReceipt(file);
+                              setD(() {
+                                isScanning = false;
+                                if (result != null) {
+                                  scannedDate = result['date'];
+                                  scannedAmount = result['amount'];
+                                }
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.camera_alt_rounded, size: 18),
+                          label: const Text('Kamera', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final storageService = StorageService();
+                            final file = await storageService.pickImage();
+                            if (file != null) {
+                              setD(() {
+                                proofImage = file;
+                                isScanning = true;
+                                scannedDate = null;
+                                scannedAmount = null;
+                              });
+                              final result = await ReceiptScanner.scanReceipt(file);
+                              setD(() {
+                                isScanning = false;
+                                if (result != null) {
+                                  scannedDate = result['date'];
+                                  scannedAmount = result['amount'];
+                                }
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.image_rounded, size: 18),
+                          label: const Text('Galeri', style: TextStyle(fontSize: 12)),
+                        ),
+                      ),
+                    ],
                   ),
+              ],
+            )),
+            actions: [
+              if (!isUploading)
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
+              ElevatedButton(
+                onPressed: (isValid && !isUploading) ? () async {
+                  setD(() => isUploading = true);
+                  
+                  String? proofUrl;
+                  if (proofImage != null) {
+                    try {
+                      final storageService = StorageService();
+                      proofUrl = await storageService.uploadSalaryProofImage(proofImage!, _selectedCashier!);
+                    } catch (e) {
+                      setD(() => isUploading = false);
+                      if (!ctx.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('Gagal mengupload foto: $e'), backgroundColor: AppColors.error));
+                      return;
+                    }
+                  }
+                  DateTime finalDate = selectedDate;
+                  if (selectedDate.year != DateTime.now().year || selectedDate.month != DateTime.now().month || selectedDate.day != DateTime.now().day) {
+                    finalDate = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, 12, 0);
+                  }
+                  
+                  await _fs.addSalaryPayment({
+                    'cashierName': _selectedCashier,
+                    'month': _selectedMonth,
+                    'year': _selectedYear,
+                    'workingDays': _totalWorkDays,
+                    'ratePerDay': _ratePerDay,
+                    'nominal': nominal,
+                    'paidDays': calcDays,
+                    'paidAt': Timestamp.fromDate(finalDate),
+                    'paymentMethod': selectedMethod,
+                    if (proofUrl != null) 'proofUrl': proofUrl,
+                  });
+                  if (!ctx.mounted) return;
+                  Navigator.pop(ctx);
+                  if (!mounted) return;
+                  _loadWorkingDays(); // refresh data
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Gaji ${AppFormatter.formatRupiah(nominal)} ($calcDays hari) berhasil dicatat'),
+                    backgroundColor: AppColors.success));
+                } : null,
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                child: isUploading 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Bayar', style: TextStyle(color: Colors.white)),
+              ),
             ],
           );
         },
