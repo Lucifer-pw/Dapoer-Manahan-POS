@@ -65,6 +65,9 @@ android {
         release {
             // Signing dengan kunci rilis resmi
             signingConfig signingConfigs.release
+
+            // Apply ProGuard keep rules to suppress missing MLKit class warnings
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
