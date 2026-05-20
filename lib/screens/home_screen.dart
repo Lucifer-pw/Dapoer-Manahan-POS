@@ -239,68 +239,74 @@ class _HomeScreenState extends State<HomeScreen> {
           )),
         ),
         const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      !isToday
-                          ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
-                          : AppFormatter.formatDate(DateTime.now()),
-                      style: AppTextStyles.caption,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (!isToday) ...[
-                    const SizedBox(width: 6),
-                    GestureDetector(
-                      onTap: _clearFilter,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.close_rounded,
-                          color: AppColors.error,
-                          size: 11,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
         Consumer2<ConnectivityProvider, PrinterProvider>(
           builder: (context, connProv, printerProv, _) {
             return Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                PulsingStatusBadge(
-                  isActive: connProv.isOnline,
-                  activeLabel: 'Cloud Aktif',
-                  inactiveLabel: 'Offline',
-                  activeColor: const Color(0xFF4CAF50),
-                  inactiveColor: const Color(0xFFEF5350),
+                // Greeting column takes remaining width
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              !isToday
+                                  ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
+                                  : AppFormatter.formatDate(DateTime.now()),
+                              style: AppTextStyles.caption,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (!isToday) ...[
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: _clearFilter,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  color: AppColors.error,
+                                  size: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 8),
-                PulsingStatusBadge(
-                  isActive: printerProv.isConnected,
-                  activeLabel: 'Printer Siap',
-                  inactiveLabel: 'Printer Offline',
-                  activeColor: const Color(0xFF00B4D8),
-                  inactiveColor: AppColors.primary,
+                // Status badges stacked vertically to avoid horizontal crowding
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    PulsingStatusBadge(
+                      isActive: connProv.isOnline,
+                      activeLabel: 'Cloud Aktif',
+                      inactiveLabel: 'Offline',
+                      activeColor: const Color(0xFF4CAF50),
+                      inactiveColor: const Color(0xFFEF5350),
+                    ),
+                    const SizedBox(height: 6),
+                    PulsingStatusBadge(
+                      isActive: printerProv.isConnected,
+                      activeLabel: 'Printer Siap',
+                      inactiveLabel: 'Printer Offline',
+                      activeColor: const Color(0xFF00B4D8),
+                      inactiveColor: AppColors.primary,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
               ],
             );
           },
