@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,8 @@ import 'providers/starting_cash_provider.dart';
 import 'providers/draft_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/navigation_provider.dart';
+import 'providers/connectivity_provider.dart';
+import 'providers/qr_order_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 import 'firebase_options.dart';
@@ -26,6 +29,11 @@ void main() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
+    );
+    // Explicitly configure Firestore for offline persistence with unlimited cache size
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
   } catch (e) {
     debugPrint('Firebase init error: $e');
@@ -57,6 +65,8 @@ class DapoerManahanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DraftProvider()..fetchDrafts()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
+        ChangeNotifierProvider(create: (_) => QrOrderProvider()..init()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProv, _) {

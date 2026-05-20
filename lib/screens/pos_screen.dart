@@ -16,6 +16,7 @@ import '../models/draft_order.dart';
 import '../widgets/drafts_dialog.dart';
 import '../providers/order_provider.dart';
 import 'package:uuid/uuid.dart';
+import '../widgets/qr_order_floating_card.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -91,7 +92,18 @@ class _PosScreenState extends State<PosScreen> {
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false, // Prevents keyboard from causing overflow
       body: SafeArea(
-        child: isWide ? _buildWideLayout() : _buildNarrowLayout(),
+        child: Stack(
+          children: [
+            isWide ? _buildWideLayout() : _buildNarrowLayout(),
+            Positioned(
+              bottom: 16,
+              right: 16,
+              left: isWide ? null : 16,
+              width: isWide ? 320 : null,
+              child: const QrOrderFloatingCard(),
+            ),
+          ],
+        ),
       ),
     );
   }

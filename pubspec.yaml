@@ -1,7 +1,7 @@
 name: dapoer_pos
 description: "Dapoer Manahan - Aplikasi POS Restoran"
 publish_to: 'none'
-version: 1.0.12+46
+version: 1.0.12+47
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -45,6 +45,8 @@ dependencies:
   permission_handler: ^11.3.1
   shared_preferences: ^2.2.3
   google_mlkit_text_recognition: ^0.15.0
+  qr_flutter: ^4.1.0
+  connectivity_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:

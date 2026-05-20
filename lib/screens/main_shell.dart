@@ -11,6 +11,8 @@ import 'order_history_screen.dart';
 import 'expense_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/printer_provider.dart';
+import '../providers/connectivity_provider.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -30,6 +32,9 @@ class _MainShellState extends State<MainShell> {
     ExpenseScreen(),
     OrderHistoryScreen(),
   ];
+
+  bool? _lastPrinterState;
+  bool? _lastConnectivityState;
 
   // ============================================================
   // INIT STATE
@@ -53,10 +58,149 @@ class _MainShellState extends State<MainShell> {
         }
       }
     });
+
+    // Setup state listeners for printer & network connectivity
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      final printerProv = Provider.of<PrinterProvider>(context, listen: false);
+      _lastPrinterState = printerProv.isConnected;
+      printerProv.addListener(_onPrinterStateChanged);
+
+      final connProv = Provider.of<ConnectivityProvider>(context, listen: false);
+      _lastConnectivityState = connProv.isOnline;
+      connProv.addListener(_onConnectivityChanged);
+    });
+  }
+
+  void _onPrinterStateChanged() {
+    if (!mounted) return;
+    final printerProv = Provider.of<PrinterProvider>(context, listen: false);
+    final isConnected = printerProv.isConnected;
+    if (_lastPrinterState != isConnected) {
+      _lastPrinterState = isConnected;
+      _showPrinterNotification(isConnected);
+    }
+  }
+
+  void _onConnectivityChanged() {
+    if (!mounted) return;
+    final connProv = Provider.of<ConnectivityProvider>(context, listen: false);
+    final isOnline = connProv.isOnline;
+    if (_lastConnectivityState != isOnline) {
+      _lastConnectivityState = isOnline;
+      _showNetworkNotification(isOnline);
+    }
+  }
+
+  void _showPrinterNotification(bool isConnected) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isConnected ? const Color(0xFF00B4D8) : AppColors.primary,
+        margin: const EdgeInsets.all(AppSpacing.lg),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        content: Row(
+          children: [
+            Icon(
+              isConnected ? Icons.print_rounded : Icons.print_disabled_rounded,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isConnected ? 'Printer Terhubung' : 'Printer Terputus',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    isConnected
+                        ? 'Printer siap mencetak struk transaksi Anda.'
+                        : 'Hubungkan printer kembali melalui menu Pengaturan.',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _showNetworkNotification(bool isOnline) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: isOnline ? const Color(0xFF4CAF50) : const Color(0xFFEF5350),
+        margin: const EdgeInsets.all(AppSpacing.lg),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        content: Row(
+          children: [
+            Icon(
+              isOnline ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isOnline ? 'Koneksi Online' : 'Koneksi Terputus (Mode Lokal)',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    isOnline
+                        ? 'Sistem berhasil terhubung kembali ke server cloud.'
+                        : 'Aplikasi berjalan dalam mode offline. Data disimpan lokal.',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   @override
   void dispose() {
+    try {
+      final printerProv = Provider.of<PrinterProvider>(context, listen: false);
+      printerProv.removeListener(_onPrinterStateChanged);
+    } catch (_) {}
+    try {
+      final connProv = Provider.of<ConnectivityProvider>(context, listen: false);
+      connProv.removeListener(_onConnectivityChanged);
+    } catch (_) {}
     _pageController.dispose();
     super.dispose();
   }

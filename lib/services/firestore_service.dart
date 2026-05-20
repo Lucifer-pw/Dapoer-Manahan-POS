@@ -798,4 +798,23 @@ class FirestoreService {
     }
     return total;
   }
+
+  // ============================================================
+  // QR ORDERS (SELF SERVICE)
+  // ============================================================
+
+  Stream<List<Map<String, dynamic>>> streamPendingQrOrders() {
+    return _db.collection('qr_orders')
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  Future<void> updateQrOrderStatus(String orderId, String status) async {
+    await _db.collection('qr_orders').doc(orderId).update({'status': status});
+  }
 }

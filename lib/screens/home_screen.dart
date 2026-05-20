@@ -8,6 +8,9 @@ import '../providers/expense_provider.dart';
 import '../providers/starting_cash_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/menu_provider.dart';
+import '../providers/connectivity_provider.dart';
+import '../providers/printer_provider.dart';
+import '../widgets/pulsing_badge.dart';
 import '../models/order.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
@@ -276,6 +279,31 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+        ),
+        Consumer2<ConnectivityProvider, PrinterProvider>(
+          builder: (context, connProv, printerProv, _) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PulsingStatusBadge(
+                  isActive: connProv.isOnline,
+                  activeLabel: 'Cloud Aktif',
+                  inactiveLabel: 'Offline',
+                  activeColor: const Color(0xFF4CAF50),
+                  inactiveColor: const Color(0xFFEF5350),
+                ),
+                const SizedBox(width: 8),
+                PulsingStatusBadge(
+                  isActive: printerProv.isConnected,
+                  activeLabel: 'Printer Siap',
+                  inactiveLabel: 'Printer Offline',
+                  activeColor: const Color(0xFF00B4D8),
+                  inactiveColor: AppColors.primary,
+                ),
+                const SizedBox(width: 8),
+              ],
+            );
+          },
         ),
         IconButton(
           padding: EdgeInsets.zero,

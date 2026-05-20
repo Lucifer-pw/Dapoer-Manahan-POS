@@ -129,6 +129,16 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void loadQrOrder(int tableNum, List<OrderItem> qrItems) {
+    _items.clear();
+    _items.addAll(qrItems);
+    _tableNumber = tableNum;
+    _isTakeAway = false;
+    _activeDraftId = null;
+    _activeDraftNumber = null;
+    notifyListeners();
+  }
+
   void clear() {
     _items.clear();
     _tableNumber = 0;
