@@ -71,10 +71,15 @@ class UpdateService {
 
       // Ambil info rilis terbaru dari GitHub
       // Kita langsung cek rilis karena di situ ada file APK-nya
-      final releaseInfo = await _getLatestReleaseInfo();
+      var releaseInfo = await _getLatestReleaseInfo();
 
       if (releaseInfo == null) {
-        debugPrint('⚠️ Could not fetch release info from GitHub');
+        debugPrint('⚠️ Could not fetch release info from GitHub API. Trying raw pubspec.yaml fallback...');
+        releaseInfo = await _getLatestReleaseInfoFromPubspecFallback();
+      }
+
+      if (releaseInfo == null) {
+        debugPrint('⚠️ All update check attempts failed.');
         return AppUpdateInfo(
           hasUpdate: false,
           currentVersion: currentVersion,
@@ -83,7 +88,7 @@ class UpdateService {
       }
 
       final latestVersion = releaseInfo['version']!;
-      debugPrint('🌐 Latest version from GitHub Release: $latestVersion');
+      debugPrint('🌐 Latest version from GitHub: $latestVersion');
 
       // Bandingkan versi
       final hasUpdate = _isNewerVersion(currentVersion, latestVersion);
@@ -110,6 +115,42 @@ class UpdateService {
         currentVersion: '1.0.0',
         latestVersion: '1.0.0',
       );
+    }
+  }
+
+  /// Fallback untuk mengambil info rilis terbaru dari pubspec.yaml raw di GitHub.
+  /// Ini menghindari pembatasan rate limit API GitHub (GitHub API rate limit 403).
+  Future<Map<String, String>?> _getLatestReleaseInfoFromPubspecFallback() async {
+    try {
+      const rawPubspecUrl = 'https://raw.githubusercontent.com/$_repoOwner/$_repoName/main/pubspec.yaml';
+      final response = await http.get(Uri.parse(rawPubspecUrl)).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final content = response.body;
+        final lines = content.split('\n');
+        String? version;
+        for (var line in lines) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('version:')) {
+            version = trimmed.replaceFirst('version:', '').trim();
+            break;
+          }
+        }
+
+        if (version != null && version.isNotEmpty) {
+          // Construct direct APK download URL based on convention
+          final downloadUrl = 'https://github.com/$_repoOwner/$_repoName/releases/download/v$version/app-release.apk';
+          return {
+            'version': version,
+            'downloadUrl': downloadUrl,
+            'message': 'Versi terbaru $version tersedia. (Diunduh melalui jalur cadangan bebas rate-limit)',
+          };
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('⚠️ Error fetching raw pubspec.yaml from GitHub: $e');
+      return null;
     }
   }
 
