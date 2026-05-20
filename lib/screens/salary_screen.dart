@@ -253,6 +253,8 @@ class _SalaryScreenState extends State<SalaryScreen> {
     DateTime? scannedDate;
     int? scannedAmount;
     bool? scannedNameMatched;
+    bool? scannedAccountNumberMatched;
+    bool? isFromGallery;
 
     showDialog(
       context: context,
@@ -262,6 +264,16 @@ class _SalaryScreenState extends State<SalaryScreen> {
           final nominal = int.tryParse(nominalCtrl.text) ?? 0;
           final calcDays = nominal ~/ _ratePerDay;
           final isValid = nominal > 0 && calcDays <= _remainingDays;
+
+          final nameCheckActive = _cashierBankAccountName.isNotEmpty;
+          final accountCheckActive = _cashierBankAccount.isNotEmpty;
+
+          final isDateMatched = scannedDate == null || (scannedDate!.year == selectedDate.year && scannedDate!.month == selectedDate.month && scannedDate!.day == selectedDate.day);
+          final isAmountMatched = scannedAmount == null || scannedAmount == nominal;
+          final isNameMatched = !nameCheckActive || (scannedNameMatched == true);
+          final isAccountNumberMatched = !accountCheckActive || (scannedAccountNumberMatched == true);
+
+          final isFullyMatched = isDateMatched && isAmountMatched && isNameMatched && isAccountNumberMatched;
           
           List<String> datesToPay = [];
           if (isValid && calcDays > 0) {
@@ -446,6 +458,8 @@ class _SalaryScreenState extends State<SalaryScreen> {
                             scannedDate = null;
                             scannedAmount = null;
                             scannedNameMatched = null;
+                            scannedAccountNumberMatched = null;
+                            isFromGallery = null;
                           }),
                           child: Container(
                             padding: const EdgeInsets.all(4),
@@ -483,16 +497,12 @@ class _SalaryScreenState extends State<SalaryScreen> {
                   else if (scannedDate != null || scannedAmount != null) ...[
                     Builder(
                       builder: (context) {
-                        final nameCheckActive = _cashierBankAccountName.isNotEmpty;
-                        final isNameMatched = !nameCheckActive || (scannedNameMatched == true);
-                        final isDateMatched = scannedDate == null || (scannedDate!.year == selectedDate.year && scannedDate!.month == selectedDate.month && scannedDate!.day == selectedDate.day);
-                        final isAmountMatched = scannedAmount == null || scannedAmount == nominal;
-                        final isFullyMatched = isDateMatched && isAmountMatched && isNameMatched;
-
                         if (isFullyMatched) {
-                          final successMessage = nameCheckActive 
-                            ? 'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}) dan transfer atas nama "$_cashierBankAccountName" terverifikasi.'
-                            : 'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}).';
+                          final successMessage = nameCheckActive && accountCheckActive
+                            ? 'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}) serta nama "$_cashierBankAccountName" dan no. rek "$_cashierBankAccount" terverifikasi.'
+                            : nameCheckActive
+                              ? 'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}) dan transfer atas nama "$_cashierBankAccountName" terverifikasi.'
+                              : 'Teks terdeteksi cocok dengan input Anda (${AppFormatter.formatRupiah(scannedAmount ?? nominal)}, ${AppFormatter.formatDate(scannedDate ?? selectedDate)}).';
                           return Container(
                             width: double.infinity,
                             padding: const EdgeInsets.all(12),
@@ -524,24 +534,31 @@ class _SalaryScreenState extends State<SalaryScreen> {
                           );
                         }
 
+                        final colorToken = isFromGallery == true ? AppColors.error : AppColors.warning;
                         return Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.warning.withOpacity(0.1),
+                            color: colorToken.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(AppRadius.md),
-                            border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                            border: Border.all(color: colorToken.withOpacity(0.3)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 16),
+                                  Icon(
+                                    isFromGallery == true ? Icons.lock_rounded : Icons.warning_amber_rounded,
+                                    color: colorToken,
+                                    size: 16,
+                                  ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Detail Bukti Transfer Berbeda:',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontWeight: FontWeight.bold),
+                                    isFromGallery == true 
+                                      ? 'Unggahan Galeri Terkunci (Gagal Verifikasi):'
+                                      : 'Detail Bukti Transfer Berbeda:',
+                                    style: AppTextStyles.caption.copyWith(color: colorToken, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -549,21 +566,41 @@ class _SalaryScreenState extends State<SalaryScreen> {
                               if (scannedDate != null && !isDateMatched)
                                 Text(
                                   '• Tanggal struk: ${AppFormatter.formatDate(scannedDate!)} (Input: ${AppFormatter.formatDate(selectedDate)})',
-                                  style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
+                                  style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 11),
                                 ),
                               if (scannedAmount != null && !isAmountMatched)
                                 Text(
                                   '• Nominal struk: ${AppFormatter.formatRupiah(scannedAmount!)} (Input: ${AppFormatter.formatRupiah(nominal)})',
-                                  style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
+                                  style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 11),
                                 ),
                               if (nameCheckActive && scannedNameMatched == false)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 2),
                                   child: Text(
-                                    '• Rekening atas nama "$_cashierBankAccountName" TIDAK terdeteksi pada struk (jaga-jaga manipulasi bukti transfer)',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
+                                    '• Rekening atas nama "$_cashierBankAccountName" tidak cocok/tidak terdeteksi',
+                                    style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 11),
                                   ),
                                 ),
+                              if (accountCheckActive && scannedAccountNumberMatched == false)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    '• Nomor rekening "$_cashierBankAccount" tidak cocok/tidak terdeteksi',
+                                    style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 11),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              if (isFromGallery == true) ...[
+                                Text(
+                                  'Verifikasi gagal. Unggahan Galeri harus 100% cocok. Silakan sesuaikan data input, unggah bukti yang benar, atau gunakan Kamera jika ingin bypass verifikasi.',
+                                  style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 10, fontStyle: FontStyle.italic),
+                                ),
+                              ] else ...[
+                                Text(
+                                  'Kamera (Bypass Aktif): Anda tetap dapat menekan tombol Bayar jika yakin data sudah sesuai.',
+                                  style: AppTextStyles.caption.copyWith(color: colorToken, fontSize: 10, fontStyle: FontStyle.italic),
+                                ),
+                              ],
                               const SizedBox(height: 8),
                               SizedBox(
                                 width: double.infinity,
@@ -580,7 +617,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                   icon: const Icon(Icons.flash_on_rounded, size: 14, color: Colors.white),
                                   label: const Text('Terapkan dari Struk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.warning,
+                                    backgroundColor: colorToken,
                                     padding: EdgeInsets.zero,
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
@@ -608,11 +645,14 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                 scannedDate = null;
                                 scannedAmount = null;
                                 scannedNameMatched = null;
+                                scannedAccountNumberMatched = null;
+                                isFromGallery = false;
                               });
                               final result = await ReceiptScanner.scanReceipt(
                                 file,
                                 inputAmount: nominal,
                                 bankAccountName: _cashierBankAccountName,
+                                bankAccountNumber: _cashierBankAccount,
                               );
                               setD(() {
                                 isScanning = false;
@@ -620,6 +660,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                   scannedDate = result['date'];
                                   scannedAmount = result['amount'];
                                   scannedNameMatched = result['isNameMatched'];
+                                  scannedAccountNumberMatched = result['isAccountNumberMatched'];
                                 }
                               });
                             }
@@ -641,11 +682,14 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                 scannedDate = null;
                                 scannedAmount = null;
                                 scannedNameMatched = null;
+                                scannedAccountNumberMatched = null;
+                                isFromGallery = true;
                               });
                               final result = await ReceiptScanner.scanReceipt(
                                 file,
                                 inputAmount: nominal,
                                 bankAccountName: _cashierBankAccountName,
+                                bankAccountNumber: _cashierBankAccount,
                               );
                               setD(() {
                                 isScanning = false;
@@ -653,6 +697,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                                   scannedDate = result['date'];
                                   scannedAmount = result['amount'];
                                   scannedNameMatched = result['isNameMatched'];
+                                  scannedAccountNumberMatched = result['isAccountNumberMatched'];
                                 }
                               });
                             }
@@ -671,7 +716,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
                   onPressed: () => Navigator.pop(ctx),
                   child: Text('Batal', style: TextStyle(color: AppColors.textSecondary))),
               ElevatedButton(
-                onPressed: (isValid && !isUploading) ? () async {
+                onPressed: (isValid && !isUploading && !isScanning && (proofImage == null || isFromGallery != true || isFullyMatched)) ? () async {
                   setD(() => isUploading = true);
                   
                   String? proofUrl;

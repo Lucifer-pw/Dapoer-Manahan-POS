@@ -5,12 +5,12 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 class ReceiptScanner {
   /// Memindai file gambar bukti transfer menggunakan Google MLKit dan mengembalikan detail parsing.
   /// Mendukung pencocokan inputAmount dan verifikasi bankAccountName (opsional).
-  static Future<Map<String, dynamic>?> scanReceipt(File file, {int? inputAmount, String? bankAccountName}) async {
+  static Future<Map<String, dynamic>?> scanReceipt(File file, {int? inputAmount, String? bankAccountName, String? bankAccountNumber}) async {
     final inputImage = InputImage.fromFile(file);
     final textRecognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
       final RecognizedText recognizedText = await textRecognizer.processImage(inputImage);
-      return parseText(recognizedText.text, inputAmount: inputAmount, bankAccountName: bankAccountName);
+      return parseText(recognizedText.text, inputAmount: inputAmount, bankAccountName: bankAccountName, bankAccountNumber: bankAccountNumber);
     } catch (e) {
       debugPrint("OCR Processing Error: $e");
       return null;
@@ -19,8 +19,8 @@ class ReceiptScanner {
     }
   }
 
-  /// Mengekstraksi tanggal, nominal, dan verifikasi nama pemilik rekening dari teks mentah.
-  static Map<String, dynamic> parseText(String text, {int? inputAmount, String? bankAccountName}) {
+  /// Mengekstraksi tanggal, nominal, verifikasi nama pemilik rekening, dan verifikasi nomor rekening dari teks mentah.
+  static Map<String, dynamic> parseText(String text, {int? inputAmount, String? bankAccountName, String? bankAccountNumber}) {
     debugPrint("=== SCAN RECEIPT RAW TEXT ===\n$text\n=============================");
     
     final normalizedText = text.toLowerCase();
@@ -224,11 +224,26 @@ class ReceiptScanner {
       }
     }
 
+    // 6. VERIFIKASI NOMOR REKENING PENERIMA
+    bool? isAccountNumberMatched;
+    if (bankAccountNumber != null && bankAccountNumber.trim().isNotEmpty) {
+      final cleanAcc = bankAccountNumber.replaceAll(RegExp(r'\D'), '');
+      if (cleanAcc.isNotEmpty) {
+        final digitOnlyText = processedText.replaceAll(RegExp(r'\D'), '');
+        if (digitOnlyText.contains(cleanAcc)) {
+          isAccountNumberMatched = true;
+        } else {
+          isAccountNumberMatched = false;
+        }
+      }
+    }
+
     return {
       'rawText': text,
       'date': date,
       'amount': amount,
       'isNameMatched': isNameMatched,
+      'isAccountNumberMatched': isAccountNumberMatched,
     };
   }
 
