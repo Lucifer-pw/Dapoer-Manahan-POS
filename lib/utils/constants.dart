@@ -283,7 +283,7 @@ class DefaultData {
     {'name': 'Snack', 'icon': '🍟', 'sortOrder': 3},
   ];
 
-  static const int defaultTableCount = 12;
+  static const int defaultTableCount = 8;
   static const String restaurantName = 'Dapoer Manahan';
   static const String restaurantTagline = 'Point of Sale System';
   static const String restaurantAddress = '';

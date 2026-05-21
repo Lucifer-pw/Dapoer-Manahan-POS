@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import '../providers/table_provider.dart';
 import '../models/table_model.dart';
@@ -6,6 +7,9 @@ import '../utils/constants.dart';
 import '../widgets/table_card.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../providers/printer_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class TableScreen extends StatelessWidget {
   const TableScreen({super.key});
@@ -286,7 +290,7 @@ class TableScreen extends StatelessWidget {
   }
 
   void _showTableQrDialog(BuildContext context, RestaurantTable table) {
-    final qrUrl = "https://dapoer-manahan-order.web.app/#/table/${table.number}";
+    final qrUrl = table.qrUrl ?? "https://pos-dapoer-manahan.web.app/table/${table.number}";
     
     showDialog(
       context: context,
@@ -345,7 +349,7 @@ class TableScreen extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.pop(ctx);
-              _printTableQr(context, table);
+              _printTableQrPdf(context, table);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
@@ -353,9 +357,28 @@ class TableScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
-            icon: const Icon(Icons.print_rounded, color: Colors.white, size: 18),
-            label: const Text('Cetak QR Code', style: TextStyle(color: Colors.white)),
+            icon: const Icon(Icons.picture_as_pdf_rounded, color: Colors.white, size: 18),
+            label: const Text('Cetak Sticker (PDF)', style: TextStyle(color: Colors.white)),
           ),
+          if (!kIsWeb) ...[
+            const SizedBox(width: 8),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _printTableQr(context, table);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.card,
+                side: BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+              ),
+              icon: const Icon(Icons.print_rounded, color: Colors.white, size: 18),
+              label: const Text('Cetak Thermal', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+          const SizedBox(width: 8),
           OutlinedButton(
             onPressed: () => Navigator.pop(ctx),
             style: OutlinedButton.styleFrom(
@@ -371,6 +394,187 @@ class TableScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _printTableQrPdf(BuildContext context, RestaurantTable table) async {
+    final doc = pw.Document();
+    final qrUrl = table.qrUrl ?? "https://pos-dapoer-manahan.web.app/table/${table.number}";
+
+    // Load restaurant logo from assets
+    pw.ImageProvider? logoImage;
+    try {
+      logoImage = await imageFromAssetBundle('assets/images/app_logo.png');
+    } catch (e) {
+      debugPrint('Failed to load logo asset for PDF: $e');
+    }
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(
+          10 * PdfPageFormat.cm,
+          10 * PdfPageFormat.cm,
+          marginTop: 0.5 * PdfPageFormat.cm,
+          marginBottom: 0.5 * PdfPageFormat.cm,
+          marginLeft: 0.5 * PdfPageFormat.cm,
+          marginRight: 0.5 * PdfPageFormat.cm,
+        ),
+        build: (pw.Context ctx) {
+          return pw.Container(
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey300, width: 1.5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+              color: PdfColors.white,
+            ),
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                // Top Row: Logo + Restaurant Name + Table Number Badge
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    // Logo + Text
+                    pw.Row(
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        if (logoImage != null) ...[
+                          pw.Image(logoImage, width: 32, height: 32),
+                          pw.SizedBox(width: 6),
+                        ],
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            pw.Text(
+                              "DAPOER MANAHAN",
+                              style: pw.TextStyle(
+                                fontSize: 11,
+                                fontWeight: pw.FontWeight.bold,
+                                color: PdfColor.fromInt(0xFF0F0F1A),
+                              ),
+                            ),
+                            pw.Text(
+                              "Pesan Online Mandiri",
+                              style: const pw.TextStyle(
+                                fontSize: 7,
+                                color: PdfColors.grey600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    
+                    // Table Number Badge
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: pw.BoxDecoration(
+                        color: PdfColor.fromInt(0xFF0F0F1A),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                      ),
+                      child: pw.Column(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        children: [
+                          pw.Text(
+                            "MEJA",
+                            style: pw.TextStyle(
+                              color: PdfColors.grey400,
+                              fontSize: 6,
+                              fontWeight: pw.FontWeight.bold,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          pw.Text(
+                            "${table.number}",
+                            style: pw.TextStyle(
+                              color: PdfColors.white,
+                              fontSize: 14,
+                              fontWeight: pw.FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                // Center QR Code
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(8),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey200, width: 1),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+                  ),
+                  child: pw.BarcodeWidget(
+                    barcode: pw.Barcode.qrCode(),
+                    data: qrUrl,
+                    width: 130,
+                    height: 130,
+                  ),
+                ),
+                
+                // Bottom steps in a single row
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildPdfStepRow("1", "Pindai QR"),
+                    _buildPdfStepRow("2", "Pilih Menu"),
+                    _buildPdfStepRow("3", "Pesanan Diantar"),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    try {
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => doc.save(),
+        name: 'QR_Code_Meja_${table.number}.pdf',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membuat PDF: $e')),
+        );
+      }
+    }
+  }
+
+  pw.Widget _buildPdfStepRow(String number, String text) {
+    return pw.Row(
+      mainAxisSize: pw.MainAxisSize.min,
+      children: [
+        pw.Container(
+          width: 12,
+          height: 12,
+          alignment: pw.Alignment.center,
+          decoration: const pw.BoxDecoration(
+            shape: pw.BoxShape.circle,
+            color: PdfColors.orange,
+          ),
+          child: pw.Text(
+            number,
+            style: pw.TextStyle(
+              color: PdfColors.white,
+              fontSize: 7,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+        ),
+        pw.SizedBox(width: 4),
+        pw.Text(
+          text,
+          style: const pw.TextStyle(
+            fontSize: 8,
+            color: PdfColors.grey800,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _printTableQr(BuildContext context, RestaurantTable table) async {
     final printerProv = Provider.of<PrinterProvider>(context, listen: false);
     if (printerProv.isConnected) {
@@ -381,7 +585,7 @@ class TableScreen extends StatelessWidget {
         bluetooth.printCustom("Meja ${table.number}", 2, 1);
         bluetooth.printNewLine();
         
-        final qrUrl = "https://dapoer-manahan-order.web.app/#/table/${table.number}";
+        final qrUrl = table.qrUrl ?? "https://pos-dapoer-manahan.web.app/table/${table.number}";
         bluetooth.printQRcode(qrUrl, 200, 200, 1);
         
         bluetooth.printNewLine();

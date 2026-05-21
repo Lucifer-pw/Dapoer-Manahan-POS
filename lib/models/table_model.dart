@@ -6,6 +6,7 @@ class RestaurantTable {
   final int capacity;
   final TableStatus status;
   final String? currentOrderId;
+  final String? qrUrl;
 
   RestaurantTable({
     required this.id,
@@ -13,6 +14,7 @@ class RestaurantTable {
     this.capacity = 4,
     this.status = TableStatus.available,
     this.currentOrderId,
+    this.qrUrl,
   });
 
   factory RestaurantTable.fromMap(Map<String, dynamic> map, String docId) {
@@ -25,6 +27,7 @@ class RestaurantTable {
         orElse: () => TableStatus.available,
       ),
       currentOrderId: map['currentOrderId'],
+      qrUrl: map['qrUrl'],
     );
   }
 
@@ -34,6 +37,7 @@ class RestaurantTable {
       'capacity': capacity,
       'status': status.name,
       'currentOrderId': currentOrderId,
+      'qrUrl': qrUrl,
     };
   }
 
@@ -43,6 +47,7 @@ class RestaurantTable {
     int? capacity,
     TableStatus? status,
     String? currentOrderId,
+    String? qrUrl,
   }) {
     return RestaurantTable(
       id: id ?? this.id,
@@ -50,6 +55,7 @@ class RestaurantTable {
       capacity: capacity ?? this.capacity,
       status: status ?? this.status,
       currentOrderId: currentOrderId ?? this.currentOrderId,
+      qrUrl: qrUrl ?? this.qrUrl,
     );
   }
 }

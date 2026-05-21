@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import 'login_screen.dart';
 import 'main_shell.dart';
 import 'billing_screen.dart';
+import 'customer_order_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -53,6 +54,33 @@ class _SplashScreenState extends State<SplashScreen>
     final subProvider =
         Provider.of<SubscriptionProvider>(context, listen: false);
 
+    // After splash animation and auth initialization, check if the URL is a table QR route.
+    String currentPath = Uri.base.path;
+    // For hash‑based URLs (fallback on some browsers), also consider the fragment.
+    if ((currentPath == '/' || currentPath.isEmpty) && Uri.base.fragment.isNotEmpty) {
+      // When using hash‑based URLs (e.g., http://example.com/#/table/1),
+      // Uri.base.path will be '/' or empty and the fragment will contain the route.
+      // Remove any leading slash from the fragment to avoid a double slash.
+      final cleanedFragment = Uri.base.fragment.replaceFirst(RegExp(r'^/'), '');
+      currentPath = '/$cleanedFragment';
+    }
+    // Normalize path: remove trailing slash if present.
+    if (currentPath.endsWith('/') && currentPath.length > 1) {
+      currentPath = currentPath.substring(0, currentPath.length - 1);
+    }
+    debugPrint('SplashScreen: currentPath = $currentPath');
+    if (currentPath.startsWith('/table/')) {
+      // Direct navigation to CustomerOrderScreen without login requirement
+      final tableNumber = currentPath.replaceFirst('/table/', '');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => CustomerOrderScreen(tableNumber: tableNumber),
+          ),
+        );
+      });
+      return;
+    }
     // 1. Wait for splash animation (min 2 seconds)
     await Future.delayed(const Duration(seconds: 2));
 
@@ -72,6 +100,20 @@ class _SplashScreenState extends State<SplashScreen>
     await _checkForUpdates();
 
     if (!mounted) return;
+
+    // Double check if we are on a table route to prevent any automatic redirects to cashier dashboard/login
+    String recheckedPath = Uri.base.path;
+    if ((recheckedPath == '/' || recheckedPath.isEmpty) && Uri.base.fragment.isNotEmpty) {
+      final cleanedFragment = Uri.base.fragment.replaceFirst(RegExp(r'^/'), '');
+      recheckedPath = '/$cleanedFragment';
+    }
+    if (recheckedPath.endsWith('/') && recheckedPath.length > 1) {
+      recheckedPath = recheckedPath.substring(0, recheckedPath.length - 1);
+    }
+    if (recheckedPath.startsWith('/table/')) {
+      debugPrint('SplashScreen: Bypassing auth navigation because we are on a table route: $recheckedPath');
+      return;
+    }
 
     // 5. Handle Navigation logic
     if (subProvider.status == SubscriptionStatus.blocked) {
@@ -100,6 +142,7 @@ class _SplashScreenState extends State<SplashScreen>
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
+
   }
 
   /// Mengecek apakah ada versi baru aplikasi

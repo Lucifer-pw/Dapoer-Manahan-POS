@@ -233,6 +233,7 @@ class FirestoreService {
         'capacity': i <= 6 ? 4 : 6,
         'status': 'available',
         'currentOrderId': null,
+        'qrUrl': 'https://pos-dapoer-manahan.web.app/table/$i',
       });
     }
 
@@ -816,5 +817,9 @@ class FirestoreService {
 
   Future<void> updateQrOrderStatus(String orderId, String status) async {
     await _db.collection('qr_orders').doc(orderId).update({'status': status});
+  }
+
+  Future<void> createQrOrder(Map<String, dynamic> orderData) async {
+    await _db.collection('qr_orders').add(orderData);
   }
 }

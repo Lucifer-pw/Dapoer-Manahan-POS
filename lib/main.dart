@@ -19,8 +19,10 @@ import 'providers/theme_provider.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/qr_order_provider.dart';
+import 'screens/customer_order_screen.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
+import 'utils/url_strategy_helper.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -42,6 +44,8 @@ void main() async {
   // Initialize date formatting for Indonesian locale
   await initializeDateFormatting('id_ID', null);
 
+  // Enable clean path URLs for Flutter web
+  configureUrlStrategy();
   runApp(const DapoerManahanApp());
 }
 
@@ -83,7 +87,24 @@ class DapoerManahanApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProv.themeMode,
-            home: const SplashScreen(),
+            onGenerateRoute: (settings) {
+              final name = settings.name ?? '';
+              // For hash‑based URLs on web (e.g., http://example.com/#/table/5)
+              // Uri.base.path may be '/' and the actual route is stored in the fragment.
+              final fragment = Uri.base.fragment;
+              final effectiveName = (name.isEmpty && fragment.isNotEmpty) ? '/${fragment.replaceFirst(RegExp(r'^/'), '')}' : name;
+              if (effectiveName.startsWith('/table/')) {
+                final tableNumber = effectiveName.replaceFirst('/table/', '');
+                return MaterialPageRoute(
+                  builder: (_) => CustomerOrderScreen(tableNumber: tableNumber),
+                  settings: settings,
+                );
+              }
+              return MaterialPageRoute(
+                builder: (_) => const SplashScreen(),
+                settings: settings,
+              );
+            },
           );
         },
       ),

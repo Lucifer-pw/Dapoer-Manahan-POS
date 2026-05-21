@@ -23,16 +23,26 @@ class OrderItem {
 
   factory OrderItem.fromMap(Map<String, dynamic> map) {
     return OrderItem(
-      menuItemId: map['menuItemId'] ?? '',
-      menuItemName: map['menuItemName'] ?? '',
+      menuItemId: map['menuItemId'] ?? map['id'] ?? '',
+      menuItemName: map['menuItemName'] ?? map['name'] ?? '',
       categoryId: map['categoryId'],
-      quantity: map['quantity'] ?? 0,
-      price: map['price'] ?? 0,
+      quantity: _toInt(map['quantity']),
+      price: _toInt(map['price']),
       notes: map['notes'] ?? '',
       isBonus: map['isBonus'] ?? false,
       variant: map['variant'],
     );
   }
+
+  /// Safely converts a dynamic value to int.
+  static int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
+  }
+
 
   Map<String, dynamic> toMap() {
     return {

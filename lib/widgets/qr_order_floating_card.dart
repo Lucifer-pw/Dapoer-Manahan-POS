@@ -195,8 +195,8 @@ class _QrOrderFloatingCardState extends State<QrOrderFloatingCard>
                         itemBuilder: (context, index) {
                           final order = orders[index];
                           final String orderId = order['id'] ?? '';
-                          final int tableNum = order['tableNumber'] as int? ?? 0;
-                          final int total = order['total'] as int? ?? 0;
+                          final int tableNum = _toInt(order['tableNumber']);
+                          final int total = _toInt(order['totalPrice'] ?? order['total']);
                           final List<dynamic> items = order['items'] as List<dynamic>? ?? [];
 
                           return Container(
@@ -250,11 +250,11 @@ class _QrOrderFloatingCardState extends State<QrOrderFloatingCard>
                                   itemCount: items.length,
                                   itemBuilder: (context, itemIdx) {
                                     final item = items[itemIdx];
-                                    final String name = item['menuItemName'] ?? '';
+                                    final String name = item['name'] ?? item['menuItemName'] ?? '';
                                     final String? variant = item['variant'];
                                     final String notes = item['notes'] ?? '';
-                                    final int qty = item['quantity'] ?? 1;
-                                    final int price = item['price'] ?? 0;
+                                    final int qty = _toInt(item['quantity'], fallback: 1);
+                                    final int price = _toInt(item['price']);
 
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 8.0),
@@ -420,5 +420,15 @@ class _QrOrderFloatingCardState extends State<QrOrderFloatingCard>
           ),
         ) ??
         false;
+  }
+
+  /// Safely converts a Firestore dynamic value (String, int, double, null)
+  /// to int. Prevents 'type String is not a subtype of type int' errors.
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
   }
 }

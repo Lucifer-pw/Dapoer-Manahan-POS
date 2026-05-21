@@ -48,7 +48,7 @@ class QrOrderProvider extends ChangeNotifier {
     final order = _pendingOrders.firstWhere((o) => o['id'] == qrOrderId, orElse: () => {});
     if (order.isEmpty) return;
 
-    final int tableNum = order['tableNumber'] as int? ?? 0;
+    final int tableNum = _toInt(order['tableNumber']);
     final List<dynamic> rawItems = order['items'] as List<dynamic>? ?? [];
     
     final List<OrderItem> orderItems = rawItems.map((itemMap) {
@@ -73,5 +73,14 @@ class QrOrderProvider extends ChangeNotifier {
   void dispose() {
     _qrOrderSub?.cancel();
     super.dispose();
+  }
+
+  /// Safely converts a Firestore dynamic value to int.
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
   }
 }

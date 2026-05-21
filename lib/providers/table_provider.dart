@@ -48,19 +48,23 @@ class TableProvider extends ChangeNotifier {
   }
 
   Future<void> addTable(int number, int capacity) async {
+    final qrUrl = 'https://pos-dapoer-manahan.web.app/table/$number';
     final table = RestaurantTable(
       id: '', // Firestore will generate
       number: number,
       capacity: capacity,
       status: TableStatus.available,
+      qrUrl: qrUrl,
     );
     await _firestoreService.addTable(table);
   }
 
   Future<void> updateTable(String id, int number, int capacity) async {
+    final qrUrl = 'https://pos-dapoer-manahan.web.app/table/$number';
     await _firestoreService.updateTable(id, {
       'number': number,
       'capacity': capacity,
+      'qrUrl': qrUrl,
     });
   }
 

@@ -34,6 +34,62 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       ),
       body: Consumer<PrinterProvider>(
         builder: (context, printerProv, child) {
+          // Show info message on web platform
+          if (printerProv.isWeb) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.print_disabled_rounded, size: 40, color: AppColors.primary),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Fitur Printer Tidak Tersedia di Web',
+                      style: AppTextStyles.heading3,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Koneksi printer Bluetooth hanya tersedia pada aplikasi Android.\n\nSilakan gunakan aplikasi Android untuk menghubungkan dan mencetak struk.',
+                      style: AppTextStyles.bodySecondary,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.info.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.info.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Gunakan versi Android untuk fitur cetak struk via Bluetooth.',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.info),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (printerProv.isLoading) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primary));
           }
