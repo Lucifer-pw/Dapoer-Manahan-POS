@@ -40,8 +40,79 @@ class _TableChatFloatingCardState extends State<TableChatFloatingCard>
   Widget build(BuildContext context) {
     return Consumer2<ChatProvider, TableProvider>(
       builder: (context, chatProv, tableProv, child) {
-        if (chatProv.unreadCount == 0) {
-          return const SizedBox.shrink();
+        final hasUnread = chatProv.unreadCount > 0;
+
+        Widget cardContent = InkWell(
+          onTap: () => _showChatTablesBottomSheet(context, chatProv, tableProv),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: hasUnread
+                    ? [AppColors.secondary, AppColors.secondaryLight]
+                    : [AppColors.surfaceDark, AppColors.surface],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: hasUnread ? null : Border.all(color: AppColors.border.withOpacity(0.5)),
+              boxShadow: hasUnread ? AppShadows.glow : null,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: hasUnread ? Colors.white.withOpacity(0.2) : AppColors.primary.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_rounded,
+                    color: hasUnread ? Colors.white : AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  hasUnread ? 'Chat Meja (${chatProv.unreadCount})' : 'Chat Meja',
+                  style: TextStyle(
+                    color: hasUnread ? Colors.white : AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: hasUnread ? Colors.white : AppColors.primary.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Text(
+                    'BUKA',
+                    style: TextStyle(
+                      color: hasUnread ? AppColors.secondary : AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        if (!hasUnread) {
+          return cardContent;
         }
 
         return AnimatedBuilder(
@@ -52,71 +123,7 @@ class _TableChatFloatingCardState extends State<TableChatFloatingCard>
               child: child,
             );
           },
-          child: InkWell(
-            onTap: () => _showChatTablesBottomSheet(context, chatProv, tableProv),
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: 12,
-              ),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.secondary, AppColors.secondaryLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: AppShadows.glow,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chat_bubble_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Chat Meja (${chatProv.unreadCount})',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                    ),
-                    child: const Text(
-                      'BUKA',
-                      style: TextStyle(
-                        color: AppColors.secondary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 10,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          child: cardContent,
         );
       },
     );

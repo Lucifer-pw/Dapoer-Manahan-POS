@@ -166,13 +166,21 @@ class _ChatRoomDialogState extends State<ChatRoomDialog> {
                       ),
                     ),
                     if (widget.role == 'admin')
-                      IconButton(
-                        tooltip: 'Hapus Obrolan',
-                        icon: const Icon(
-                          Icons.delete_sweep_rounded,
-                          color: Colors.white,
+                      Container(
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        onPressed: () => _confirmClearChat(context),
+                        child: IconButton(
+                          tooltip: 'Hapus Obrolan',
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: () => _confirmClearChat(context),
+                        ),
                       ),
                     IconButton(
                       icon: Icon(
