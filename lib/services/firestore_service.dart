@@ -822,4 +822,84 @@ class FirestoreService {
   Future<void> createQrOrder(Map<String, dynamic> orderData) async {
     await _db.collection('qr_orders').add(orderData);
   }
+
+  // ============================================================
+  // TABLE CHATS
+  // ============================================================
+
+  Stream<List<Map<String, dynamic>>> streamTableMessages(String tableNumber) {
+    return _db.collection('chats')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .orderBy('timestamp', descending: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> streamAllUnreadMessages() {
+    return _db.collection('chats')
+        .where('sender', isEqualTo: 'customer')
+        .where('isReadByAdmin', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> streamCustomerUnreadMessages(String tableNumber) {
+    return _db.collection('chats')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .where('sender', isEqualTo: 'admin')
+        .where('isReadByCustomer', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  Future<void> sendChatMessage(String tableNumber, String sender, String messageText) async {
+    await _db.collection('chats').add({
+      'tableNumber': tableNumber,
+      'sender': sender,
+      'message': messageText,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isReadByAdmin': sender == 'admin',
+      'isReadByCustomer': sender == 'customer',
+    });
+  }
+
+  Future<void> markMessagesAsReadByAdmin(String tableNumber) async {
+    final query = await _db.collection('chats')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .where('sender', isEqualTo: 'customer')
+        .where('isReadByAdmin', isEqualTo: false)
+        .get();
+
+    final batch = _db.batch();
+    for (final doc in query.docs) {
+      batch.update(doc.reference, {'isReadByAdmin': true});
+    }
+    await batch.commit();
+  }
+
+  Future<void> markMessagesAsReadByCustomer(String tableNumber) async {
+    final query = await _db.collection('chats')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .where('sender', isEqualTo: 'admin')
+        .where('isReadByCustomer', isEqualTo: false)
+        .get();
+
+    final batch = _db.batch();
+    for (final doc in query.docs) {
+      batch.update(doc.reference, {'isReadByCustomer': true});
+    }
+    await batch.commit();
+  }
 }

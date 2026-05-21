@@ -5,6 +5,7 @@ import '../providers/table_provider.dart';
 import '../models/table_model.dart';
 import '../utils/constants.dart';
 import '../widgets/table_card.dart';
+import '../widgets/chat_room_dialog.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../providers/printer_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -242,12 +243,26 @@ class TableScreen extends StatelessWidget {
                     Navigator.pop(context);
                   },
                 ),
-                ListTile(
+                 ListTile(
                   leading: const Icon(Icons.qr_code_2_rounded, color: AppColors.primary),
                   title: const Text('Tampilkan QR Code Meja'),
                   onTap: () {
                     Navigator.pop(context);
                     _showTableQrDialog(context, table);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.chat_rounded, color: AppColors.secondary),
+                  title: const Text('Chat dengan Pelanggan'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    showDialog(
+                      context: context,
+                      builder: (_) => ChatRoomDialog(
+                        tableNumber: table.number.toString(),
+                        role: 'admin',
+                      ),
+                    );
                   },
                 ),
                 const Divider(height: 1),

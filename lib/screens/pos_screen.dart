@@ -17,6 +17,7 @@ import '../widgets/drafts_dialog.dart';
 import '../providers/order_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../widgets/qr_order_floating_card.dart';
+import '../widgets/table_chat_floating_card.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -100,7 +101,15 @@ class _PosScreenState extends State<PosScreen> {
               right: 16,
               left: isWide ? null : 16,
               width: isWide ? 320 : null,
-              child: const QrOrderFloatingCard(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const TableChatFloatingCard(),
+                  const SizedBox(height: 12),
+                  const QrOrderFloatingCard(),
+                ],
+              ),
             ),
           ],
         ),

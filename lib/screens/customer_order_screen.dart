@@ -5,6 +5,7 @@ import '../providers/menu_provider.dart';
 import '../models/menu_item.dart';
 import '../models/category.dart';
 import '../services/firestore_service.dart';
+import '../widgets/chat_room_dialog.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 
@@ -722,6 +723,34 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         ),
       ),
       bottomNavigationBar: totalItems > 0 ? _buildFloatingCartBar() : null,
+      floatingActionButton: _buildChatFAB(),
+    );
+  }
+
+  Widget _buildChatFAB() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _firestoreService.streamCustomerUnreadMessages(widget.tableNumber),
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data?.length ?? 0;
+
+        return FloatingActionButton(
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (_) => ChatRoomDialog(
+                tableNumber: widget.tableNumber,
+                role: 'customer',
+              ),
+            );
+          },
+          backgroundColor: AppColors.primary,
+          child: Badge(
+            label: Text(unreadCount.toString()),
+            isLabelVisible: unreadCount > 0,
+            child: const Icon(Icons.chat_bubble_rounded, color: Colors.white),
+          ),
+        );
+      },
     );
   }
 
@@ -843,6 +872,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           ),
         ),
       ),
+      floatingActionButton: _buildChatFAB(),
     );
   }
 }
