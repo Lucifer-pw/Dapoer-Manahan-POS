@@ -25,6 +25,7 @@ import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
 import 'utils/url_strategy_helper.dart';
 import 'firebase_options.dart';
+import 'services/notification/notification_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,13 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Firebase init error: $e');
+  }
+
+  // Initialize notifications (Web/Mobile)
+  try {
+    await NotificationHelper.instance.init();
+  } catch (e) {
+    debugPrint('Notification init error: $e');
   }
 
   // Initialize date formatting for Indonesian locale

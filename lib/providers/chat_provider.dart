@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/firestore_service.dart';
+import '../services/notification/notification_helper.dart';
 
 class ChatProvider extends ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -33,8 +34,16 @@ class ChatProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      if (hasNewMessage) {
+      if (hasNewMessage && messages.isNotEmpty) {
         _playAlertSound();
+        final latestMsg = messages.last;
+        final tableNum = latestMsg['tableNumber'] ?? 'Unknown';
+        final text = latestMsg['message'] ?? 'Ada pesan baru';
+        NotificationHelper.instance.showNotification(
+          title: 'Chat Baru Meja $tableNum',
+          body: text,
+          payload: tableNum.toString(),
+        );
       }
     });
   }

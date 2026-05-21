@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import '../services/auth_service.dart';
+import '../services/notification/notification_helper.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -104,6 +105,9 @@ class AuthProvider extends ChangeNotifier {
         };
       }
 
+      // Get device FCM token if available
+      final String? fcmToken = await NotificationHelper.instance.getDeviceToken();
+
       await FirebaseFirestore.instance
           .collection('users')
           .doc(_user!.uid)
@@ -111,6 +115,7 @@ class AuthProvider extends ChangeNotifier {
           .doc(deviceData['deviceId'] ?? 'current_device')
           .set({
             ...deviceData,
+            if (fcmToken != null) 'fcmToken': fcmToken,
             'lastLogin': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
           

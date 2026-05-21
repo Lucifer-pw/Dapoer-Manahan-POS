@@ -49,6 +49,8 @@ dependencies:
   google_mlkit_text_recognition: ^0.15.0
   qr_flutter: ^4.1.0
   connectivity_plus: ^5.0.2
+  firebase_messaging: ^14.9.4
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
