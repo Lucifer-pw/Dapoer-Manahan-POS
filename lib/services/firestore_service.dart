@@ -830,12 +830,47 @@ class FirestoreService {
   Stream<List<Map<String, dynamic>>> streamTableMessages(String tableNumber) {
     return _db.collection('chats')
         .where('tableNumber', isEqualTo: tableNumber)
-        .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final list = snapshot.docs
           .map((doc) => {...doc.data(), 'id': doc.id})
           .toList();
+
+      // Sort in-memory to bypass Firestore composite index requirement
+      list.sort((a, b) {
+        final aTime = a['timestamp'];
+        final bTime = b['timestamp'];
+
+        DateTime aDate;
+        if (aTime == null) {
+          aDate = DateTime.now();
+        } else if (aTime is Timestamp) {
+          aDate = aTime.toDate();
+        } else if (aTime is int) {
+          aDate = DateTime.fromMillisecondsSinceEpoch(aTime);
+        } else if (aTime is DateTime) {
+          aDate = aTime;
+        } else {
+          aDate = DateTime.tryParse(aTime.toString()) ?? DateTime.now();
+        }
+
+        DateTime bDate;
+        if (bTime == null) {
+          bDate = DateTime.now();
+        } else if (bTime is Timestamp) {
+          bDate = bTime.toDate();
+        } else if (bTime is int) {
+          bDate = DateTime.fromMillisecondsSinceEpoch(bTime);
+        } else if (bTime is DateTime) {
+          bDate = bTime;
+        } else {
+          bDate = DateTime.tryParse(bTime.toString()) ?? DateTime.now();
+        }
+
+        return aDate.compareTo(bDate);
+      });
+
+      return list;
     });
   }
 
