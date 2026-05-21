@@ -57,6 +57,67 @@ class _ChatRoomDialogState extends State<ChatRoomDialog> {
     Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
   }
 
+  void _confirmClearChat(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogCtx) {
+        return AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: Text(
+            'Hapus Obrolan?',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          content: Text(
+            'Semua riwayat obrolan dengan Meja ${widget.tableNumber} akan dihapus secara permanen untuk pelanggan baru.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(
+                'Batal',
+                style: TextStyle(color: AppColors.textHint),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () async {
+                Navigator.pop(dialogCtx); // Close confirm dialog
+                
+                try {
+                  await Provider.of<ChatProvider>(context, listen: false)
+                      .clearChat(widget.tableNumber);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Obrolan Meja ${widget.tableNumber} berhasil dihapus.'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal menghapus obrolan: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _messageController.dispose();
@@ -104,6 +165,15 @@ class _ChatRoomDialogState extends State<ChatRoomDialog> {
                         ),
                       ),
                     ),
+                    if (widget.role == 'admin')
+                      IconButton(
+                        tooltip: 'Hapus Obrolan',
+                        icon: const Icon(
+                          Icons.delete_sweep_rounded,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => _confirmClearChat(context),
+                      ),
                     IconButton(
                       icon: Icon(
                         Icons.close_rounded,

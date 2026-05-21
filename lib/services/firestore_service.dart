@@ -937,4 +937,16 @@ class FirestoreService {
     }
     await batch.commit();
   }
+
+  Future<void> clearTableMessages(String tableNumber) async {
+    final query = await _db.collection('chats')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .get();
+
+    final batch = _db.batch();
+    for (final doc in query.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+  }
 }

@@ -60,6 +60,10 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> clearChat(String tableNumber) async {
+    await _firestoreService.clearTableMessages(tableNumber);
+  }
+
   @override
   void dispose() {
     _unreadSub?.cancel();
