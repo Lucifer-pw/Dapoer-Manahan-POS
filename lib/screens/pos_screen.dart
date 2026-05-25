@@ -39,7 +39,7 @@ class _PosScreenState extends State<PosScreen> {
     final cartProv = Provider.of<CartProvider>(context, listen: false);
     final categoryName = menuProv.getCategoryName(item.categoryId);
 
-    if (categoryName.toLowerCase().contains('paket')) {
+    if (categoryName.toLowerCase().contains('paket') || item.name.toLowerCase().contains('paket')) {
       _showDrinkOptionsDialog(item, cartProv);
     } else {
       cartProv.addItem(item);
@@ -47,21 +47,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _showDrinkOptionsDialog(MenuItem item, CartProvider cartProv) {
-    final menuProv = Provider.of<MenuProvider>(context, listen: false);
-
-    // Ambil opsi dinamis dari kategori "Botolan"
-    final botolanCatIds = menuProv.categories
-        .where((c) => c.name.toLowerCase().contains('botol'))
-        .map((c) => c.id)
-        .toList();
-
-    final dynamicOptions = menuProv.allMenuItems
-        .where((m) => botolanCatIds.contains(m.categoryId) && m.isAvailable)
-        .map((m) => m.name)
-        .toList();
-
-    // Gabungkan dengan opsi tetap (Air Mineral, Es Teh, Teh Anget)
-    final options = {'Air Mineral', 'Es Teh', 'Teh Anget', ...dynamicOptions}.toList();
+    final options = ['Air Mineral', 'Esteh', 'Teh Anget'];
     
     showDialog(
       context: context,

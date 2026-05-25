@@ -112,7 +112,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       builder: (ctx) {
-        final options = ['Air Mineral', 'Es Teh', 'Teh Anget'];
+        final options = ['Air Mineral', 'Esteh', 'Teh Anget'];
         return Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
@@ -687,7 +687,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                             final item = filteredItems[index];
                             final qty = _getItemTotalQuantity(item.id);
                             final categoryName = menuProv.getCategoryName(item.categoryId);
-                            final isPaket = categoryName.toLowerCase().contains('paket');
+                            final isPaket = categoryName.toLowerCase().contains('paket') || item.name.toLowerCase().contains('paket');
 
                             return Card(
                               color: AppColors.card,
