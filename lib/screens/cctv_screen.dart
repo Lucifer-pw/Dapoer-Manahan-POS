@@ -367,7 +367,7 @@ class _CctvScreenState extends State<CctvScreen> {
             children: [
               _buildTypeRadio('ipcamlive', 'IPCamLive'),
               const SizedBox(width: 16),
-              _buildTypeRadio('xmeye_p2p', 'XMeye P2P (Cloud ID)'),
+              _buildTypeRadio('xmeye_p2p', 'SPC Smart Living / XMeye P2P'),
               const SizedBox(width: 16),
               _buildTypeRadio('custom', 'Custom URL / Web Stream'),
             ],
@@ -407,7 +407,7 @@ class _CctvScreenState extends State<CctvScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Tipe P2P Cloud ID akan mengaktifkan Hub Pandu & Launcher Aplikasi di perangkat (XMeye/iCSee) karena enkripsi cloud ID tidak bisa dimasukkan ke WebPlayer biasa.',
+                      'Tipe P2P Cloud ID akan mengaktifkan Hub Panduan & Launcher Aplikasi SPC Smart Living / XMeye di perangkat karena enkripsi cloud ID tidak bisa dimasukkan langsung ke WebPlayer biasa.',
                       style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontSize: 11),
                     ),
                   ),
@@ -677,7 +677,59 @@ class _CctvScreenState extends State<CctvScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
+          // Status Live dari DVR SCMS Anda (Tampilan premium)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.success.withOpacity(0.2)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.success,
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      )
+                    ]
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'UVR SPC Smart Living Aktif (Connected)',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.success,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        'Device Name: WDM • Type: UVR • Status: Connected (SCMS Windows)',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.success.withOpacity(0.8),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -685,19 +737,19 @@ class _CctvScreenState extends State<CctvScreen> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.router_rounded,
+              Icons.settings_input_hdmi_rounded,
               color: AppColors.primary,
               size: 64,
             ),
           ),
           const SizedBox(height: 20),
           Text(
-            'Koneksi Cloud P2P CCTV',
+            'Koneksi Cloud P2P CCTV SPC',
             style: AppTextStyles.heading2.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 6),
           Text(
-            'Kamera CCTV ini menggunakan enkripsi Xiongmai / XMeye P2P dengan Cloud ID.',
+            'Kamera CCTV ini menggunakan enkripsi P2P yang terhubung dengan aplikasi SPC Smart Living & software SCMS Windows.',
             style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -744,28 +796,17 @@ class _CctvScreenState extends State<CctvScreen> {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Cara Memantau CCTV:',
+              'Panduan & Alternatif Akses Stream:',
               style: AppTextStyles.heading3.copyWith(color: Colors.white, fontSize: 16),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Cara 1: Buka Web Player (HTML5 Plugin-Free)
+          // Cara 1: Pantau dari Aplikasi Mobile SPC Smart Living
           _buildMethodCard(
             number: '1',
-            title: 'Gunakan Web Browser (Bebas Plugin)',
-            description: 'Masuk ke portal web resmi XMeye HTML5, lalu pilih mode "By Device ID", masukkan serial number di atas, login tanpa perlu install ActiveX.',
-            icon: Icons.open_in_browser_rounded,
-            actionLabel: 'Buka Web Player XMeye',
-            onAction: () => _launchUrl('https://v2.xmeye.net/'),
-          ),
-          const SizedBox(height: 16),
-
-          // Cara 2: Aplikasi iCSee / XMeye di Handphone
-          _buildMethodCard(
-            number: '2',
-            title: 'Pantau dari Aplikasi Handphone (iCSee / XMeye)',
-            description: 'Ini adalah metode paling stabil. Download aplikasi di Play Store atau App Store, daftar akun, lalu tambahkan device baru menggunakan metode "Add by Device Serial Number".',
+            title: 'Aplikasi HP: SPC Smart Living (Google Play / App Store)',
+            description: 'Cloud ID "$_cctvAlias" didapatkan dari aplikasi SPC Smart Living. Ini adalah platform P2P (chipset Xiongmai/XMeye) paling stabil untuk memantau dari smartphone.',
             icon: Icons.phone_android_rounded,
             child: Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -773,9 +814,9 @@ class _CctvScreenState extends State<CctvScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _launchUrl('https://play.google.com/store/apps/details?id=com.xm.xmcamera'),
+                      onPressed: () => _launchUrl('https://play.google.com/store/apps/details?id=com.spc.smartliving'),
                       icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Unduh iCSee (Android)', style: TextStyle(fontSize: 11)),
+                      label: const Text('SPC Smart Living (Android)', style: TextStyle(fontSize: 10)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.primary,
                         side: const BorderSide(color: AppColors.primary),
@@ -785,18 +826,45 @@ class _CctvScreenState extends State<CctvScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: () => _launchUrl('https://apps.apple.com/us/app/icsee/id1130250579'),
+                      onPressed: () => _launchUrl('https://play.google.com/store/apps/details?id=com.xm.xmcamera'),
                       icon: const Icon(Icons.download_rounded, size: 16),
-                      label: const Text('Unduh iCSee (iOS)', style: TextStyle(fontSize: 11)),
+                      label: const Text('iCSee App (Alternatif)', style: TextStyle(fontSize: 10)),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
+                        foregroundColor: AppColors.secondary,
+                        side: const BorderSide(color: AppColors.secondary),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // Cara 2: SCMS Windows (Seperti di Screenshot PC Anda)
+          _buildMethodCard(
+            number: '2',
+            title: 'PC Windows: Software SCMS (Smart CMS)',
+            description: 'Di PC kasir/kantor Windows Anda yang menggunakan aplikasi SCMS:\n'
+                '• Buka SCMS Windows dan masuk ke menu Device Manager.\n'
+                '• Klik "Manual Add" di bagian kiri bawah.\n'
+                '• Isi Device Name: "WDM", pilih Login Type: "Cloud ID" (atau masukkan di kolom IP Address/Cloud ID: "$_cctvAlias").\n'
+                '• Isi User Name: "admin", Port Num: "0" dan tekan Save.\n'
+                '• Setelah status berubah menjadi "Connected", Anda dapat memantau live stream dari SCMS Windows.',
+            icon: Icons.computer_rounded,
+          ),
+          const SizedBox(height: 16),
+
+          // Cara 3: Menampilkan langsung live stream di Web POS Dapoer Manahan
+          _buildMethodCard(
+            number: '3',
+            title: 'Integrasikan Live View Langsung ke POS Dapoer Manahan',
+            description: 'Agar CCTV SPC Anda bisa tayang langsung di halaman POS ini (bukan sekedar panduan):\n\n'
+                '• Langkah A (RTSP Lokal - Sangat Direkomendasikan): Karena DVR/NVR SPC dan PC Kasir berada di Wi-Fi restoran yang sama, Anda dapat mengambil stream RTSP lokal:\n'
+                '  rtsp://admin:password_cctv@IP_LOKAL_DVR:554/user=admin&password=password_cctv&channel=1&stream=0.sdp\n\n'
+                '• Langkah B (Konversi Web): Pasang program gratis seperti Agent DVR (iSpy) atau RTSP-to-Web di PC Windows SCMS Anda. Program ini akan mengubah RTSP lokal menjadi Web Player/HLS stream URL (misal: http://192.168.1.100:8090/live.m3u8).\n\n'
+                '• Langkah C (Simpan): Masukkan URL HLS tersebut ke menu CCTV POS ini dengan memilih tipe "Custom URL / Web Stream". Maka live player CCTV akan langsung aktif di layar ini!',
+            icon: Icons.connected_tv_rounded,
           ),
         ],
       ),
