@@ -22,6 +22,7 @@ import 'billing_screen.dart';
 import 'best_seller_screen.dart';
 import 'salary_screen.dart';
 import 'user_guide_screen.dart';
+import 'cctv_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -340,6 +341,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   builder: (_) => UserGuideScreen(role: auth.role),
                 ),
               );
+            } else if (value == 'cctv') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CctvScreen()),
+              );
             } else if (value == 'settings') {
               Navigator.push(
                   context,
@@ -383,6 +389,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            if (auth.isAdmin || auth.isOwner)
+              PopupMenuItem<String>(
+                value: 'cctv',
+                child: Row(
+                  children: [
+                    const Icon(Icons.videocam_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Text('CCTV Monitor', style: AppTextStyles.body),
+                  ],
+                ),
+              ),
             if (!auth.isAdmin)
               PopupMenuItem<String>(
                 value: 'guide',
