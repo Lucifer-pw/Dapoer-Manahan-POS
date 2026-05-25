@@ -838,6 +838,66 @@ class FirestoreService {
     await _db.collection('qr_orders').add(orderData);
   }
 
+  Stream<List<Map<String, dynamic>>> streamQrOrdersByTable(String tableNumber) {
+    return _db.collection('qr_orders')
+        .where('tableNumber', isEqualTo: tableNumber)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+      
+      // Urutkan di memori untuk menghindari keharusan indeks komposit Firestore
+      list.sort((a, b) {
+        final aTime = a['createdAt'];
+        final bTime = b['createdAt'];
+        if (aTime == null) return 1;
+        if (bTime == null) return -1;
+        
+        DateTime aDate;
+        if (aTime is Timestamp) {
+          aDate = aTime.toDate();
+        } else if (aTime is DateTime) {
+          aDate = aTime;
+        } else {
+          aDate = DateTime.tryParse(aTime.toString()) ?? DateTime.now();
+        }
+
+        DateTime bDate;
+        if (bTime is Timestamp) {
+          bDate = bTime.toDate();
+        } else if (bTime is DateTime) {
+          bDate = bTime;
+        } else {
+          bDate = DateTime.tryParse(bTime.toString()) ?? DateTime.now();
+        }
+
+        return bDate.compareTo(aDate); // Descending (terbaru di atas)
+      });
+      return list;
+    });
+  }
+
+  Stream<List<app.Order>> streamTodayOrdersByTable(int tableNumber) {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+
+    return _ordersRef
+        .where('tableNumber', isEqualTo: tableNumber)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map<app.Order>((doc) =>
+              app.Order.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+      
+      // Filter hari ini dan urutkan di memori
+      final todayOrders = list.where((o) => o.createdAt.isAfter(startOfDay)).toList();
+      todayOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return todayOrders;
+    });
+  }
+
   // ============================================================
   // TABLE CHATS
   // ============================================================
