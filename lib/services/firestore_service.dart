@@ -538,6 +538,39 @@ class FirestoreService {
   }
 
   // ============================================================
+  // CCTV SETTINGS
+  // ============================================================
+
+  Future<Map<String, dynamic>> getCctvSettings() async {
+    try {
+      final doc = await _db.collection('app_settings').doc('cctv').get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Error getting CCTV settings: $e');
+    }
+    return {
+      'alias': 'umkssig5d5vu',
+      'platform': 'IPCamLive',
+      'type': 'ipcamlive', // 'ipcamlive' atau 'xmeye_p2p' atau 'custom'
+      'customUrl': '',
+    };
+  }
+
+  Future<void> updateCctvSettings(Map<String, dynamic> cctvData) async {
+    try {
+      await _db.collection('app_settings').doc('cctv').set({
+        ...cctvData,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error updating CCTV settings: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
   // EXPENSES (BELANJA)
   // ============================================================
 
