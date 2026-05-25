@@ -157,6 +157,21 @@ class FirestoreService {
     });
   }
 
+  Stream<List<app.Order>> streamOrdersByTable(int tableNumber) {
+    return _ordersRef
+        .where('tableNumber', isEqualTo: tableNumber)
+        .snapshots()
+        .map((snapshot) {
+      final list = snapshot.docs
+          .map<app.Order>((doc) =>
+              app.Order.fromMap(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+      // Urutkan di memori untuk menghindari keharusan indeks komposit Firestore
+      list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return list;
+    });
+  }
+
   Future<List<app.Order>> getOrdersByDateRange(
       DateTime start, DateTime end) async {
     final snapshot = await _ordersRef

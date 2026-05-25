@@ -11,6 +11,10 @@ import '../providers/printer_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../services/firestore_service.dart';
+import '../models/order.dart' as app;
+import '../utils/formatter.dart';
+import 'order_detail_screen.dart';
 
 class TableScreen extends StatelessWidget {
   const TableScreen({super.key});
@@ -263,6 +267,14 @@ class TableScreen extends StatelessWidget {
                         role: 'admin',
                       ),
                     );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history_rounded, color: AppColors.info),
+                  title: const Text('Riwayat Pemesanan Meja'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showTableOrderHistoryDialog(context, table);
                   },
                 ),
                 const Divider(height: 1),
@@ -626,5 +638,304 @@ class TableScreen extends StatelessWidget {
         ),
       );
     }
+  }
+
+  void _showTableOrderHistoryDialog(BuildContext context, RestaurantTable table) {
+    final firestoreService = FirestoreService();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          maxChildSize: 0.9,
+          minChildSize: 0.5,
+          expand: false,
+          builder: (context, scrollController) {
+            return StreamBuilder<List<app.Order>>(
+              stream: firestoreService.streamOrdersByTable(table.number),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Text('Terjadi kesalahan: ${snapshot.error}', style: AppTextStyles.bodySecondary),
+                    ),
+                  );
+                }
+
+                final orders = snapshot.data ?? [];
+
+                // Filter today's completed orders for revenue calculation
+                final today = DateTime.now();
+                final todayCompletedOrders = orders.where((o) =>
+                    o.status == app.OrderStatus.completed &&
+                    o.createdAt.year == today.year &&
+                    o.createdAt.month == today.month &&
+                    o.createdAt.day == today.day);
+                
+                final totalEarningsToday = todayCompletedOrders.fold(0, (sum, o) => sum + o.total);
+
+                return Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.border.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.history_rounded,
+                                color: AppColors.primary,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Riwayat Meja ${table.number}',
+                                style: AppTextStyles.heading3,
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Hari Ini: ${AppFormatter.formatRupiah(totalEarningsToday)}',
+                              style: TextStyle(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: orders.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.receipt_long_rounded, size: 64, color: AppColors.textHint.withOpacity(0.4)),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'Belum ada riwayat pesanan\nuntuk Meja ${table.number}',
+                                    style: AppTextStyles.bodySecondary,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              controller: scrollController,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: orders.length,
+                              itemBuilder: (context, index) {
+                                final order = orders[index];
+                                
+                                Color statusColor = AppColors.warning;
+                                String statusText = 'Pending';
+                                
+                                if (order.status == app.OrderStatus.completed) {
+                                  statusColor = AppColors.success;
+                                  statusText = 'Selesai';
+                                } else if (order.status == app.OrderStatus.cancelled) {
+                                  statusColor = AppColors.error;
+                                  statusText = 'Batal';
+                                }
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface,
+                                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                                    border: Border.all(
+                                      color: AppColors.border.withOpacity(0.2),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                order.orderNumber,
+                                                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: order.paymentMethod == 'QRIS' 
+                                                      ? AppColors.info.withOpacity(0.15) 
+                                                      : AppColors.success.withOpacity(0.15),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  order.paymentMethod,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: order.paymentMethod == 'QRIS' 
+                                                        ? AppColors.info 
+                                                        : AppColors.success,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: statusColor.withOpacity(0.15),
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              statusText,
+                                              style: TextStyle(
+                                                color: statusColor,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            AppFormatter.formatDateTime(order.createdAt),
+                                            style: AppTextStyles.caption,
+                                          ),
+                                          Text(
+                                            AppFormatter.formatRupiah(order.total),
+                                            style: AppTextStyles.priceSmall,
+                                          ),
+                                        ],
+                                      ),
+                                      const Divider(height: 16),
+                                      ListView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        itemCount: order.items.length,
+                                        itemBuilder: (context, itemIndex) {
+                                          final item = order.items[itemIndex];
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 4.0),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${item.quantity}x',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.primary,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        item.menuItemName,
+                                                        style: AppTextStyles.body.copyWith(fontSize: 12),
+                                                      ),
+                                                      if (item.variant != null && item.variant!.isNotEmpty)
+                                                        Text(
+                                                          'Minuman: ${item.variant}',
+                                                          style: AppTextStyles.caption.copyWith(
+                                                            color: AppColors.secondary,
+                                                            fontSize: 10,
+                                                          ),
+                                                        ),
+                                                      if (item.notes.isNotEmpty)
+                                                        Text(
+                                                          'Catatan: "${item.notes}"',
+                                                          style: AppTextStyles.caption.copyWith(
+                                                            fontStyle: FontStyle.italic,
+                                                            fontSize: 10,
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Text(
+                                                  AppFormatter.formatRupiah(item.price * item.quantity),
+                                                  style: AppTextStyles.caption.copyWith(fontSize: 12),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton(
+                                          onPressed: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) => OrderDetailScreen(order: order),
+                                              ),
+                                            );
+                                          },
+                                          style: OutlinedButton.styleFrom(
+                                            side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+                                            padding: const EdgeInsets.symmetric(vertical: 8),
+                                          ),
+                                          child: Text(
+                                            'Lihat Detail Transaksi',
+                                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }

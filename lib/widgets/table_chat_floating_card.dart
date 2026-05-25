@@ -17,6 +17,10 @@ class _TableChatFloatingCardState extends State<TableChatFloatingCard>
   late AnimationController _animController;
   late Animation<double> _bounceAnimation;
 
+  bool _isDragging = false;
+  Offset _offset = Offset.zero;
+  late Offset _startOffset;
+
   @override
   void initState() {
     super.initState();
@@ -111,19 +115,55 @@ class _TableChatFloatingCardState extends State<TableChatFloatingCard>
           ),
         );
 
-        if (!hasUnread) {
-          return cardContent;
+        Widget mainCard = cardContent;
+
+        if (hasUnread) {
+          mainCard = AnimatedBuilder(
+            animation: _bounceAnimation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(0, _bounceAnimation.value),
+                child: child,
+              );
+            },
+            child: cardContent,
+          );
         }
 
-        return AnimatedBuilder(
-          animation: _bounceAnimation,
-          builder: (context, child) {
-            return Transform.translate(
-              offset: Offset(0, _bounceAnimation.value),
-              child: child,
-            );
+        return GestureDetector(
+          onLongPressStart: (details) {
+            setState(() {
+              _isDragging = true;
+              _startOffset = _offset;
+            });
           },
-          child: cardContent,
+          onLongPressMoveUpdate: (details) {
+            setState(() {
+              _offset = _startOffset + details.localOffsetFromOrigin;
+            });
+          },
+          onLongPressEnd: (details) {
+            setState(() {
+              _isDragging = false;
+            });
+          },
+          onLongPressUp: () {
+            setState(() {
+              _isDragging = false;
+            });
+          },
+          child: AnimatedScale(
+            scale: _isDragging ? 1.06 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            child: AnimatedOpacity(
+              opacity: _isDragging ? 0.8 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              child: Transform.translate(
+                offset: _offset,
+                child: mainCard,
+              ),
+            ),
+          ),
         );
       },
     );

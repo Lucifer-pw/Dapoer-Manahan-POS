@@ -36,43 +36,126 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         return acc + (item.price * qty);
       });
 
-  void _addToCart(MenuItem item) {
+  int _getItemTotalQuantity(String itemId) {
+    int total = 0;
+    _cart.forEach((key, val) {
+      if (key.startsWith(itemId)) {
+        total += val['quantity'] as int;
+      }
+    });
+    return total;
+  }
+
+  void _addToCart(MenuItem item, {String? variant}) {
     setState(() {
-      if (_cart.containsKey(item.id)) {
-        _cart[item.id]!['quantity'] = (_cart[item.id]!['quantity'] as int) + 1;
+      final key = variant != null ? '${item.id}_$variant' : item.id;
+      if (_cart.containsKey(key)) {
+        _cart[key]!['quantity'] = (_cart[key]!['quantity'] as int) + 1;
       } else {
-        _cart[item.id] = {
+        _cart[key] = {
           'item': item,
           'quantity': 1,
           'notes': '',
+          'variant': variant,
         };
       }
     });
   }
 
-  void _removeFromCart(MenuItem item) {
+  void _removeFromCart(MenuItem item, {String? variant}) {
     setState(() {
-      if (_cart.containsKey(item.id)) {
-        final currentQty = _cart[item.id]!['quantity'] as int;
+      final key = variant != null ? '${item.id}_$variant' : item.id;
+      if (_cart.containsKey(key)) {
+        final currentQty = _cart[key]!['quantity'] as int;
         if (currentQty > 1) {
-          _cart[item.id]!['quantity'] = currentQty - 1;
+          _cart[key]!['quantity'] = currentQty - 1;
         } else {
-          _cart.remove(item.id);
+          _cart.remove(key);
         }
       }
     });
   }
 
-  void _updateNotes(String itemId, String newNotes) {
+  void _removeFromCartFromGrid(MenuItem item) {
     setState(() {
-      if (_cart.containsKey(itemId)) {
-        _cart[itemId]!['notes'] = newNotes;
+      String? targetKey;
+      for (final key in _cart.keys) {
+        if (key.startsWith(item.id)) {
+          targetKey = key;
+          break;
+        }
+      }
+      if (targetKey != null) {
+        final currentQty = _cart[targetKey]!['quantity'] as int;
+        if (currentQty > 1) {
+          _cart[targetKey]!['quantity'] = currentQty - 1;
+        } else {
+          _cart.remove(targetKey);
+        }
       }
     });
   }
 
-  void _showNotesDialog(MenuItem item) {
-    final currentNotes = _cart[item.id]?['notes'] as String? ?? '';
+  void _updateNotes(String key, String newNotes) {
+    setState(() {
+      if (_cart.containsKey(key)) {
+        _cart[key]!['notes'] = newNotes;
+      }
+    });
+  }
+
+  void _showDrinkOptionsBottomSheet(MenuItem item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (ctx) {
+        final options = ['Air Mineral', 'Es Teh', 'Teh Anget'];
+        return Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pilih Minuman Paket',
+                style: AppTextStyles.heading3,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Silakan pilih minuman pendamping untuk ${item.name}:',
+                style: AppTextStyles.caption,
+              ),
+              const SizedBox(height: 16),
+              ...options.map((opt) {
+                return Card(
+                  color: AppColors.surfaceDark,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const Icon(Icons.local_drink_rounded, color: AppColors.primary),
+                    title: Text(
+                      opt,
+                      style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    trailing: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+                    onTap: () {
+                      _addToCart(item, variant: opt);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showNotesDialog(String key, MenuItem item) {
+    final currentNotes = _cart[key]?['notes'] as String? ?? '';
     final controller = TextEditingController(text: currentNotes);
 
     showDialog(
@@ -99,7 +182,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               enabledBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.border),
               ),
-              focusedBorder: const UnderlineInputBorder(
+              focusedBorder: UnderlineInputBorder(
                 borderSide: BorderSide(color: AppColors.primary),
               ),
             ),
@@ -114,7 +197,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                _updateNotes(item.id, controller.text.trim());
+                _updateNotes(key, controller.text.trim());
                 Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
@@ -146,12 +229,14 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         final item = elem['item'] as MenuItem;
         final qty = elem['quantity'] as int;
         final notes = elem['notes'] as String;
+        final variant = elem['variant'] as String?;
         return {
           'id': item.id,
           'name': item.name,
           'price': item.price,
           'quantity': qty,
           'notes': notes,
+          'variant': variant,
         };
       }).toList();
 
@@ -247,6 +332,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                 final item = entry['item'] as MenuItem;
                                 final qty = entry['quantity'] as int;
                                 final notes = entry['notes'] as String;
+                                final variant = entry['variant'] as String?;
 
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -282,12 +368,22 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                             AppFormatter.formatRupiah(item.price),
                                             style: AppTextStyles.caption,
                                           ),
+                                          if (variant != null && variant.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Minuman: $variant',
+                                              style: AppTextStyles.caption.copyWith(
+                                                color: AppColors.secondary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 8),
                                           Row(
                                             children: [
                                               GestureDetector(
                                                 onTap: () {
-                                                  _showNotesDialog(item);
+                                                  _showNotesDialog(key, item);
                                                   setModalState(() {});
                                                 },
                                                 child: Row(
@@ -328,7 +424,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                                     constraints: const BoxConstraints(),
                                                     onPressed: () {
                                                       setModalState(() {
-                                                        _removeFromCart(item);
+                                                        _removeFromCart(item, variant: variant);
                                                       });
                                                       setState(() {});
                                                     },
@@ -347,7 +443,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                                     constraints: const BoxConstraints(),
                                                     onPressed: () {
                                                       setModalState(() {
-                                                        _addToCart(item);
+                                                        _addToCart(item, variant: variant);
                                                       });
                                                       setState(() {});
                                                     },
@@ -589,7 +685,9 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                           itemCount: filteredItems.length,
                           itemBuilder: (context, index) {
                             final item = filteredItems[index];
-                            final qty = _cart[item.id]?['quantity'] as int? ?? 0;
+                            final qty = _getItemTotalQuantity(item.id);
+                            final categoryName = menuProv.getCategoryName(item.categoryId);
+                            final isPaket = categoryName.toLowerCase().contains('paket');
 
                             return Card(
                               color: AppColors.card,
@@ -656,7 +754,13 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                               Row(
                                                 children: [
                                                   GestureDetector(
-                                                    onTap: () => _removeFromCart(item),
+                                                    onTap: () {
+                                                      if (isPaket) {
+                                                        _removeFromCartFromGrid(item);
+                                                      } else {
+                                                        _removeFromCart(item);
+                                                      }
+                                                    },
                                                     child: const Icon(
                                                       Icons.remove_circle_rounded,
                                                       color: AppColors.primary,
@@ -674,7 +778,13 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                                     ),
                                                   ),
                                                   GestureDetector(
-                                                    onTap: () => _addToCart(item),
+                                                    onTap: () {
+                                                      if (isPaket) {
+                                                        _showDrinkOptionsBottomSheet(item);
+                                                      } else {
+                                                        _addToCart(item);
+                                                      }
+                                                    },
                                                     child: const Icon(
                                                       Icons.add_circle_rounded,
                                                       color: AppColors.primary,
@@ -685,7 +795,13 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                               )
                                             else
                                               GestureDetector(
-                                                onTap: () => _addToCart(item),
+                                                onTap: () {
+                                                  if (isPaket) {
+                                                    _showDrinkOptionsBottomSheet(item);
+                                                  } else {
+                                                    _addToCart(item);
+                                                  }
+                                                },
                                                 child: Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                                   decoration: BoxDecoration(

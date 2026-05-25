@@ -60,8 +60,8 @@ class _PosScreenState extends State<PosScreen> {
         .map((m) => m.name)
         .toList();
 
-    // Gabungkan dengan opsi tetap (Teh Anget, Esteh)
-    final options = {'Teh Anget', 'Esteh', ...dynamicOptions}.toList();
+    // Gabungkan dengan opsi tetap (Air Mineral, Es Teh, Teh Anget)
+    final options = {'Air Mineral', 'Es Teh', 'Teh Anget', ...dynamicOptions}.toList();
     
     showDialog(
       context: context,
