@@ -657,279 +657,314 @@ class TableScreen extends StatelessWidget {
           minChildSize: 0.5,
           expand: false,
           builder: (context, scrollController) {
-            return StreamBuilder<List<app.Order>>(
-              stream: firestoreService.streamOrdersByTable(table.number),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: AppColors.primary));
-                }
+            return StreamBuilder<List<Map<String, dynamic>>>(
+              stream: firestoreService.streamQrOrdersByTable(table.number.toString()),
+              builder: (context, qrSnapshot) {
+                return StreamBuilder<List<app.Order>>(
+                  stream: firestoreService.streamOrdersByTable(table.number),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting &&
+                        qrSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                    }
 
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Text('Terjadi kesalahan: ${snapshot.error}', style: AppTextStyles.bodySecondary),
-                    ),
-                  );
-                }
+                    final orders = snapshot.data ?? [];
+                    final qrOrders = qrSnapshot.data ?? [];
 
-                final orders = snapshot.data ?? [];
+                    // Active QR orders (pending, accepted)
+                    final activeQrOrders = qrOrders.where((o) {
+                      final st = o['status'] as String? ?? '';
+                      return st == 'pending' || st == 'accepted' || st == 'delivered';
+                    }).toList();
 
-                // Filter today's completed orders for revenue calculation
-                final today = DateTime.now();
-                final todayCompletedOrders = orders.where((o) =>
-                    o.status == app.OrderStatus.completed &&
-                    o.createdAt.year == today.year &&
-                    o.createdAt.month == today.month &&
-                    o.createdAt.day == today.day);
-                
-                final totalEarningsToday = todayCompletedOrders.fold(0, (sum, o) => sum + o.total);
+                    // Filter today's completed orders for revenue calculation
+                    final today = DateTime.now();
+                    final todayCompletedOrders = orders.where((o) =>
+                        o.status == app.OrderStatus.completed &&
+                        o.createdAt.year == today.year &&
+                        o.createdAt.month == today.month &&
+                        o.createdAt.day == today.day);
+                    
+                    final totalEarningsToday = todayCompletedOrders.fold(0, (sum, o) => sum + o.total);
 
-                return Column(
-                  children: [
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
+                    return Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Icon(
-                                Icons.history_rounded,
-                                color: AppColors.primary,
-                                size: 28,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Riwayat Meja ${table.number}',
-                                style: AppTextStyles.heading3,
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppColors.success.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Hari Ini: ${AppFormatter.formatRupiah(totalEarningsToday)}',
-                              style: TextStyle(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: orders.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              Row(
                                 children: [
-                                  Icon(Icons.receipt_long_rounded, size: 64, color: AppColors.textHint.withOpacity(0.4)),
-                                  const SizedBox(height: 12),
+                                  const Icon(
+                                    Icons.history_rounded,
+                                    color: AppColors.primary,
+                                    size: 28,
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    'Belum ada riwayat pesanan\nuntuk Meja ${table.number}',
-                                    style: AppTextStyles.bodySecondary,
-                                    textAlign: TextAlign.center,
+                                    'Riwayat Meja ${table.number}',
+                                    style: AppTextStyles.heading3,
                                   ),
                                 ],
                               ),
-                            )
-                          : ListView.builder(
-                              controller: scrollController,
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              itemCount: orders.length,
-                              itemBuilder: (context, index) {
-                                final order = orders[index];
-                                
-                                Color statusColor = AppColors.warning;
-                                String statusText = 'Pending';
-                                
-                                if (order.status == app.OrderStatus.completed) {
-                                  statusColor = AppColors.success;
-                                  statusText = 'Selesai';
-                                } else if (order.status == app.OrderStatus.cancelled) {
-                                  statusColor = AppColors.error;
-                                  statusText = 'Batal';
-                                }
-
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                                    border: Border.all(
-                                      color: AppColors.border.withOpacity(0.2),
-                                    ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.success.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  'Hari Ini: ${AppFormatter.formatRupiah(totalEarningsToday)}',
+                                  style: const TextStyle(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
                                   ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Expanded(
+                          child: (activeQrOrders.isEmpty && orders.isEmpty)
+                              ? Center(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
+                                      Icon(Icons.receipt_long_rounded, size: 64, color: AppColors.textHint.withOpacity(0.4)),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'Belum ada riwayat pesanan\nuntuk Meja ${table.number}',
+                                        style: AppTextStyles.bodySecondary,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView(
+                                  controller: scrollController,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  children: [
+                                    // === ACTIVE QR ORDERS SECTION ===
+                                    if (activeQrOrders.isNotEmpty) ...[
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
+                                          const Icon(Icons.qr_code_2_rounded, color: AppColors.primary, size: 20),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Pesanan QR Aktif (${activeQrOrders.length})',
+                                            style: AppTextStyles.subtitle.copyWith(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ...activeQrOrders.map((qr) => _buildActiveQrOrderTile(context, qr, firestoreService)),
+                                      const SizedBox(height: 16),
+                                      const Divider(),
+                                      const SizedBox(height: 8),
+                                    ],
+                                    // === COMPLETED ORDERS SECTION ===
+                                    if (orders.isNotEmpty) ...[
+                                      Text(
+                                        'Riwayat Transaksi',
+                                        style: AppTextStyles.subtitle.copyWith(
+                                          color: AppColors.success,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ...orders.map((order) {
+                                        Color statusColor = AppColors.warning;
+                                        String statusText = 'Pending';
+                                        
+                                        if (order.status == app.OrderStatus.completed) {
+                                          statusColor = AppColors.success;
+                                          statusText = 'Selesai';
+                                        } else if (order.status == app.OrderStatus.cancelled) {
+                                          statusColor = AppColors.error;
+                                          statusText = 'Batal';
+                                        }
+
+                                        return Container(
+                                          margin: const EdgeInsets.only(bottom: 12),
+                                          padding: const EdgeInsets.all(16),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surface,
+                                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                                            border: Border.all(
+                                              color: AppColors.border.withOpacity(0.2),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(
-                                                order.orderNumber,
-                                                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        order.orderNumber,
+                                                        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          color: order.paymentMethod == 'QRIS' 
+                                                              ? AppColors.info.withOpacity(0.15) 
+                                                              : AppColors.success.withOpacity(0.15),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          order.paymentMethod,
+                                                          style: TextStyle(
+                                                            fontSize: 10,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: order.paymentMethod == 'QRIS' 
+                                                                ? AppColors.info 
+                                                                : AppColors.success,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: statusColor.withOpacity(0.15),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: Text(
+                                                      statusText,
+                                                      style: TextStyle(
+                                                        color: statusColor,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: order.paymentMethod == 'QRIS' 
-                                                      ? AppColors.info.withOpacity(0.15) 
-                                                      : AppColors.success.withOpacity(0.15),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  order.paymentMethod,
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: order.paymentMethod == 'QRIS' 
-                                                        ? AppColors.info 
-                                                        : AppColors.success,
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    AppFormatter.formatDateTime(order.createdAt),
+                                                    style: AppTextStyles.caption,
+                                                  ),
+                                                  Text(
+                                                    AppFormatter.formatRupiah(order.total),
+                                                    style: AppTextStyles.priceSmall,
+                                                  ),
+                                                ],
+                                              ),
+                                              const Divider(height: 16),
+                                              ListView.builder(
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                itemCount: order.items.length,
+                                                itemBuilder: (context, itemIndex) {
+                                                  final item = order.items[itemIndex];
+                                                  return Padding(
+                                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                                    child: Row(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(
+                                                          '${item.quantity}x',
+                                                          style: const TextStyle(
+                                                            fontWeight: FontWeight.bold,
+                                                            color: AppColors.primary,
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 6),
+                                                        Expanded(
+                                                          child: Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Text(
+                                                                item.menuItemName,
+                                                                style: AppTextStyles.body.copyWith(fontSize: 12),
+                                                              ),
+                                                              if (item.variant != null && item.variant!.isNotEmpty)
+                                                                Text(
+                                                                  'Minuman: ${item.variant}',
+                                                                  style: AppTextStyles.caption.copyWith(
+                                                                    color: AppColors.secondary,
+                                                                    fontSize: 10,
+                                                                  ),
+                                                                ),
+                                                              if (item.notes.isNotEmpty)
+                                                                Text(
+                                                                  'Catatan: "${item.notes}"',
+                                                                  style: AppTextStyles.caption.copyWith(
+                                                                    fontStyle: FontStyle.italic,
+                                                                    fontSize: 10,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          AppFormatter.formatRupiah(item.price * item.quantity),
+                                                          style: AppTextStyles.caption.copyWith(fontSize: 12),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              const SizedBox(height: 8),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) => OrderDetailScreen(order: order),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: OutlinedButton.styleFrom(
+                                                    side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+                                                    padding: const EdgeInsets.symmetric(vertical: 8),
+                                                  ),
+                                                  child: Text(
+                                                    'Lihat Detail Transaksi',
+                                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                                                   ),
                                                 ),
                                               ),
                                             ],
                                           ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: statusColor.withOpacity(0.15),
-                                              borderRadius: BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              statusText,
-                                              style: TextStyle(
-                                                color: statusColor,
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 10,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Text(
-                                            AppFormatter.formatDateTime(order.createdAt),
-                                            style: AppTextStyles.caption,
-                                          ),
-                                          Text(
-                                            AppFormatter.formatRupiah(order.total),
-                                            style: AppTextStyles.priceSmall,
-                                          ),
-                                        ],
-                                      ),
-                                      const Divider(height: 16),
-                                      ListView.builder(
-                                        shrinkWrap: true,
-                                        physics: const NeverScrollableScrollPhysics(),
-                                        itemCount: order.items.length,
-                                        itemBuilder: (context, itemIndex) {
-                                          final item = order.items[itemIndex];
-                                          return Padding(
-                                            padding: const EdgeInsets.only(bottom: 4.0),
-                                            child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${item.quantity}x',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppColors.primary,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        item.menuItemName,
-                                                        style: AppTextStyles.body.copyWith(fontSize: 12),
-                                                      ),
-                                                      if (item.variant != null && item.variant!.isNotEmpty)
-                                                        Text(
-                                                          'Minuman: ${item.variant}',
-                                                          style: AppTextStyles.caption.copyWith(
-                                                            color: AppColors.secondary,
-                                                            fontSize: 10,
-                                                          ),
-                                                        ),
-                                                      if (item.notes.isNotEmpty)
-                                                        Text(
-                                                          'Catatan: "${item.notes}"',
-                                                          style: AppTextStyles.caption.copyWith(
-                                                            fontStyle: FontStyle.italic,
-                                                            fontSize: 10,
-                                                          ),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                Text(
-                                                  AppFormatter.formatRupiah(item.price * item.quantity),
-                                                  style: AppTextStyles.caption.copyWith(fontSize: 12),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 8),
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: OutlinedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) => OrderDetailScreen(order: order),
-                                              ),
-                                            );
-                                          },
-                                          style: OutlinedButton.styleFrom(
-                                            side: BorderSide(color: AppColors.border.withOpacity(0.5)),
-                                            padding: const EdgeInsets.symmetric(vertical: 8),
-                                          ),
-                                          child: Text(
-                                            'Lihat Detail Transaksi',
-                                            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-                                          ),
-                                        ),
-                                      ),
+                                        );
+                                      }),
                                     ],
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
+                                  ],
+                                ),
+                        ),
+                      ],
+                    );
+                  },
                 );
               },
             );
@@ -937,5 +972,268 @@ class TableScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Build a single active QR order tile with accept/reject, mark paid, mark delivered actions
+  Widget _buildActiveQrOrderTile(BuildContext context, Map<String, dynamic> qr, FirestoreService firestoreService) {
+    final String orderId = qr['id'] ?? '';
+    final String status = qr['status'] as String? ?? 'pending';
+    final String paymentMethod = qr['paymentMethod'] as String? ?? 'Tunai';
+    final String paymentStatus = qr['paymentStatus'] as String? ?? 'belum_bayar';
+    final int total = _toInt(qr['totalPrice'] ?? qr['total']);
+    final List<dynamic> items = qr['items'] as List<dynamic>? ?? [];
+
+    final timestamp = qr['createdAt'];
+    DateTime date = DateTime.now();
+    if (timestamp != null) {
+      try { date = (timestamp as dynamic).toDate(); } catch (_) {}
+    }
+
+    // Payment status badge
+    Color payColor;
+    String payText;
+    if (paymentStatus == 'sudah_bayar') {
+      payColor = AppColors.success;
+      payText = 'Lunas';
+    } else if (paymentMethod == 'QRIS') {
+      payColor = AppColors.info;
+      payText = 'Menunggu QRIS';
+    } else {
+      payColor = AppColors.primary;
+      payText = 'Belum Dibayar';
+    }
+
+    // Order status badge
+    Color statusColor;
+    String statusText;
+    switch (status) {
+      case 'accepted':
+        statusColor = AppColors.info;
+        statusText = 'Sedang Diproses';
+        break;
+      case 'delivered':
+        statusColor = AppColors.success;
+        statusText = 'Sudah Dianter';
+        break;
+      case 'pending':
+      default:
+        statusColor = AppColors.warning;
+        statusText = 'Menunggu Konfirmasi';
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: statusColor.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: time + badges
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppFormatter.formatDateTime(date),
+                      style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Metode: $paymentMethod',
+                      style: AppTextStyles.caption.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 4,
+                runSpacing: 4,
+                children: [
+                  _badge(payText, payColor),
+                  _badge(statusText, statusColor),
+                ],
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          // Items
+          ...items.map((it) {
+            final String name = it['name'] ?? it['menuItemName'] ?? '';
+            final int qty = _toInt(it['quantity'], fallback: 1);
+            final int price = _toInt(it['price']);
+            final String? variant = it['variant'];
+            final String notes = it['notes'] ?? '';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${qty}x', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 12)),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name, style: AppTextStyles.body.copyWith(fontSize: 12, fontWeight: FontWeight.w600)),
+                        if (variant != null && variant.isNotEmpty)
+                          Text('Opsi: $variant', style: AppTextStyles.caption.copyWith(color: AppColors.secondary, fontSize: 10)),
+                        if (notes.isNotEmpty)
+                          Text('Catatan: "$notes"', style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic, fontSize: 10)),
+                      ],
+                    ),
+                  ),
+                  Text(AppFormatter.formatRupiah(price * qty), style: AppTextStyles.caption.copyWith(fontSize: 12)),
+                ],
+              ),
+            );
+          }),
+          const Divider(height: 16),
+          // Total
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+              Text(AppFormatter.formatRupiah(total), style: AppTextStyles.price),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Action buttons
+          if (status == 'pending') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      await firestoreService.updateQrOrderStatus(orderId, 'rejected');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.error),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Tolak', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await firestoreService.updateQrOrderStatus(orderId, 'accepted');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Text('Terima & Proses', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (status == 'accepted') ...[
+            Row(
+              children: [
+                if (paymentStatus != 'sudah_bayar')
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar');
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Pesanan ditandai Lunas!'), backgroundColor: AppColors.success),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.payments_rounded, size: 16),
+                      label: const Text('Tandai Lunas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.info,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
+                  ),
+                if (paymentStatus != 'sudah_bayar') const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await firestoreService.updateQrOrderStatus(orderId, 'delivered');
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Pesanan ditandai sudah Dianter!'), backgroundColor: AppColors.success),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.delivery_dining_rounded, size: 16),
+                    label: const Text('Tandai Dianter', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.success,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (status == 'delivered' && paymentStatus != 'sudah_bayar') ...[
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pesanan ditandai Lunas!'), backgroundColor: AppColors.success),
+                    );
+                  }
+                },
+                icon: const Icon(Icons.payments_rounded, size: 16),
+                label: const Text('Tandai Lunas', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.info,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _badge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
   }
 }

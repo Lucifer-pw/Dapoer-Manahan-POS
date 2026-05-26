@@ -867,6 +867,10 @@ class FirestoreService {
     await _db.collection('qr_orders').doc(orderId).update({'status': status});
   }
 
+  Future<void> updateQrOrderPaymentStatus(String orderId, String paymentStatus) async {
+    await _db.collection('qr_orders').doc(orderId).update({'paymentStatus': paymentStatus});
+  }
+
   Future<void> createQrOrder(Map<String, dynamic> orderData) async {
     await _db.collection('qr_orders').add(orderData);
   }

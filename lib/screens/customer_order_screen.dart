@@ -27,6 +27,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   String _localSearchQuery = '';
   bool _isSubmitting = false;
   bool _isSuccess = false;
+  String _selectedPaymentMethod = 'QRIS';
 
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -246,6 +247,8 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         'items': orderItems,
         'totalPrice': totalPrice,
         'status': 'pending',
+        'paymentMethod': _selectedPaymentMethod,
+        'paymentStatus': 'belum_bayar',
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -465,7 +468,128 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                     Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(
+                            'Pilih Metode Pembayaran',
+                            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setModalState(() {
+                                      _selectedPaymentMethod = 'QRIS';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedPaymentMethod == 'QRIS'
+                                          ? AppColors.primary.withOpacity(0.12)
+                                          : AppColors.surfaceDark,
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      border: Border.all(
+                                        color: _selectedPaymentMethod == 'QRIS'
+                                            ? AppColors.primary
+                                            : AppColors.border.withOpacity(0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.qr_code_2_rounded,
+                                          color: _selectedPaymentMethod == 'QRIS'
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'QRIS (Bayar Sekarang)',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: _selectedPaymentMethod == 'QRIS'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: _selectedPaymentMethod == 'QRIS'
+                                                ? AppColors.primary
+                                                : AppColors.textPrimary,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setModalState(() {
+                                      _selectedPaymentMethod = 'Tunai';
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: _selectedPaymentMethod == 'Tunai'
+                                          ? AppColors.primary.withOpacity(0.12)
+                                          : AppColors.surfaceDark,
+                                      borderRadius: BorderRadius.circular(AppRadius.md),
+                                      border: Border.all(
+                                        color: _selectedPaymentMethod == 'Tunai'
+                                            ? AppColors.primary
+                                            : AppColors.border.withOpacity(0.3),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.payments_rounded,
+                                          color: _selectedPaymentMethod == 'Tunai'
+                                              ? AppColors.primary
+                                              : AppColors.textSecondary,
+                                          size: 22,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Tunai (Bayar di Kasir)',
+                                          style: AppTextStyles.caption.copyWith(
+                                            fontWeight: _selectedPaymentMethod == 'Tunai'
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: _selectedPaymentMethod == 'Tunai'
+                                                ? AppColors.primary
+                                                : AppColors.textPrimary,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _selectedPaymentMethod == 'QRIS'
+                                ? '* Pindai kode QRIS setelah mengirim pesanan untuk langsung membayar'
+                                : '* Silakan bayar ke meja kasir setelah hidangan disajikan/selesai makan',
+                            style: AppTextStyles.caption.copyWith(
+                              fontStyle: FontStyle.italic,
+                              color: AppColors.secondary,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -1028,6 +1152,8 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     final status = qr['status'] as String? ?? 'pending';
     final items = qr['items'] as List<dynamic>? ?? [];
     final totalPrice = qr['totalPrice'] as int? ?? 0;
+    final paymentMethod = qr['paymentMethod'] as String? ?? 'Tunai';
+    final paymentStatus = qr['paymentStatus'] as String? ?? 'belum_bayar';
     
     final timestamp = qr['createdAt'];
     DateTime date = DateTime.now();
@@ -1035,12 +1161,31 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
       date = timestamp.toDate();
     }
 
+    Color payColor;
+    String payText;
+    if (paymentStatus == 'sudah_bayar') {
+      payColor = AppColors.success;
+      payText = 'Lunas';
+    } else {
+      if (paymentMethod == 'QRIS') {
+        payColor = AppColors.info;
+        payText = 'Menunggu Verifikasi QRIS';
+      } else {
+        payColor = AppColors.primary;
+        payText = 'Belum Dibayar (Kasir)';
+      }
+    }
+
     Color statusColor;
     String statusText;
     switch (status) {
       case 'accepted':
+        statusColor = AppColors.info;
+        statusText = 'Sedang Diproses';
+        break;
+      case 'delivered':
         statusColor = AppColors.success;
-        statusText = 'Diterima & Diproses';
+        statusText = 'Pesanan Sudah Dianter';
         break;
       case 'rejected':
         statusColor = AppColors.error;
@@ -1066,27 +1211,63 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  AppFormatter.formatDateTime(date),
-                  style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppFormatter.formatDateTime(date),
+                        style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Metode: $paymentMethod',
+                        style: AppTextStyles.caption.copyWith(fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                    border: Border.all(color: statusColor.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: payColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: payColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        payText,
+                        style: TextStyle(
+                          color: payColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1379,12 +1560,80 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              Text(
-                'Mohon tunggu beberapa saat. Kasir kami akan segera memverifikasi dan pelayan akan mengantarkan hidangan lezat Anda.',
-                style: AppTextStyles.bodySecondary,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 36),
+              if (_selectedPaymentMethod == 'QRIS') ...[
+                Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(color: AppColors.border.withOpacity(0.4)),
+                    boxShadow: AppShadows.card,
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 6),
+                          Text(
+                            'PINDAI KODE QRIS UNTUK MEMBAYAR',
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        child: Image.asset(
+                          'assets/images/payment_qr_cs.png',
+                          width: 180,
+                          height: 180,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 180,
+                            height: 180,
+                            color: Colors.white10,
+                            child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Total Tagihan: ${AppFormatter.formatRupiah(totalPrice)}',
+                        style: AppTextStyles.subtitle.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
+                        style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'Silakan lakukan pembayaran langsung sebesar ${AppFormatter.formatRupiah(totalPrice)} di meja kasir.',
+                  style: AppTextStyles.subtitle.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Mohon tunggu beberapa saat. Kasir kami akan segera memverifikasi dan pelayan akan mengantarkan hidangan lezat Anda.',
+                  style: AppTextStyles.bodySecondary,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 28),
               OutlinedButton(
                 onPressed: () {
                   setState(() {
