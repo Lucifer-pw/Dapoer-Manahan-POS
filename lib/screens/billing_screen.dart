@@ -124,7 +124,8 @@ class BillingScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Metode Alternatif (QRIS)',
-                            style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold),
+                            style: AppTextStyles.caption
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 12),
                           Container(
@@ -135,7 +136,7 @@ class BillingScreen extends StatelessWidget {
                               border: Border.all(color: AppColors.border),
                             ),
                             child: Image.asset(
-                              'assets/images/payment_qr.png',
+                              'assets/images/qris_code_customer.png',
                               width: 200,
                               height: 200,
                               fit: BoxFit.contain,
@@ -158,7 +159,8 @@ class BillingScreen extends StatelessWidget {
                                 backgroundColor: Colors.green.shade600,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppRadius.md),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.md),
                                 ),
                                 elevation: 0,
                               ),
@@ -184,7 +186,8 @@ class BillingScreen extends StatelessWidget {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.textHint, // Grayed out since it's pending
+                            backgroundColor: AppColors
+                                .textHint, // Grayed out since it's pending
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
