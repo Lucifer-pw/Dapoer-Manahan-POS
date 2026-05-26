@@ -1591,7 +1591,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         child: Image.asset(
-                          'assets/images/payment_qr_cs.png',
+                          'assets/images/qris_code_customer.png',
                           width: 180,
                           height: 180,
                           fit: BoxFit.contain,
