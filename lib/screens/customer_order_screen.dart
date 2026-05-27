@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2435,17 +2436,42 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                               color: AppColors.surfaceDark,
                             ),
                             clipBehavior: Clip.antiAlias,
-                            child: Image.network(
-                              item.imageUrl,
-                              key: ValueKey(item.imageUrl),
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(
-                                  Icons.fastfood_rounded,
-                                  color: AppColors.primary,
-                                  size: 80,
+                            child: Stack(
+                              children: [
+                                // Layer 1: Blurred background cover
+                                Positioned.fill(
+                                  child: ImageFiltered(
+                                    imageFilter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                    child: Image.network(
+                                      item.imageUrl,
+                                      key: ValueKey('blur_${item.imageUrl}'),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const SizedBox(),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                // Layer 2: Dark semi-transparent overlay to merge with dark theme
+                                Positioned.fill(
+                                  child: Container(
+                                    color: Colors.black.withOpacity(0.25),
+                                  ),
+                                ),
+                                // Layer 3: Crisp uncropped front image (contain)
+                                Positioned.fill(
+                                  child: Image.network(
+                                    item.imageUrl,
+                                    key: ValueKey('contain_${item.imageUrl}'),
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) => const Center(
+                                      child: Icon(
+                                        Icons.fastfood_rounded,
+                                        color: AppColors.primary,
+                                        size: 80,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           )
                         else
