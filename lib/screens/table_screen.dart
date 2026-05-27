@@ -16,8 +16,43 @@ import '../models/order.dart' as app;
 import '../utils/formatter.dart';
 import 'order_detail_screen.dart';
 
-class TableScreen extends StatelessWidget {
+class TableScreen extends StatefulWidget {
   const TableScreen({super.key});
+
+  @override
+  State<TableScreen> createState() => _TableScreenState();
+}
+
+class _TableScreenState extends State<TableScreen> {
+  late final TableProvider _tableProv;
+
+  @override
+  void initState() {
+    super.initState();
+    _tableProv = Provider.of<TableProvider>(context, listen: false);
+    _tableProv.addListener(_checkForPendingHighlight);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForPendingHighlight();
+    });
+  }
+
+  @override
+  void dispose() {
+    _tableProv.removeListener(_checkForPendingHighlight);
+    super.dispose();
+  }
+
+  void _checkForPendingHighlight() {
+    if (!mounted) return;
+    final highlightNumber = _tableProv.pendingHighlightTableNumber;
+    if (highlightNumber != null) {
+      final table = _tableProv.getTableByNumber(highlightNumber);
+      if (table != null) {
+        _showTableOrderHistoryDialog(context, table);
+      }
+      _tableProv.pendingHighlightTableNumber = null;
+    }
+  }
 
   void _showAddEditDialog(BuildContext context, {RestaurantTable? table}) {
     final tableProv = Provider.of<TableProvider>(context, listen: false);

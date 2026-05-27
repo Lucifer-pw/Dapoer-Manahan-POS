@@ -28,6 +28,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   bool _isSubmitting = false;
   bool _isSuccess = false;
   String _selectedPaymentMethod = 'QRIS';
+  int _submittedTotalPrice = 0;
 
   final FirestoreService _firestoreService = FirestoreService();
 
@@ -252,9 +253,11 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
+      final finalPrice = totalPrice;
       await _firestoreService.createQrOrder(qrOrderData);
 
       setState(() {
+        _submittedTotalPrice = finalPrice;
         _isSubmitting = false;
         _isSuccess = true;
         _cart.clear();
@@ -704,6 +707,51 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               ),
             ),
 
+            // Beautiful Interactive Guide Banner
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.lg, right: AppSpacing.lg, bottom: 12),
+              child: GestureDetector(
+                onTap: _showCustomerGuideBottomSheet,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.25), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.help_outline_rounded, color: AppColors.primary, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Panduan Memesan & Membayar',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Ketuk di sini untuk melihat langkah mudah memesan hidangan Anda',
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 10.5,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primary, size: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -801,9 +849,11 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         )
                       : GridView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.72,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                            childAspectRatio: MediaQuery.of(context).size.width > 600
+                                ? 0.8
+                                : (MediaQuery.of(context).size.width < 360 ? 0.64 : 0.7),
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
@@ -1527,169 +1577,348 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
   Widget _buildSuccessScreen() {
     return Scaffold(
       backgroundColor: AppColors.backgroundDark,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xxl),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.success.withOpacity(0.4), width: 2),
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.success,
-                  size: 56,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Pesanan Dikirim!',
-                style: AppTextStyles.heading1,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Pesanan untuk Meja ${widget.tableNumber} berhasil dikirim ke Kasir.',
-                style: AppTextStyles.subtitle.copyWith(color: AppColors.success),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              if (_selectedPaymentMethod == 'QRIS') ...[
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(AppRadius.lg),
-                    border: Border.all(color: AppColors.border.withOpacity(0.4)),
-                    boxShadow: AppShadows.card,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 450),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.success.withOpacity(0.4), width: 2),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      color: AppColors.success,
+                      size: 56,
+                    ),
                   ),
-                  child: StreamBuilder<Map<String, dynamic>>(
-                    stream: _firestoreService.streamActiveQrisConfig(),
-                    builder: (context, snapshot) {
-                      final config = snapshot.data ?? {};
-                      final customerQris = config['customer'];
-                      final imageUrl = customerQris?['imageUrl'] as String?;
-                      final label = customerQris?['label'] as String?;
+                  const SizedBox(height: 24),
+                  Text(
+                    'Pesanan Dikirim!',
+                    style: AppTextStyles.heading1,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Pesanan untuk Meja ${widget.tableNumber} berhasil dikirim ke Kasir.',
+                    style: AppTextStyles.subtitle.copyWith(color: AppColors.success),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  if (_selectedPaymentMethod == 'QRIS') ...[
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(color: AppColors.border.withOpacity(0.4)),
+                        boxShadow: AppShadows.card,
+                      ),
+                      child: StreamBuilder<Map<String, dynamic>>(
+                        stream: _firestoreService.streamActiveQrisConfig(),
+                        builder: (context, snapshot) {
+                          final config = snapshot.data ?? {};
+                          final customerQris = config['customer'];
+                          final imageUrl = customerQris?['imageUrl'] as String?;
+                          final label = customerQris?['label'] as String?;
 
-                      Widget buildFallback() {
-                        return Image.asset(
-                          'assets/images/qris_code_customer.png',
-                          width: 180,
-                          height: 180,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            width: 180,
-                            height: 180,
-                            color: Colors.white10,
-                            child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
-                          ),
-                        );
-                      }
+                          Widget buildFallback() {
+                            return Image.asset(
+                              'assets/images/qris_code_customer.png',
+                              width: 180,
+                              height: 180,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                width: 180,
+                                height: 180,
+                                color: Colors.white10,
+                                child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
+                              ),
+                            );
+                          }
 
-                      return Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          return Column(
                             children: [
-                              const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
-                              const SizedBox(width: 6),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    label != null && label.isNotEmpty
+                                        ? 'PINDAI KODE QRIS ($label)'
+                                        : 'PINDAI KODE QRIS UNTUK MEMBAYAR',
+                                    style: AppTextStyles.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                child: imageUrl != null && imageUrl.isNotEmpty
+                                    ? Image.network(
+                                        imageUrl,
+                                        width: 180,
+                                        height: 180,
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (context, error, stackTrace) => buildFallback(),
+                                      )
+                                    : buildFallback(),
+                              ),
+                              const SizedBox(height: 12),
                               Text(
-                                label != null && label.isNotEmpty
-                                    ? 'PINDAI KODE QRIS ($label)'
-                                    : 'PINDAI KODE QRIS UNTUK MEMBAYAR',
-                                style: AppTextStyles.caption.copyWith(
+                                'Total Tagihan: ${AppFormatter.formatRupiah(_submittedTotalPrice)}',
+                                style: AppTextStyles.subtitle.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.primary,
-                                  letterSpacing: 0.5,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
+                                style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
+                                textAlign: TextAlign.center,
+                              ),
                             ],
-                          ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(AppRadius.md),
-                            child: imageUrl != null && imageUrl.isNotEmpty
-                                ? Image.network(
-                                    imageUrl,
-                                    width: 180,
-                                    height: 180,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) => buildFallback(),
-                                  )
-                                : buildFallback(),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Total Tagihan: ${AppFormatter.formatRupiah(totalPrice)}',
-                            style: AppTextStyles.subtitle.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
-                            style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      );
+                          );
+                        },
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      'Silakan lakukan pembayaran langsung sebesar ${AppFormatter.formatRupiah(_submittedTotalPrice)} di meja kasir.',
+                      style: AppTextStyles.subtitle.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Mohon tunggu beberapa saat. Kasir kami akan segera memverifikasi dan pelayan akan mengantarkan hidangan lezat Anda.',
+                      style: AppTextStyles.bodySecondary,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 28),
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isSuccess = false;
+                      });
                     },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                      ),
+                    ),
+                    child: const Text(
+                      'Pesan Lagi',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ] else ...[
-                Text(
-                  'Silakan lakukan pembayaran langsung sebesar ${AppFormatter.formatRupiah(totalPrice)} di meja kasir.',
-                  style: AppTextStyles.subtitle.copyWith(color: AppColors.secondary, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Mohon tunggu beberapa saat. Kasir kami akan segera memverifikasi dan pelayan akan mengantarkan hidangan lezat Anda.',
-                  style: AppTextStyles.bodySecondary,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-              const SizedBox(height: 28),
-              OutlinedButton(
-                onPressed: () {
-                  setState(() {
-                    _isSuccess = false;
-                  });
-                },
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: AppColors.primary),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                ),
-                child: const Text(
-                  'Pesan Lagi',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
+    );
+  }
+
+  void _showCustomerGuideBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.backgroundDark,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (_, scrollController) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Icon(Icons.help_outline_rounded, color: AppColors.primary, size: 26),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Panduan Memesan & Membayar',
+                        style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Ikuti 4 langkah praktis berikut untuk memesan hidangan favorit Anda:',
+                      style: AppTextStyles.bodySecondary.copyWith(fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        _buildGuideStepTile(
+                          stepNumber: '1',
+                          title: 'Pilih Hidangan',
+                          description: 'Cari makanan dan minuman lezat kesukaan Anda di daftar menu. Ketuk tombol "+ Tambah" untuk memasukkannya ke dalam keranjang belanja.',
+                          detailText: 'Tips: Ketuk item untuk menambahkan catatan khusus (misalnya: "es sedikit", "tidak pedas") atau untuk paket makanan, Anda bisa memilih rasa minumannya.',
+                          icon: Icons.restaurant_menu_rounded,
+                          color: AppColors.primary,
+                        ),
+                        _buildGuideStepTile(
+                          stepNumber: '2',
+                          title: 'Tinjau Keranjang',
+                          description: 'Setelah selesai memilih hidangan, klik tombol "Tinjau Pesanan" berwarna oranye di bagian bawah layar untuk meninjau pesanan Anda.',
+                          detailText: 'Di halaman Tinjau Pesanan, Anda dapat menaikkan/menurunkan jumlah porsi atau membatalkan item sebelum benar-benar mengirimkannya.',
+                          icon: Icons.shopping_basket_rounded,
+                          color: AppColors.secondary,
+                        ),
+                        _buildGuideStepTile(
+                          stepNumber: '3',
+                          title: 'Pilih Metode Pembayaran',
+                          description: 'Di bagian bawah keranjang, pilih salah satu dari dua metode pembayaran berikut yang paling nyaman bagi Anda:',
+                          detailText: '• QRIS (Otomatis): Bayar langsung menggunakan saldo E-Wallet (GoPay, OVO, Dana, ShopeePay) or M-Banking dengan memindai kode QRIS.\n• Bayar Tunai di Kasir: Lakukan pembayaran secara manual menggunakan uang tunai langsung di meja kasir setelah pesanan dikonfirmasi.',
+                          icon: Icons.payments_rounded,
+                          color: AppColors.success,
+                        ),
+                        _buildGuideStepTile(
+                          stepNumber: '4',
+                          title: 'Kirim & Selesaikan',
+                          description: 'Tekan tombol "Kirim Pesanan" untuk mengirimkan pesanan Anda ke dapur dan kasir secara realtime.',
+                          detailText: '• Jika memilih QRIS: Pindai kode QRIS dinamis yang muncul di layar sukses, selesaikan transfer, lalu tunjukkan bukti bayar ke pelayan saat mengantarkan makanan.\n• Jika memilih Bayar Tunai di Kasir: Silakan konfirmasi dan selesaikan pembayaran tunai Anda langsung di meja kasir.\n\nSelamat menikmati hidangan lezat Anda!',
+                          icon: Icons.check_circle_rounded,
+                          color: const Color(0xFF2196F3),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildGuideStepTile({
+    required String stepNumber,
+    required String title,
+    required String description,
+    required String detailText,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHistoryFAB(),
-          const SizedBox(height: 12),
-          _buildChatFAB(),
+          Column(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.2),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    )
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    stepNumber,
+                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ),
+              Container(
+                width: 2,
+                height: 120,
+                color: AppColors.border.withOpacity(0.15),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: color, size: 18),
+                    const SizedBox(width: 6),
+                    Text(
+                      title,
+                      style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  description,
+                  style: AppTextStyles.bodySecondary.copyWith(fontSize: 12.5, height: 1.4),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(color: AppColors.border.withOpacity(0.15)),
+                  ),
+                  child: Text(
+                    detailText,
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary, height: 1.4, fontSize: 11.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

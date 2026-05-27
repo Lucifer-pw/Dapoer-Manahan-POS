@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:async';
 
 import '../utils/constants.dart';
+import '../utils/formatter.dart';
+import '../services/firestore_service.dart';
+import '../providers/table_provider.dart';
 
 import 'home_screen.dart';
 import 'pos_screen.dart';
@@ -35,6 +39,16 @@ class _MainShellState extends State<MainShell> {
 
   bool? _lastPrinterState;
   bool? _lastConnectivityState;
+
+  // Draggable notification fields
+  Offset _notificationPosition = const Offset(20, 100);
+  bool _isPositionInitialized = false;
+  
+  late final FirestoreService _firestoreService;
+  StreamSubscription<List<Map<String, dynamic>>>? _pendingOrdersSubscription;
+  final Set<String> _notifiedOrderIds = {};
+  bool _isFirstSnapshot = true;
+  Map<String, dynamic>? _activeAlertOrder;
 
   // ============================================================
   // INIT STATE
@@ -71,6 +85,9 @@ class _MainShellState extends State<MainShell> {
       _lastConnectivityState = connProv.isOnline;
       connProv.addListener(_onConnectivityChanged);
     });
+
+    _firestoreService = FirestoreService();
+    _startListeningToPendingOrders();
   }
 
   void _onPrinterStateChanged() {
@@ -201,6 +218,7 @@ class _MainShellState extends State<MainShell> {
       final connProv = Provider.of<ConnectivityProvider>(context, listen: false);
       connProv.removeListener(_onConnectivityChanged);
     } catch (_) {}
+    _pendingOrdersSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -215,12 +233,17 @@ class _MainShellState extends State<MainShell> {
       builder: (context, navProv, _) {
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: PageView(
-            controller: _pageController,
-            onPageChanged: (index) {
-              navProv.setIndex(index);
-            },
-            children: _screens,
+          body: Stack(
+            children: [
+              PageView(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  navProv.setIndex(index);
+                },
+                children: _screens,
+              ),
+              _buildFloatingNotification(context, navProv),
+            ],
           ),
           bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -385,6 +408,239 @@ class _MainShellState extends State<MainShell> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  void _startListeningToPendingOrders() {
+    _pendingOrdersSubscription = _firestoreService.streamPendingQrOrders().listen((orders) {
+      if (_isFirstSnapshot) {
+        for (var o in orders) {
+          final id = o['id'] as String?;
+          if (id != null) {
+            _notifiedOrderIds.add(id);
+          }
+        }
+        _isFirstSnapshot = false;
+        return;
+      }
+
+      for (var o in orders) {
+        final id = o['id'] as String?;
+        if (id != null && !_notifiedOrderIds.contains(id)) {
+          _notifiedOrderIds.add(id);
+          
+          setState(() {
+            _activeAlertOrder = o;
+          });
+        }
+      }
+    });
+  }
+
+  Widget _buildFloatingNotification(BuildContext context, NavigationProvider navProv) {
+    if (_activeAlertOrder == null) return const SizedBox.shrink();
+
+    final order = _activeAlertOrder!;
+    final tableNumberStr = order['tableNumber']?.toString() ?? '';
+    final int? tableNumber = int.tryParse(tableNumberStr);
+    final totalPrice = order['totalPrice'] as int? ?? 0;
+    final List<dynamic> items = order['items'] as List<dynamic>? ?? [];
+
+    final size = MediaQuery.of(context).size;
+    
+    if (!_isPositionInitialized) {
+      _notificationPosition = Offset(size.width - 320.0, 100.0);
+      _isPositionInitialized = true;
+    }
+
+    return Positioned(
+      left: _notificationPosition.dx,
+      top: _notificationPosition.dy,
+      child: GestureDetector(
+        onPanUpdate: (details) {
+          final double newX = (_notificationPosition.dx + details.delta.dx).clamp(10.0, size.width - 310.0);
+          final double newY = (_notificationPosition.dy + details.delta.dy).clamp(80.0, size.height - 240.0);
+          setState(() {
+            _notificationPosition = Offset(newX, newY);
+          });
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 300,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.surface.withOpacity(0.95),
+                  AppColors.surfaceDark.withOpacity(0.98),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.primary, width: 1.8),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.35),
+                  blurRadius: 18,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.textHint.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Pesanan Baru!',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Meja $tableNumberStr • ${AppFormatter.formatRupiah(totalPrice)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: AppColors.textHint, size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        setState(() {
+                          _activeAlertOrder = null;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Divider(height: 1, color: Colors.white10),
+                const SizedBox(height: 8),
+                ...items.take(2).map((item) {
+                  final name = item['name'] ?? '';
+                  final qty = item['quantity'] ?? 1;
+                  final variant = item['variant'] as String?;
+                  final hasVariant = variant != null && variant.isNotEmpty;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '$name ${hasVariant ? "($variant)" : ""}',
+                            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          'x$qty',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                if (items.length > 2)
+                  Text(
+                    '+ ${items.length - 2} item lainnya...',
+                    style: TextStyle(color: AppColors.textHint, fontSize: 10, fontStyle: FontStyle.italic),
+                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        minimumSize: Size.zero,
+                        side: BorderSide(color: AppColors.textHint.withOpacity(0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _activeAlertOrder = null;
+                        });
+                      },
+                      child: Text(
+                        'Tutup',
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        minimumSize: Size.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                      onPressed: () {
+                        if (tableNumber != null) {
+                          final tableProv = Provider.of<TableProvider>(context, listen: false);
+                          tableProv.pendingHighlightTableNumber = tableNumber;
+                          navProv.setIndex(2);
+                        }
+                        setState(() {
+                          _activeAlertOrder = null;
+                        });
+                      },
+                      child: const Text(
+                        'Kelola',
+                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

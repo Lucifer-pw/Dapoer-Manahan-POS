@@ -9,9 +9,16 @@ class TableProvider extends ChangeNotifier {
   List<RestaurantTable> _tables = [];
   bool _isLoading = true;
   StreamSubscription? _tableSub;
+  int? _pendingHighlightTableNumber;
 
   List<RestaurantTable> get tables => _tables;
   bool get isLoading => _isLoading;
+  int? get pendingHighlightTableNumber => _pendingHighlightTableNumber;
+
+  set pendingHighlightTableNumber(int? val) {
+    _pendingHighlightTableNumber = val;
+    notifyListeners();
+  }
 
   List<RestaurantTable> get availableTables =>
       _tables.where((t) => t.status == TableStatus.available).toList();
