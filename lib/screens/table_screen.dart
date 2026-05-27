@@ -15,6 +15,7 @@ import '../services/firestore_service.dart';
 import '../models/order.dart' as app;
 import '../utils/formatter.dart';
 import 'order_detail_screen.dart';
+import '../providers/auth_provider.dart';
 
 class TableScreen extends StatefulWidget {
   const TableScreen({super.key});
@@ -677,6 +678,9 @@ class _TableScreenState extends State<TableScreen> {
 
   void _showTableOrderHistoryDialog(BuildContext context, RestaurantTable table) {
     final firestoreService = FirestoreService();
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final cashierName = authProv.cashierName;
+    final cashierId = authProv.user?.uid ?? '';
 
     showModalBottomSheet(
       context: context,
@@ -705,6 +709,20 @@ class _TableScreenState extends State<TableScreen> {
 
                     final orders = snapshot.data ?? [];
                     final qrOrders = qrSnapshot.data ?? [];
+
+                    // Auto-repair/sync any QR orders that are accepted/delivered and paid (sudah_bayar) but not yet completed
+                    for (final o in qrOrders) {
+                      final st = o['status'] as String? ?? '';
+                      final paySt = o['paymentStatus'] as String? ?? '';
+                      final orderDocId = o['orderDocId'];
+                      if ((st == 'accepted' || st == 'delivered') && paySt == 'sudah_bayar' && orderDocId == null) {
+                        firestoreService.syncQrOrderToCompletedOrders(
+                          o['id'] ?? '',
+                          cashierName: cashierName,
+                          cashierId: cashierId,
+                        );
+                      }
+                    }
 
                     // Active QR orders (pending, accepted)
                     final activeQrOrders = qrOrders.where((o) {
@@ -808,7 +826,13 @@ class _TableScreenState extends State<TableScreen> {
                                         ],
                                       ),
                                       const SizedBox(height: 8),
-                                      ...activeQrOrders.map((qr) => _buildActiveQrOrderTile(context, qr, firestoreService)),
+                                      ...activeQrOrders.map((qr) => _buildActiveQrOrderTile(
+                                        context,
+                                        qr,
+                                        firestoreService,
+                                        cashierName: cashierName,
+                                        cashierId: cashierId,
+                                      )),
                                       const SizedBox(height: 16),
                                       const Divider(),
                                       const SizedBox(height: 8),
@@ -1010,7 +1034,13 @@ class _TableScreenState extends State<TableScreen> {
   }
 
   /// Build a single active QR order tile with accept/reject, mark paid, mark delivered actions
-  Widget _buildActiveQrOrderTile(BuildContext context, Map<String, dynamic> qr, FirestoreService firestoreService) {
+  Widget _buildActiveQrOrderTile(
+    BuildContext context, 
+    Map<String, dynamic> qr, 
+    FirestoreService firestoreService, {
+    String? cashierName,
+    String? cashierId,
+  }) {
     final String orderId = qr['id'] ?? '';
     final String status = qr['status'] as String? ?? 'pending';
     final String paymentMethod = qr['paymentMethod'] as String? ?? 'Tunai';
@@ -1161,7 +1191,7 @@ class _TableScreenState extends State<TableScreen> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await firestoreService.updateQrOrderStatus(orderId, 'accepted');
+                      await firestoreService.updateQrOrderStatus(orderId, 'accepted', cashierName: cashierName, cashierId: cashierId);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.success,
@@ -1180,7 +1210,7 @@ class _TableScreenState extends State<TableScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar');
+                        await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar', cashierName: cashierName, cashierId: cashierId);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Pesanan ditandai Lunas!'), backgroundColor: AppColors.success),
@@ -1201,7 +1231,7 @@ class _TableScreenState extends State<TableScreen> {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await firestoreService.updateQrOrderStatus(orderId, 'delivered');
+                      await firestoreService.updateQrOrderStatus(orderId, 'delivered', cashierName: cashierName, cashierId: cashierId);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Pesanan ditandai sudah Dianter!'), backgroundColor: AppColors.success),
@@ -1226,7 +1256,7 @@ class _TableScreenState extends State<TableScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar');
+                  await firestoreService.updateQrOrderPaymentStatus(orderId, 'sudah_bayar', cashierName: cashierName, cashierId: cashierId);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Pesanan ditandai Lunas!'), backgroundColor: AppColors.success),

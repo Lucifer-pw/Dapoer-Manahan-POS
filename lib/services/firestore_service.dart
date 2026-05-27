@@ -863,12 +863,99 @@ class FirestoreService {
     });
   }
 
-  Future<void> updateQrOrderStatus(String orderId, String status) async {
+  Future<void> updateQrOrderStatus(String orderId, String status, {String? cashierName, String? cashierId}) async {
     await _db.collection('qr_orders').doc(orderId).update({'status': status});
+    await syncQrOrderToCompletedOrders(orderId, cashierName: cashierName, cashierId: cashierId);
   }
 
-  Future<void> updateQrOrderPaymentStatus(String orderId, String paymentStatus) async {
+  Future<void> updateQrOrderPaymentStatus(String orderId, String paymentStatus, {String? cashierName, String? cashierId}) async {
     await _db.collection('qr_orders').doc(orderId).update({'paymentStatus': paymentStatus});
+    await syncQrOrderToCompletedOrders(orderId, cashierName: cashierName, cashierId: cashierId);
+  }
+
+  Future<void> syncQrOrderToCompletedOrders(String qrOrderId, {String? cashierName, String? cashierId}) async {
+    try {
+      final qrDocRef = _db.collection('qr_orders').doc(qrOrderId);
+      final doc = await qrDocRef.get();
+      if (!doc.exists) return;
+
+      final data = doc.data()!;
+      // If it has already been copied or is already completed, return
+      if (data['orderDocId'] != null || data['status'] == 'completed') {
+        return;
+      }
+
+      final String status = data['status'] as String? ?? 'pending';
+      final String paymentStatus = data['paymentStatus'] as String? ?? 'belum_bayar';
+
+      // A QR order is complete if it's accepted or delivered AND it's paid (sudah_bayar)
+      if ((status == 'accepted' || status == 'delivered') && paymentStatus == 'sudah_bayar') {
+        // 1. Get next sequence number
+        final int seqNum = await getNextOrderSequence();
+
+        // 2. Parse items
+        final List<dynamic> rawItems = data['items'] as List<dynamic>? ?? [];
+        final List<Map<String, dynamic>> orderItemsMaps = rawItems.map((elem) {
+          final Map<String, dynamic> itemMap = Map<String, dynamic>.from(elem);
+          final String itemId = itemMap['menuItemId'] ?? itemMap['id'] ?? '';
+          final String itemName = itemMap['menuItemName'] ?? itemMap['name'] ?? '';
+          final int qty = _toInt(itemMap['quantity'], fallback: 1);
+          final int price = _toInt(itemMap['price']);
+          final String? variant = itemMap['variant'];
+          final String notes = itemMap['notes'] ?? '';
+          
+          return {
+            'menuItemId': itemId,
+            'menuItemName': itemName,
+            'quantity': qty,
+            'price': price,
+            'notes': notes,
+            'variant': variant,
+            'isBonus': itemMap['isBonus'] ?? false,
+            'categoryId': itemMap['categoryId'],
+          };
+        }).toList();
+
+        final int totalPrice = _toInt(data['totalPrice'] ?? data['total']);
+
+        // 3. Create Order map for 'orders' collection
+        final Map<String, dynamic> completedOrderMap = {
+          'tableNumber': _toInt(data['tableNumber']),
+          'cashierName': cashierName ?? 'Self-Service QR',
+          'cashierId': cashierId ?? 'self_service_qr',
+          'items': orderItemsMaps,
+          'subtotal': totalPrice,
+          'tax': 0,
+          'total': totalPrice,
+          'paymentMethod': data['paymentMethod'] ?? 'QRIS',
+          'amountPaid': totalPrice,
+          'change': 0,
+          'status': 'completed',
+          'isTakeAway': false,
+          'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
+          'sequenceNumber': seqNum,
+        };
+
+        // 4. Write to 'orders' collection
+        final orderDocRef = await _ordersRef.add(completedOrderMap);
+
+        // 5. Update QR order status to 'completed' and save the order doc ID
+        await qrDocRef.update({
+          'status': 'completed',
+          'orderDocId': orderDocRef.id,
+        });
+      }
+    } catch (e) {
+      debugPrint('Error syncing QR order to completed: $e');
+    }
+  }
+
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? fallback;
+    return fallback;
   }
 
   Future<void> createQrOrder(Map<String, dynamic> orderData) async {
