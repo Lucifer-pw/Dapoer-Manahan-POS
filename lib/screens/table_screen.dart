@@ -715,7 +715,9 @@ class _TableScreenState extends State<TableScreen> {
                       final st = o['status'] as String? ?? '';
                       final paySt = o['paymentStatus'] as String? ?? '';
                       final orderDocId = o['orderDocId'];
-                      if ((st == 'accepted' || st == 'delivered') && paySt == 'sudah_bayar' && orderDocId == null) {
+                      final bool isPaidAndProcessed = (st == 'accepted' || st == 'delivered') && paySt == 'sudah_bayar';
+                      final bool isDelivered = st == 'delivered';
+                      if ((isPaidAndProcessed || isDelivered) && orderDocId == null) {
                         firestoreService.syncQrOrderToCompletedOrders(
                           o['id'] ?? '',
                           cashierName: cashierName,

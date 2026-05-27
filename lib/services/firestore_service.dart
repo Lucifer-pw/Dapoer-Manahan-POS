@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final Set<String> _syncingQrOrders = {};
 
   // ============================================================
   // CATEGORIES
@@ -874,22 +875,37 @@ class FirestoreService {
   }
 
   Future<void> syncQrOrderToCompletedOrders(String qrOrderId, {String? cashierName, String? cashierId}) async {
+    if (qrOrderId.isEmpty) return;
+
+    // Synchronously check and lock this qrOrderId to prevent concurrent sync operations (race condition)
+    if (_syncingQrOrders.contains(qrOrderId)) {
+      return;
+    }
+    _syncingQrOrders.add(qrOrderId);
+
     try {
       final qrDocRef = _db.collection('qr_orders').doc(qrOrderId);
       final doc = await qrDocRef.get();
-      if (!doc.exists) return;
+      if (!doc.exists) {
+        _syncingQrOrders.remove(qrOrderId);
+        return;
+      }
 
       final data = doc.data()!;
       // If it has already been copied or is already completed, return
       if (data['orderDocId'] != null || data['status'] == 'completed') {
+        _syncingQrOrders.remove(qrOrderId);
         return;
       }
 
       final String status = data['status'] as String? ?? 'pending';
       final String paymentStatus = data['paymentStatus'] as String? ?? 'belum_bayar';
 
-      // A QR order is complete if it's accepted or delivered AND it's paid (sudah_bayar)
-      if ((status == 'accepted' || status == 'delivered') && paymentStatus == 'sudah_bayar') {
+      final bool isPaidAndProcessed = (status == 'accepted' || status == 'delivered') && paymentStatus == 'sudah_bayar';
+      final bool isDelivered = status == 'delivered';
+
+      // A QR order is complete if it's accepted or delivered AND it's paid (sudah_bayar), or if it is already delivered.
+      if (isPaidAndProcessed || isDelivered) {
         // 1. Get next sequence number
         final int seqNum = await getNextOrderSequence();
 
@@ -947,6 +963,9 @@ class FirestoreService {
       }
     } catch (e) {
       debugPrint('Error syncing QR order to completed: $e');
+    } finally {
+      // Always remove the lock when finished
+      _syncingQrOrders.remove(qrOrderId);
     }
   }
 
