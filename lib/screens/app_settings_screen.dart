@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import 'admin_billing_screen.dart';
 import 'billing_history_screen.dart';
 import 'salary_screen.dart';
+import 'qris_management_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -287,6 +288,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   _buildSectionHeader(auth.isAdmin ? 'Administrator' : 'Owner'),
                   const SizedBox(height: 16),
                   if (auth.isAdmin) ...[
+                    _buildSettingsTile(
+                      icon: Icons.qr_code_scanner_rounded,
+                      title: 'Kelola QRIS (Admin)',
+                      subtitle: 'Atur foto QRIS pelanggan & kasir',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const QrisManagementScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     _buildSettingsTile(
                       icon: Icons.admin_panel_settings_rounded,
                       title: 'Kelola Billing (Admin)',

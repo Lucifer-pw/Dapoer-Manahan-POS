@@ -92,6 +92,34 @@ class StorageService {
     }
   }
 
+  /// Upload QRIS image to Firebase Storage
+  Future<String> uploadQrisImage(File file, String label, {Function(double)? onProgress}) async {
+    try {
+      final sanitizedLabel = label.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_').toLowerCase();
+      final fileName = 'qris_${sanitizedLabel}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref().child('qris_images').child(fileName);
+      
+      final uploadTask = ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+
+      if (onProgress != null) {
+        uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+          final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+          onProgress(progress);
+        });
+      }
+      
+      await uploadTask;
+      await Future.delayed(const Duration(milliseconds: 500));
+      return await ref.getDownloadURL();
+    } catch (e) {
+      debugPrint('Error uploading QRIS image: $e');
+      rethrow;
+    }
+  }
+
   /// Delete image from Firebase Storage by URL
   Future<void> deleteImageByUrl(String url) async {
     if (url.isEmpty || !url.contains('firebase')) return;

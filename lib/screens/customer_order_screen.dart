@@ -1570,27 +1570,16 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                     border: Border.all(color: AppColors.border.withOpacity(0.4)),
                     boxShadow: AppShadows.card,
                   ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
-                          const SizedBox(width: 6),
-                          Text(
-                            'PINDAI KODE QRIS UNTUK MEMBAYAR',
-                            style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        child: Image.asset(
+                  child: StreamBuilder<Map<String, dynamic>>(
+                    stream: _firestoreService.streamActiveQrisConfig(),
+                    builder: (context, snapshot) {
+                      final config = snapshot.data ?? {};
+                      final customerQris = config['customer'];
+                      final imageUrl = customerQris?['imageUrl'] as String?;
+                      final label = customerQris?['label'] as String?;
+
+                      Widget buildFallback() {
+                        return Image.asset(
                           'assets/images/qris_code_customer.png',
                           width: 180,
                           height: 180,
@@ -1601,23 +1590,58 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                             color: Colors.white10,
                             child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Total Tagihan: ${AppFormatter.formatRupiah(totalPrice)}',
-                        style: AppTextStyles.subtitle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
-                        style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+                        );
+                      }
+
+                      return Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 6),
+                              Text(
+                                label != null && label.isNotEmpty
+                                    ? 'PINDAI KODE QRIS ($label)'
+                                    : 'PINDAI KODE QRIS UNTUK MEMBAYAR',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            child: imageUrl != null && imageUrl.isNotEmpty
+                                ? Image.network(
+                                    imageUrl,
+                                    width: 180,
+                                    height: 180,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) => buildFallback(),
+                                  )
+                                : buildFallback(),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Total Tagihan: ${AppFormatter.formatRupiah(totalPrice)}',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
+                            style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ] else ...[

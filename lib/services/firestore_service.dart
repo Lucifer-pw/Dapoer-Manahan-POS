@@ -936,6 +936,73 @@ class FirestoreService {
   }
 
   // ============================================================
+  // QRIS IMAGE MANAGEMENT
+  // ============================================================
+
+  /// Add a new QRIS image record
+  Future<String> addQrisImage(String label, String imageUrl) async {
+    final docRef = await _db.collection('qris_images').add({
+      'label': label,
+      'imageUrl': imageUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    return docRef.id;
+  }
+
+  /// Delete a QRIS image record and its storage file
+  Future<void> deleteQrisImage(String docId) async {
+    await _db.collection('qris_images').doc(docId).delete();
+  }
+
+  /// Stream all uploaded QRIS images
+  Stream<List<Map<String, dynamic>>> streamQrisImages() {
+    return _db.collection('qris_images')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
+  /// Set a QRIS image as the active one for a given target ('customer' or 'cashier')
+  Future<void> setActiveQris(String target, String docId, String label, String imageUrl) async {
+    await _db.collection('app_settings').doc('qris_config').set({
+      target: {
+        'id': docId,
+        'label': label,
+        'imageUrl': imageUrl,
+      },
+    }, SetOptions(merge: true));
+  }
+
+  /// Get active QRIS config (one-time)
+  Future<Map<String, dynamic>> getActiveQrisConfig() async {
+    try {
+      final doc = await _db.collection('app_settings').doc('qris_config').get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('Error getting QRIS config: $e');
+    }
+    return {};
+  }
+
+  /// Stream active QRIS config (realtime)
+  Stream<Map<String, dynamic>> streamActiveQrisConfig() {
+    return _db.collection('app_settings').doc('qris_config')
+        .snapshots()
+        .map((doc) {
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>;
+      }
+      return <String, dynamic>{};
+    });
+  }
+
+  // ============================================================
   // TABLE CHATS
   // ============================================================
 

@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../widgets/custom_numpad.dart';
 import 'receipt_screen.dart';
+import '../services/firestore_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({super.key});
@@ -196,22 +197,52 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(color: AppColors.border.withOpacity(0.3)),
                 ),
-                child: Column(
-                  children: [
-                    Image.asset(
-                      'assets/images/payment_qr_cs.png',
-                      width: 200,
-                      height: 200,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Minta pelanggan memindai QRIS', style: AppTextStyles.bodySecondary),
-                    const SizedBox(height: 8),
-                    Text('Total: ${AppFormatter.formatRupiah(cart.total)}', style: AppTextStyles.heading3),
-                  ],
+                child: StreamBuilder<Map<String, dynamic>>(
+                  stream: FirestoreService().streamActiveQrisConfig(),
+                  builder: (context, snapshot) {
+                    final config = snapshot.data ?? {};
+                    final cashierQris = config['cashier'];
+                    final imageUrl = cashierQris?['imageUrl'] as String?;
+                    final label = cashierQris?['label'] as String?;
+
+                    Widget buildFallback() {
+                      return Image.asset(
+                        'assets/images/payment_qr_cs.png',
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(Icons.qr_code_2, size: 100, color: AppColors.textPrimary);
+                        },
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                          child: imageUrl != null && imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl,
+                                  width: 200,
+                                  height: 200,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) => buildFallback(),
+                                )
+                              : buildFallback(),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          label != null && label.isNotEmpty
+                              ? 'Minta pelanggan memindai QRIS ($label)'
+                              : 'Minta pelanggan memindai QRIS',
+                          style: AppTextStyles.bodySecondary,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Total: ${AppFormatter.formatRupiah(cart.total)}', style: AppTextStyles.heading3),
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 20),
