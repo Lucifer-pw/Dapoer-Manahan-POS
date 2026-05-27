@@ -498,6 +498,7 @@ class _QrisManagementScreenState extends State<QrisManagementScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       child: Image.network(
                         imageUrl,
+                        key: ValueKey(imageUrl),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return const Center(child: Icon(Icons.broken_image_rounded, color: AppColors.error));
@@ -558,6 +559,7 @@ class _QrisManagementScreenState extends State<QrisManagementScreen> {
                   ),
                   child: Image.network(
                     imageUrl,
+                    key: ValueKey(imageUrl),
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return const Center(child: Icon(Icons.broken_image_rounded, color: AppColors.error, size: 40));

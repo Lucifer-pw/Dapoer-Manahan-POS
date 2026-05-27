@@ -224,6 +224,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: imageUrl != null && imageUrl.isNotEmpty
                               ? Image.network(
                                   imageUrl,
+                                  key: ValueKey(imageUrl),
                                   width: 200,
                                   height: 200,
                                   fit: BoxFit.contain,

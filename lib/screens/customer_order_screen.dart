@@ -997,24 +997,28 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
-                                    child: Container(
-                                      color: AppColors.surfaceDark,
-                                      width: double.infinity,
-                                      child: item.imageUrl.isNotEmpty
-                                          ? Image.network(
-                                              item.imageUrl,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const Icon(
+                                    child: GestureDetector(
+                                      onTap: () => _showProductDetailBottomSheet(context, item.id),
+                                      child: Container(
+                                        color: AppColors.surfaceDark,
+                                        width: double.infinity,
+                                        child: item.imageUrl.isNotEmpty
+                                            ? Image.network(
+                                                item.imageUrl,
+                                                key: ValueKey(item.imageUrl),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) => const Icon(
+                                                  Icons.fastfood_rounded,
+                                                  color: AppColors.primary,
+                                                  size: 40,
+                                                ),
+                                              )
+                                            : const Icon(
                                                 Icons.fastfood_rounded,
                                                 color: AppColors.primary,
                                                 size: 40,
                                               ),
-                                            )
-                                          : const Icon(
-                                              Icons.fastfood_rounded,
-                                              color: AppColors.primary,
-                                              size: 40,
-                                            ),
+                                      ),
                                     ),
                                   ),
                                   Padding(
@@ -1022,18 +1026,30 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          item.name,
-                                          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          item.description,
-                                          style: AppTextStyles.caption,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                                        GestureDetector(
+                                          onTap: () => _showProductDetailBottomSheet(context, item.id),
+                                          behavior: HitTestBehavior.opaque,
+                                          child: SizedBox(
+                                            width: double.infinity,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  item.name,
+                                                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  item.description,
+                                                  style: AppTextStyles.caption,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                         const SizedBox(height: 6),
                                         Row(
@@ -2346,6 +2362,242 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showProductDetailBottomSheet(BuildContext context, String itemId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
+      ),
+      builder: (ctx) {
+        return Consumer<MenuProvider>(
+          builder: (context, menuProv, _) {
+            final itemIndex = menuProv.allMenuItems.indexWhere((it) => it.id == itemId);
+            if (itemIndex == -1) {
+              return Padding(
+                padding: const EdgeInsets.all(AppSpacing.xxl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.broken_image_rounded, size: 60, color: AppColors.error),
+                    const SizedBox(height: 12),
+                    Text('Menu tidak lagi tersedia', style: AppTextStyles.body),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Tutup'),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final item = menuProv.allMenuItems[itemIndex];
+            final categoryName = menuProv.getCategoryName(item.categoryId);
+            final isPaket = categoryName.toLowerCase().contains('paket') || item.name.toLowerCase().contains('paket');
+
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                final qty = _getItemTotalQuantity(item.id);
+
+                return Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.85,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 12),
+                            width: 40,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: AppColors.textHint.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(AppRadius.full),
+                            ),
+                          ),
+                        ),
+                        if (item.imageUrl.isNotEmpty)
+                          Container(
+                            height: 250,
+                            width: double.infinity,
+                            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              color: AppColors.surfaceDark,
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Image.network(
+                              item.imageUrl,
+                              key: ValueKey(item.imageUrl),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(
+                                  Icons.fastfood_rounded,
+                                  color: AppColors.primary,
+                                  size: 80,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 200,
+                            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(AppRadius.lg),
+                              color: AppColors.surfaceDark,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.fastfood_rounded,
+                                color: AppColors.primary,
+                                size: 80,
+                              ),
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Text(
+                                  categoryName,
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                item.name,
+                                style: AppTextStyles.heading2.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                AppFormatter.formatRupiah(item.price),
+                                style: AppTextStyles.price.copyWith(fontSize: 20),
+                              ),
+                              const SizedBox(height: 16),
+                              Divider(color: AppColors.border.withOpacity(0.2)),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Deskripsi Menu',
+                                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                item.description.isNotEmpty ? item.description : 'Tidak ada deskripsi untuk menu ini.',
+                                style: AppTextStyles.bodySecondary.copyWith(height: 1.5),
+                              ),
+                              const SizedBox(height: 32),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Jumlah Pesanan',
+                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  if (qty > 0)
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.remove_circle_rounded,
+                                            color: AppColors.primary,
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            setSheetState(() {
+                                              if (isPaket) {
+                                                _removeFromCartFromGrid(item);
+                                              } else {
+                                                _removeFromCart(item);
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                          child: Text(
+                                            qty.toString(),
+                                            style: AppTextStyles.heading3.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.add_circle_rounded,
+                                            color: AppColors.primary,
+                                            size: 28,
+                                          ),
+                                          onPressed: () {
+                                            if (isPaket) {
+                                              Navigator.pop(ctx);
+                                              _showDrinkOptionsBottomSheet(item);
+                                            } else {
+                                              setSheetState(() {
+                                                _addToCart(item);
+                                              });
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        if (isPaket) {
+                                          Navigator.pop(ctx);
+                                          _showDrinkOptionsBottomSheet(item);
+                                        } else {
+                                          setSheetState(() {
+                                            _addToCart(item);
+                                          });
+                                        }
+                                      },
+                                      icon: const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 18),
+                                      label: const Text(
+                                        'Tambah',
+                                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(AppRadius.md),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
