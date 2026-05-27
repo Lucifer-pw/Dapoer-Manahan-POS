@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/menu_provider.dart';
 import '../models/menu_item.dart';
 import '../models/category.dart';
@@ -19,6 +21,22 @@ class CustomerOrderScreen extends StatefulWidget {
 }
 
 class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _saveTableNumber();
+  }
+
+  Future<void> _saveTableNumber() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_table_number', widget.tableNumber);
+      debugPrint('Saved active table number: ${widget.tableNumber}');
+    } catch (e) {
+      debugPrint('Error saving table number: $e');
+    }
+  }
+
   // Local cart state
   // Structure: { menuItemId: { 'item': MenuItem, 'quantity': int, 'notes': String } }
   final Map<String, Map<String, dynamic>> _cart = {};
@@ -644,10 +662,21 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isSuccess) {
-      return _buildSuccessScreen();
-    }
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (_isSuccess) {
+          setState(() {
+            _isSuccess = false;
+          });
+        }
+      },
+      child: _isSuccess ? _buildSuccessScreen() : _buildMenuScreen(context),
+    );
+  }
 
+  Widget _buildMenuScreen(BuildContext context) {
     final menuProv = Provider.of<MenuProvider>(context);
 
     // Dynamic filtering for independent customer screen
@@ -750,6 +779,97 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                   ),
                 ),
               ),
+            ),
+
+            // Warning Banner for unpaid QRIS orders
+            StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _firestoreService.streamQrOrdersByTable(widget.tableNumber),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return const SizedBox.shrink();
+                }
+
+                final unpaidQrisOrders = snapshot.data!.where((o) {
+                  final method = o['paymentMethod'] as String? ?? '';
+                  final payStatus = o['paymentStatus'] as String? ?? '';
+                  final orderStatus = o['status'] as String? ?? '';
+
+                  return method == 'QRIS' &&
+                         payStatus == 'belum_bayar' &&
+                         orderStatus != 'rejected';
+                }).toList();
+
+                if (unpaidQrisOrders.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                final activeOrder = unpaidQrisOrders.first;
+                final orderPrice = activeOrder['totalPrice'] as int? ?? 0;
+
+                return Padding(
+                  padding: const EdgeInsets.only(left: AppSpacing.lg, right: AppSpacing.lg, bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.error.withOpacity(0.25), width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pembayaran QRIS Belum Selesai',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Tagihan sebesar ${AppFormatter.formatRupiah(orderPrice)} belum terbayar.',
+                                style: AppTextStyles.caption.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            _showQrisInvoiceDialog(context, activeOrder);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppRadius.sm),
+                            ),
+                          ),
+                          child: const Text(
+                            'Bayar',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
 
             // Search Bar
@@ -1388,6 +1508,30 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                 ),
               ],
             ),
+            if (paymentMethod == 'QRIS' && paymentStatus == 'belum_bayar' && status != 'rejected') ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    // Close the bottom sheet first, then open dialog
+                    Navigator.pop(context);
+                    _showQrisInvoiceDialog(context, qr);
+                  },
+                  icon: const Icon(Icons.qr_code_scanner_rounded, size: 16, color: Colors.white),
+                  label: const Text(
+                    'Lanjutkan Pembayaran QRIS',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1631,69 +1775,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                           final imageUrl = customerQris?['imageUrl'] as String?;
                           final label = customerQris?['label'] as String?;
 
-                          Widget buildFallback() {
-                            return Image.asset(
-                              'assets/images/qris_code_customer.png',
-                              width: 180,
-                              height: 180,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                width: 180,
-                                height: 180,
-                                color: Colors.white10,
-                                child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
-                              ),
-                            );
-                          }
-
-                          return Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    label != null && label.isNotEmpty
-                                        ? 'PINDAI KODE QRIS ($label)'
-                                        : 'PINDAI KODE QRIS UNTUK MEMBAYAR',
-                                    style: AppTextStyles.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.primary,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(AppRadius.md),
-                                child: imageUrl != null && imageUrl.isNotEmpty
-                                    ? Image.network(
-                                        imageUrl,
-                                        width: 180,
-                                        height: 180,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (context, error, stackTrace) => buildFallback(),
-                                      )
-                                    : buildFallback(),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'Total Tagihan: ${AppFormatter.formatRupiah(_submittedTotalPrice)}',
-                                style: AppTextStyles.subtitle.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
-                                style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          );
+                          return _buildQrisPaymentSection(imageUrl, label, _submittedTotalPrice);
                         },
                       ),
                     ),
@@ -1921,6 +2003,351 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // --- Integrasi QRIS & E-Wallet Baru ---
+
+  Future<void> _openEWallet(String urlScheme, String appName) async {
+    try {
+      final Uri uri = Uri.parse(urlScheme);
+      final bool launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tidak dapat membuka aplikasi $appName. Pastikan aplikasi sudah terinstal.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuka $appName: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildEWalletButton({required String appName, required Color color, required String urlScheme}) {
+    return ElevatedButton(
+      onPressed: () => _openEWallet(urlScheme, appName),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        elevation: 1,
+      ),
+      child: Text(
+        appName,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildQrisPaymentSection(String? imageUrl, String? label, int amount) {
+    Widget buildFallback() {
+      return Image.asset(
+        'assets/images/qris_code_customer.png',
+        width: 180,
+        height: 180,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => Container(
+          width: 180,
+          height: 180,
+          color: Colors.white10,
+          child: const Icon(Icons.qr_code_2_rounded, size: 80, color: Colors.white30),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary, size: 20),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label != null && label.isNotEmpty
+                    ? 'PINDAI KODE QRIS ($label)'
+                    : 'PINDAI KODE QRIS UNTUK MEMBAYAR',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                  letterSpacing: 0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: imageUrl != null && imageUrl.isNotEmpty
+              ? Image.network(
+                  imageUrl,
+                  width: 180,
+                  height: 180,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => buildFallback(),
+                )
+              : buildFallback(),
+        ),
+        const SizedBox(height: 12),
+
+        // Simpan / Buka QRIS button
+        if (imageUrl != null && imageUrl.isNotEmpty) ...[
+          OutlinedButton.icon(
+            onPressed: () async {
+              try {
+                final uri = Uri.parse(imageUrl);
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal membuka gambar: $e'), backgroundColor: AppColors.error),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.primary),
+            label: const Text(
+              'Buka / Simpan Gambar QRIS',
+              style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.primary),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        Text(
+          'Total Tagihan: ${AppFormatter.formatRupiah(amount)}',
+          style: AppTextStyles.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // E-Wallet instruction & buttons
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.backgroundDark.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.border.withOpacity(0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Cara Bayar Lewat HP:',
+                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '1. Simpan gambar QRIS di atas ke galeri (atau screenshot).\n'
+                '2. Buka salah satu aplikasi e-wallet pilihan Anda di bawah ini:',
+                style: AppTextStyles.caption.copyWith(fontSize: 11, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 10),
+
+              // E-Wallet buttons row
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  _buildEWalletButton(
+                    appName: 'DANA',
+                    color: const Color(0xFF118EEA),
+                    urlScheme: 'dana://',
+                  ),
+                  _buildEWalletButton(
+                    appName: 'GoPay',
+                    color: const Color(0xFF00AED6),
+                    urlScheme: 'gojek://',
+                  ),
+                  _buildEWalletButton(
+                    appName: 'OVO',
+                    color: const Color(0xFF4C2A86),
+                    urlScheme: 'ovo://',
+                  ),
+                  _buildEWalletButton(
+                    appName: 'ShopeePay',
+                    color: const Color(0xFFEE4D2D),
+                    urlScheme: 'shopeepay://',
+                  ),
+                  _buildEWalletButton(
+                    appName: 'LinkAja',
+                    color: const Color(0xFFE61C24),
+                    urlScheme: 'linkaja://',
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+              Text(
+                '3. Di aplikasi e-wallet, pilih "Scan" / "Bayar" lalu ketuk ikon galeri untuk mengunggah gambar QRIS.',
+                style: AppTextStyles.caption.copyWith(fontSize: 11, color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Mendukung Gopay, OVO, ShopeePay, Dana, LinkAja & M-Banking',
+          style: AppTextStyles.caption.copyWith(fontSize: 10, color: AppColors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  void _showQrisInvoiceDialog(BuildContext context, Map<String, dynamic> qr) {
+    final items = qr['items'] as List<dynamic>? ?? [];
+    final totalPrice = qr['totalPrice'] as int? ?? 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: AppColors.surface,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: BorderSide(color: AppColors.border.withOpacity(0.5)),
+          ),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Invoice Pembayaran',
+                        style: AppTextStyles.heading2,
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Detail Pesanan Meja ${widget.tableNumber}',
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Item list
+                  ...items.map((it) {
+                    final name = it['name'] as String? ?? '';
+                    final qty = it['quantity'] as int? ?? 0;
+                    final price = it['price'] as int? ?? 0;
+                    final notes = it['notes'] as String? ?? '';
+                    final variant = it['variant'] as String?;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '$qty x $name',
+                                  style: AppTextStyles.body.copyWith(fontSize: 13),
+                                ),
+                              ),
+                              Text(
+                                AppFormatter.formatRupiah(price * qty),
+                                style: AppTextStyles.body.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ),
+                          if (variant != null && variant.isNotEmpty) ...[
+                            Text(
+                              '  Minuman: $variant',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.secondary, fontSize: 11),
+                            ),
+                          ],
+                          if (notes.isNotEmpty) ...[
+                            Text(
+                              '  Catatan: "$notes"',
+                              style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic, fontSize: 11),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+
+                  const Divider(height: 20),
+
+                  // QRIS stream
+                  StreamBuilder<Map<String, dynamic>>(
+                    stream: _firestoreService.streamActiveQrisConfig(),
+                    builder: (context, snapshot) {
+                      final config = snapshot.data ?? {};
+                      final customerQris = config['customer'];
+                      final imageUrl = customerQris?['imageUrl'] as String?;
+                      final label = customerQris?['label'] as String?;
+
+                      return _buildQrisPaymentSection(imageUrl, label, totalPrice);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                    ),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

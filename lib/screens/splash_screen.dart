@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../widgets/update_dialog.dart';
@@ -138,9 +139,21 @@ class _SplashScreenState extends State<SplashScreen>
       );
     } else {
       // First time or logged out
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final savedTableNumber = prefs.getString('active_table_number');
+      if (!mounted) return;
+      if (savedTableNumber != null && savedTableNumber.isNotEmpty) {
+        debugPrint('SplashScreen: Redirecting to saved table number: $savedTableNumber');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => CustomerOrderScreen(tableNumber: savedTableNumber),
+          ),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
     }
 
   }
