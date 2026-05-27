@@ -11,6 +11,7 @@ import '../services/firestore_service.dart';
 import '../widgets/chat_room_dialog.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
+import '../utils/file_saver.dart';
 
 class CustomerOrderScreen extends StatefulWidget {
   final String tableNumber;
@@ -2127,21 +2128,20 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
         // Simpan / Buka QRIS button
         if (imageUrl != null && imageUrl.isNotEmpty) ...[
           OutlinedButton.icon(
-            onPressed: () async {
+            onPressed: () {
               try {
-                final uri = Uri.parse(imageUrl);
-                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                downloadFile(imageUrl, 'qris_dapoer_manahan_${label ?? "payment"}.png');
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Gagal membuka gambar: $e'), backgroundColor: AppColors.error),
+                    SnackBar(content: Text('Gagal mengunduh gambar: $e'), backgroundColor: AppColors.error),
                   );
                 }
               }
             },
-            icon: const Icon(Icons.open_in_new_rounded, size: 16, color: AppColors.primary),
+            icon: const Icon(Icons.download_rounded, size: 16, color: AppColors.primary),
             label: const Text(
-              'Buka / Simpan Gambar QRIS',
+              'Unduh Gambar QRIS',
               style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold),
             ),
             style: OutlinedButton.styleFrom(
@@ -2180,7 +2180,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                '1. Simpan gambar QRIS di atas ke galeri (atau screenshot).\n'
+                '1. Tekan tombol "Unduh Gambar QRIS" di atas untuk menyimpan ke HP Anda.\n'
                 '2. Buka salah satu aplikasi e-wallet pilihan Anda di bawah ini:',
                 style: AppTextStyles.caption.copyWith(fontSize: 11, color: AppColors.textSecondary),
               ),
