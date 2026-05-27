@@ -128,6 +128,8 @@ class _TableScreenState extends State<TableScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final firestoreService = FirestoreService();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -167,58 +169,73 @@ class _TableScreenState extends State<TableScreen> {
             );
           }
 
-          return Column(
-            children: [
-              // Legend
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  border: Border(
-                      bottom: BorderSide(
-                          color: AppColors.border.withOpacity(0.2))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildLegendItem(
-                        'Tersedia', AppColors.success, tableProv.availableCount),
-                    _buildLegendItem(
-                        'Terisi', AppColors.error, tableProv.occupiedCount),
-                    _buildLegendItem(
-                        'Reserved',
-                        AppColors.warning,
-                        tableProv.tables
-                            .where((t) => t.status == TableStatus.reserved)
-                            .length),
-                  ],
-                ),
-              ),
+          return StreamBuilder<List<Map<String, dynamic>>>(
+            stream: firestoreService.streamActiveQrOrders(),
+            builder: (context, activeOrdersSnapshot) {
+              final activeQrOrders = activeOrdersSnapshot.data ?? [];
 
-              // Grid
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.75,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
+              return Column(
+                children: [
+                  // Legend
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      border: Border(
+                          bottom: BorderSide(
+                              color: AppColors.border.withOpacity(0.2))),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildLegendItem(
+                            'Tersedia', AppColors.success, tableProv.availableCount),
+                        _buildLegendItem(
+                            'Terisi', AppColors.error, tableProv.occupiedCount),
+                        _buildLegendItem(
+                            'Reserved',
+                            AppColors.warning,
+                            tableProv.tables
+                                .where((t) => t.status == TableStatus.reserved)
+                                .length),
+                      ],
+                    ),
                   ),
-                  itemCount: tableProv.tables.length,
-                  itemBuilder: (context, index) {
-                    final table = tableProv.tables[index];
-                    return TableCard(
-                      table: table,
-                      onTap: () {
-                        _showTableOptions(context, table, tableProv);
+
+                  // Grid
+                  Expanded(
+                    child: GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        childAspectRatio: 0.75,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                      ),
+                      itemCount: tableProv.tables.length,
+                      itemBuilder: (context, index) {
+                        final table = tableProv.tables[index];
+                        
+                        // Filter active QR orders for this table
+                        final tableActiveOrders = activeQrOrders.where((o) {
+                          final tableNum = o['tableNumber'];
+                          return tableNum?.toString() == table.number.toString();
+                        }).toList();
+
+                        return TableCard(
+                          table: table,
+                          activeOrders: tableActiveOrders,
+                          onTap: () {
+                            _showTableOptions(context, table, tableProv);
+                          },
+                        );
                       },
-                    );
-                  },
-                ),
-              ),
-            ],
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),

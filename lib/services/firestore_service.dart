@@ -864,6 +864,17 @@ class FirestoreService {
     });
   }
 
+  Stream<List<Map<String, dynamic>>> streamActiveQrOrders() {
+    return _db.collection('qr_orders')
+        .where('status', whereIn: ['pending', 'accepted', 'delivered'])
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data(), 'id': doc.id})
+          .toList();
+    });
+  }
+
   Future<void> updateQrOrderStatus(String orderId, String status, {String? cashierName, String? cashierId}) async {
     await _db.collection('qr_orders').doc(orderId).update({'status': status});
     await syncQrOrderToCompletedOrders(orderId, cashierName: cashierName, cashierId: cashierId);
