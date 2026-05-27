@@ -710,21 +710,6 @@ class _TableScreenState extends State<TableScreen> {
                     final orders = snapshot.data ?? [];
                     final qrOrders = qrSnapshot.data ?? [];
 
-                    // Auto-repair/sync any QR orders that are accepted/delivered and paid (sudah_bayar) but not yet completed
-                    for (final o in qrOrders) {
-                      final st = o['status'] as String? ?? '';
-                      final paySt = o['paymentStatus'] as String? ?? '';
-                      final orderDocId = o['orderDocId'];
-                      final bool isPaidAndProcessed = (st == 'accepted' || st == 'delivered') && paySt == 'sudah_bayar';
-                      final bool isDelivered = st == 'delivered';
-                      if ((isPaidAndProcessed || isDelivered) && orderDocId == null) {
-                        firestoreService.syncQrOrderToCompletedOrders(
-                          o['id'] ?? '',
-                          cashierName: cashierName,
-                          cashierId: cashierId,
-                        );
-                      }
-                    }
 
                     // Active QR orders (pending, accepted)
                     final activeQrOrders = qrOrders.where((o) {

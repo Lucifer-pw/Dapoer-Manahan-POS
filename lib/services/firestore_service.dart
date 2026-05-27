@@ -892,19 +892,33 @@ class FirestoreService {
       }
 
       final data = doc.data()!;
-      // If it has already been copied or is already completed, return
-      if (data['orderDocId'] != null || data['status'] == 'completed') {
+      final String status = data['status'] as String? ?? 'pending';
+      final String paymentStatus = data['paymentStatus'] as String? ?? 'belum_bayar';
+
+      // If the QR order has already been finalized, nothing to do
+      if (data['status'] == 'completed') {
         _syncingQrOrders.remove(qrOrderId);
         return;
       }
 
-      final String status = data['status'] as String? ?? 'pending';
-      final String paymentStatus = data['paymentStatus'] as String? ?? 'belum_bayar';
+      // Check if order was already synced to 'orders' collection previously
+      final bool alreadySynced = data['orderDocId'] != null;
 
       final bool isPaidAndProcessed = (status == 'accepted' || status == 'delivered') && paymentStatus == 'sudah_bayar';
       final bool isDelivered = status == 'delivered';
+      final bool isFullyComplete = isDelivered && paymentStatus == 'sudah_bayar';
 
-      // A QR order is complete if it's accepted or delivered AND it's paid (sudah_bayar), or if it is already delivered.
+      if (alreadySynced) {
+        // Order already exists in 'orders' collection — do NOT create another one.
+        // But if both delivered AND paid, finalize the QR order to 'completed' so it
+        // disappears from the active list.
+        if (isFullyComplete) {
+          await qrDocRef.update({'status': 'completed'});
+        }
+        return;
+      }
+
+      // First-time sync: create the order in 'orders' collection when delivered or paid+processed
       if (isPaidAndProcessed || isDelivered) {
         // 1. Get next sequence number
         final int seqNum = await getNextOrderSequence();
@@ -955,11 +969,16 @@ class FirestoreService {
         // 4. Write to 'orders' collection
         final orderDocRef = await _ordersRef.add(completedOrderMap);
 
-        // 5. Update QR order status to 'completed' and save the order doc ID
-        await qrDocRef.update({
-          'status': 'completed',
+        // 5. Save the order doc ID and optionally finalize status
+        // Only set status to 'completed' if BOTH delivered AND paid.
+        // Otherwise keep the current status so the order stays active for further actions (e.g. mark paid).
+        final Map<String, dynamic> updateData = {
           'orderDocId': orderDocRef.id,
-        });
+        };
+        if (isFullyComplete) {
+          updateData['status'] = 'completed';
+        }
+        await qrDocRef.update(updateData);
       }
     } catch (e) {
       debugPrint('Error syncing QR order to completed: $e');
