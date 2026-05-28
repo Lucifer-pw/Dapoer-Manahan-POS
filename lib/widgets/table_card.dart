@@ -94,6 +94,8 @@ class TableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final highlightColor = _hasActiveOrders ? _activeOrderColor : _statusColor;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 600;
     
     return GestureDetector(
       onTap: onTap,
@@ -104,7 +106,7 @@ class TableCard extends StatelessWidget {
             duration: const Duration(milliseconds: 300),
             decoration: BoxDecoration(
               gradient: AppColors.cardGradient,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+              borderRadius: BorderRadius.circular(isMobile ? AppRadius.md : AppRadius.lg),
               border: Border.all(
                 color: highlightColor.withOpacity(_hasActiveOrders ? 0.7 : 0.4),
                 width: _hasActiveOrders ? 2.2 : 1.5,
@@ -112,52 +114,52 @@ class TableCard extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: highlightColor.withOpacity(_hasActiveOrders ? 0.25 : 0.1),
-                  blurRadius: _hasActiveOrders ? 16 : 12,
-                  offset: const Offset(0, 4),
+                  blurRadius: _hasActiveOrders ? (isMobile ? 10 : 16) : (isMobile ? 8 : 12),
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 8), // Memberikan sedikit ruang di atas
+                SizedBox(height: isMobile ? 6 : 8), // Memberikan sedikit ruang di atas
                 // Table icon with status glow
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(isMobile ? 8 : 12),
                   decoration: BoxDecoration(
                     color: _statusColor.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.table_restaurant,
-                    size: 24,
+                    size: isMobile ? 20 : 24,
                     color: _statusColor,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 6 : 8),
 
                 // Table number
                 Text(
                   'Meja ${table.number}',
                   style: AppTextStyles.subtitle.copyWith(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    fontSize: isMobile ? 13 : 15,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isMobile ? 2 : 4),
 
                 // Capacity
                 Text(
                   '${table.capacity} kursi',
-                  style: AppTextStyles.caption.copyWith(fontSize: 11),
+                  style: AppTextStyles.caption.copyWith(fontSize: isMobile ? 10 : 11),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: isMobile ? 6 : 8),
 
                 // Status chip
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 8 : 10,
+                    vertical: isMobile ? 3 : 4,
                   ),
                   decoration: BoxDecoration(
                     color: _statusColor.withOpacity(0.15),
@@ -166,20 +168,20 @@ class TableCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(_statusIcon, size: 12, color: _statusColor),
-                      const SizedBox(width: 4),
+                      Icon(_statusIcon, size: isMobile ? 10 : 12, color: _statusColor),
+                      SizedBox(width: isMobile ? 3 : 4),
                       Text(
                         _statusText,
                         style: TextStyle(
                           color: _statusColor,
-                          fontSize: 11,
+                          fontSize: isMobile ? 10 : 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: isMobile ? 2 : 4),
               ],
             ),
           ),
@@ -187,16 +189,16 @@ class TableCard extends StatelessWidget {
           // Badge Pesanan Aktif di Pojok Kanan Atas
           if (_hasActiveOrders)
             Positioned(
-              top: 8,
-              right: 8,
-              child: _buildActiveOrdersIndicator(),
+              top: isMobile ? 6 : 8,
+              right: isMobile ? 6 : 8,
+              child: _buildActiveOrdersIndicator(isMobile),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildActiveOrdersIndicator() {
+  Widget _buildActiveOrdersIndicator(bool isMobile) {
     final urgent = _mostUrgentOrder;
     if (urgent == null) return const SizedBox.shrink();
 
@@ -210,30 +212,33 @@ class TableCard extends StatelessWidget {
     if (status == 'delivered' && paymentStatus != 'sudah_bayar') {
       badgeColor = AppColors.error;
       badgeIcon = Icons.payment_rounded;
-      badgeText = 'Belum Bayar';
+      badgeText = isMobile ? '' : 'Belum Bayar';
     } else if (status == 'pending') {
       badgeColor = AppColors.warning;
       badgeIcon = Icons.new_releases_rounded;
-      badgeText = 'Baru';
+      badgeText = isMobile ? '' : 'Baru';
     } else if (status == 'accepted') {
       badgeColor = AppColors.info;
       badgeIcon = Icons.restaurant_rounded;
-      badgeText = 'Diproses';
+      badgeText = isMobile ? '' : 'Diproses';
     } else {
       badgeColor = AppColors.primary;
       badgeIcon = Icons.receipt_long_rounded;
-      badgeText = 'Aktif';
+      badgeText = isMobile ? '' : 'Aktif';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 5 : 6,
+        vertical: isMobile ? 5 : 3,
+      ),
       decoration: BoxDecoration(
         color: badgeColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(isMobile ? 4 : 6),
         boxShadow: [
           BoxShadow(
             color: badgeColor.withOpacity(0.4),
-            blurRadius: 6,
+            blurRadius: isMobile ? 4 : 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -241,17 +246,19 @@ class TableCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(badgeIcon, size: 9, color: Colors.white),
-          const SizedBox(width: 3),
-          Text(
-            badgeText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 8.5,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.3,
+          Icon(badgeIcon, size: isMobile ? 11 : 9, color: Colors.white),
+          if (badgeText.isNotEmpty) ...[
+            const SizedBox(width: 3),
+            Text(
+              badgeText,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 8.5,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

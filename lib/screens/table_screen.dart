@@ -205,29 +205,43 @@ class _TableScreenState extends State<TableScreen> {
 
                   // Grid
                   Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 180,
-                        childAspectRatio: 0.85,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: tableProv.tables.length,
-                      itemBuilder: (context, index) {
-                        final table = tableProv.tables[index];
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double width = constraints.maxWidth;
+                        final bool isMobile = width < 600;
                         
-                        // Filter active QR orders for this table
-                        final tableActiveOrders = activeQrOrders.where((o) {
-                          final tableNum = o['tableNumber'];
-                          return tableNum?.toString() == table.number.toString();
-                        }).toList();
+                        return GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate: isMobile
+                              ? const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 1.1,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                )
+                              : const SliverGridDelegateWithMaxCrossAxisExtent(
+                                  maxCrossAxisExtent: 180,
+                                  childAspectRatio: 0.85,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
+                          itemCount: tableProv.tables.length,
+                          itemBuilder: (context, index) {
+                            final table = tableProv.tables[index];
+                            
+                            // Filter active QR orders for this table
+                            final tableActiveOrders = activeQrOrders.where((o) {
+                              final tableNum = o['tableNumber'];
+                              return tableNum?.toString() == table.number.toString();
+                            }).toList();
 
-                        return TableCard(
-                          table: table,
-                          activeOrders: tableActiveOrders,
-                          onTap: () {
-                            _showTableOptions(context, table, tableProv);
+                            return TableCard(
+                              table: table,
+                              activeOrders: tableActiveOrders,
+                              onTap: () {
+                                _showTableOptions(context, table, tableProv);
+                              },
+                            );
                           },
                         );
                       },
