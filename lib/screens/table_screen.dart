@@ -215,9 +215,9 @@ class _TableScreenState extends State<TableScreen> {
                           gridDelegate: isMobile
                               ? const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 2,
-                                  childAspectRatio: 1.1,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
+                                  childAspectRatio: 1.35,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
                                 )
                               : const SliverGridDelegateWithMaxCrossAxisExtent(
                                   maxCrossAxisExtent: 180,

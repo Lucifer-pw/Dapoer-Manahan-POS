@@ -121,22 +121,23 @@ class TableCard extends StatelessWidget {
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: isMobile ? MainAxisSize.min : MainAxisSize.max,
               children: [
-                SizedBox(height: isMobile ? 6 : 8), // Memberikan sedikit ruang di atas
+                SizedBox(height: isMobile ? 4 : 8),
                 // Table icon with status glow
                 Container(
-                  padding: EdgeInsets.all(isMobile ? 8 : 12),
+                  padding: EdgeInsets.all(isMobile ? 6 : 12),
                   decoration: BoxDecoration(
                     color: _statusColor.withOpacity(0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.table_restaurant,
-                    size: isMobile ? 20 : 24,
+                    size: isMobile ? 18 : 24,
                     color: _statusColor,
                   ),
                 ),
-                SizedBox(height: isMobile ? 6 : 8),
+                SizedBox(height: isMobile ? 4 : 8),
 
                 // Table number
                 Text(
@@ -146,20 +147,20 @@ class TableCard extends StatelessWidget {
                     fontSize: isMobile ? 13 : 15,
                   ),
                 ),
-                SizedBox(height: isMobile ? 2 : 4),
+                SizedBox(height: isMobile ? 1 : 4),
 
                 // Capacity
                 Text(
                   '${table.capacity} kursi',
                   style: AppTextStyles.caption.copyWith(fontSize: isMobile ? 10 : 11),
                 ),
-                SizedBox(height: isMobile ? 6 : 8),
+                SizedBox(height: isMobile ? 4 : 8),
 
                 // Status chip
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: isMobile ? 8 : 10,
-                    vertical: isMobile ? 3 : 4,
+                    vertical: isMobile ? 2 : 4,
                   ),
                   decoration: BoxDecoration(
                     color: _statusColor.withOpacity(0.15),
@@ -174,7 +175,7 @@ class TableCard extends StatelessWidget {
                         _statusText,
                         style: TextStyle(
                           color: _statusColor,
-                          fontSize: isMobile ? 10 : 11,
+                          fontSize: isMobile ? 9 : 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
