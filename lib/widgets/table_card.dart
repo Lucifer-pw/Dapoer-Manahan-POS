@@ -101,6 +101,7 @@ class TableCard extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Stack(
+        fit: StackFit.expand,
         children: [
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
@@ -119,111 +120,73 @@ class TableCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: isMobile
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: isMobile ? 6 : 8),
+                // Table icon with status glow
+                Container(
+                  padding: EdgeInsets.all(isMobile ? 8 : 12),
+                  decoration: BoxDecoration(
+                    color: _statusColor.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.table_restaurant,
+                    size: isMobile ? 20 : 24,
+                    color: _statusColor,
+                  ),
+                ),
+                SizedBox(height: isMobile ? 6 : 8),
+
+                // Table number
+                Text(
+                  'Meja ${table.number}',
+                  style: AppTextStyles.subtitle.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: isMobile ? 12 : 15,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: isMobile ? 2 : 4),
+
+                // Capacity
+                Text(
+                  '${table.capacity} kursi',
+                  style: AppTextStyles.caption.copyWith(fontSize: isMobile ? 9 : 11),
+                ),
+                SizedBox(height: isMobile ? 6 : 8),
+
+                // Status chip
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 8 : 10,
+                    vertical: isMobile ? 3 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _statusColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const SizedBox(height: 6),
-                      Icon(
-                        Icons.table_restaurant_outlined,
-                        size: 14,
-                        color: _statusColor.withOpacity(0.9),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Meja ${table.number}',
-                        style: AppTextStyles.subtitle.copyWith(
-                          fontWeight: FontWeight.w800,
-                          fontSize: table.number.toString().length > 2 ? 10 : 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${table.capacity} kursi',
-                        style: AppTextStyles.caption.copyWith(
-                          fontSize: 8,
-                          color: Colors.white.withOpacity(0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
+                      Icon(_statusIcon, size: isMobile ? 10 : 12, color: _statusColor),
+                      SizedBox(width: isMobile ? 3 : 4),
                       Text(
                         _statusText,
                         style: TextStyle(
                           color: _statusColor,
-                          fontSize: 8.5,
-                          fontWeight: FontWeight.bold,
+                          fontSize: isMobile ? 9.5 : 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                    ],
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 8),
-                      // Table icon with status glow
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _statusColor.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.table_restaurant,
-                          size: 24,
-                          color: _statusColor,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Table number
-                      Text(
-                        'Meja ${table.number}',
-                        style: AppTextStyles.subtitle.copyWith(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-
-                      // Capacity
-                      Text(
-                        '${table.capacity} kursi',
-                        style: AppTextStyles.caption.copyWith(fontSize: 11),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Status chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _statusColor.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(_statusIcon, size: 12, color: _statusColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              _statusText,
-                              style: TextStyle(
-                                color: _statusColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
                     ],
                   ),
+                ),
+                SizedBox(height: isMobile ? 2 : 4),
+              ],
+            ),
           ),
           
           // Badge Pesanan Aktif di Pojok Kanan Atas
@@ -252,25 +215,25 @@ class TableCard extends StatelessWidget {
     if (status == 'delivered' && paymentStatus != 'sudah_bayar') {
       badgeColor = AppColors.error;
       badgeIcon = Icons.payment_rounded;
-      badgeText = isMobile ? '' : 'Belum Bayar';
+      badgeText = isMobile ? 'Bayar' : 'Belum Bayar';
     } else if (status == 'pending') {
       badgeColor = AppColors.warning;
       badgeIcon = Icons.new_releases_rounded;
-      badgeText = isMobile ? '' : 'Baru';
+      badgeText = isMobile ? 'Baru' : 'Baru';
     } else if (status == 'accepted') {
       badgeColor = AppColors.info;
       badgeIcon = Icons.restaurant_rounded;
-      badgeText = isMobile ? '' : 'Diproses';
+      badgeText = isMobile ? 'Proses' : 'Diproses';
     } else {
       badgeColor = AppColors.primary;
       badgeIcon = Icons.receipt_long_rounded;
-      badgeText = isMobile ? '' : 'Aktif';
+      badgeText = isMobile ? 'Aktif' : 'Aktif';
     }
 
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: isMobile ? 5 : 6,
-        vertical: isMobile ? 5 : 3,
+        vertical: isMobile ? 3 : 3,
       ),
       decoration: BoxDecoration(
         color: badgeColor,
