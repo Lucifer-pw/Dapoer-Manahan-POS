@@ -211,13 +211,13 @@ class _TableScreenState extends State<TableScreen> {
                         final bool isMobile = width < 600;
                         
                         return GridView.builder(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(isMobile ? 10 : 16),
                           gridDelegate: isMobile
                               ? const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 1.35,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
+                                  crossAxisCount: 4,
+                                  childAspectRatio: 0.88,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
                                 )
                               : const SliverGridDelegateWithMaxCrossAxisExtent(
                                   maxCrossAxisExtent: 180,
