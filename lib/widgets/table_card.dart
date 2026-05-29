@@ -189,79 +189,135 @@ class TableCard extends StatelessWidget {
             ),
           ),
           
-          // Badge Pesanan Aktif di Pojok Kanan Atas
+          // Badge Multi-Status Pesanan Aktif di Pojok Kanan Atas
           if (_hasActiveOrders)
             Positioned(
-              top: isMobile ? 6 : 8,
-              right: isMobile ? 6 : 8,
-              child: _buildActiveOrdersIndicator(isMobile),
+              top: isMobile ? 4 : 6,
+              right: isMobile ? 4 : 6,
+              child: _buildMultiStatusBadges(isMobile),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildActiveOrdersIndicator(bool isMobile) {
-    final urgent = _mostUrgentOrder;
-    if (urgent == null) return const SizedBox.shrink();
+  /// Menghitung dan menampilkan badge per kategori status pesanan
+  Widget _buildMultiStatusBadges(bool isMobile) {
+    // Hitung jumlah pesanan per kategori
+    int pendingCount = 0;    // Pesanan Masuk (menunggu konfirmasi)
+    int acceptedCount = 0;   // Sedang Diproses (dapur)
+    int deliveredCount = 0;  // Sudah Diantar
+    int unpaidCount = 0;     // Belum Dibayar
 
-    final String status = urgent['status'] as String? ?? '';
-    final String paymentStatus = urgent['paymentStatus'] as String? ?? '';
+    for (final order in activeOrders) {
+      final String status = order['status'] as String? ?? '';
+      final String paymentStatus = order['paymentStatus'] as String? ?? '';
 
-    Color badgeColor;
-    IconData badgeIcon;
-    String badgeText;
-
-    if (status == 'delivered' && paymentStatus != 'sudah_bayar') {
-      badgeColor = AppColors.error;
-      badgeIcon = Icons.payment_rounded;
-      badgeText = isMobile ? 'Bayar' : 'Belum Bayar';
-    } else if (status == 'pending') {
-      badgeColor = AppColors.warning;
-      badgeIcon = Icons.new_releases_rounded;
-      badgeText = isMobile ? 'Baru' : 'Baru';
-    } else if (status == 'accepted') {
-      badgeColor = AppColors.info;
-      badgeIcon = Icons.restaurant_rounded;
-      badgeText = isMobile ? 'Proses' : 'Diproses';
-    } else {
-      badgeColor = AppColors.primary;
-      badgeIcon = Icons.receipt_long_rounded;
-      badgeText = isMobile ? 'Aktif' : 'Aktif';
+      if (status == 'pending') {
+        pendingCount++;
+      } else if (status == 'accepted') {
+        acceptedCount++;
+      } else if (status == 'delivered') {
+        deliveredCount++;
+        if (paymentStatus != 'sudah_bayar') {
+          unpaidCount++;
+        }
+      }
     }
 
+    final List<Widget> badges = [];
+
+    if (pendingCount > 0) {
+      badges.add(_buildMiniBadge(
+        color: AppColors.warning,
+        icon: Icons.notification_important_rounded,
+        count: pendingCount,
+        label: isMobile ? 'Masuk' : 'Pesanan Masuk',
+        isMobile: isMobile,
+      ));
+    }
+
+    if (acceptedCount > 0) {
+      badges.add(_buildMiniBadge(
+        color: AppColors.info,
+        icon: Icons.restaurant_rounded,
+        count: acceptedCount,
+        label: isMobile ? 'Proses' : 'Diproses',
+        isMobile: isMobile,
+      ));
+    }
+
+    if (deliveredCount > 0 && unpaidCount == 0) {
+      badges.add(_buildMiniBadge(
+        color: AppColors.success,
+        icon: Icons.check_circle_rounded,
+        count: deliveredCount,
+        label: isMobile ? 'Antar' : 'Diantar',
+        isMobile: isMobile,
+      ));
+    }
+
+    if (unpaidCount > 0) {
+      badges.add(_buildMiniBadge(
+        color: AppColors.error,
+        icon: Icons.payment_rounded,
+        count: unpaidCount,
+        label: isMobile ? 'Bayar' : 'Belum Bayar',
+        isMobile: isMobile,
+      ));
+    }
+
+    if (badges.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (int i = 0; i < badges.length; i++) ...[
+          badges[i],
+          if (i < badges.length - 1) SizedBox(height: isMobile ? 3 : 4),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMiniBadge({
+    required Color color,
+    required IconData icon,
+    required int count,
+    required String label,
+    required bool isMobile,
+  }) {
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 5 : 6,
-        vertical: isMobile ? 3 : 3,
+        horizontal: isMobile ? 4 : 6,
+        vertical: isMobile ? 2 : 3,
       ),
       decoration: BoxDecoration(
-        color: badgeColor,
+        color: color,
         borderRadius: BorderRadius.circular(isMobile ? 4 : 6),
         boxShadow: [
           BoxShadow(
-            color: badgeColor.withOpacity(0.4),
-            blurRadius: isMobile ? 4 : 6,
-            offset: const Offset(0, 2),
+            color: color.withOpacity(0.4),
+            blurRadius: isMobile ? 3 : 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(badgeIcon, size: isMobile ? 11 : 9, color: Colors.white),
-          if (badgeText.isNotEmpty) ...[
-            const SizedBox(width: 3),
-            Text(
-              badgeText,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 8.5,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.3,
-              ),
+          Icon(icon, size: isMobile ? 8 : 9, color: Colors.white),
+          SizedBox(width: isMobile ? 2 : 3),
+          Text(
+            isMobile ? '$count' : '$label ($count)',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isMobile ? 7.5 : 8.5,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.2,
             ),
-          ],
+          ),
         ],
       ),
     );
