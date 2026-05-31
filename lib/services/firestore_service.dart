@@ -1264,4 +1264,16 @@ class FirestoreService {
     }
     await batch.commit();
   }
+
+  // ============================================================
+  // USER PRESENCE
+  // ============================================================
+
+  Stream<List<Map<String, dynamic>>> streamUsers() {
+    return _db.collection('users').snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => {...doc.data() as Map<String, dynamic>, 'id': doc.id})
+          .toList();
+    });
+  }
 }

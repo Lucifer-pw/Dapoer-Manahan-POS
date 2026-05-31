@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/subscription_provider.dart';
@@ -13,6 +14,7 @@ import '../providers/printer_provider.dart';
 import '../widgets/pulsing_badge.dart';
 import '../models/order.dart';
 import '../utils/constants.dart';
+import '../services/firestore_service.dart';
 import '../utils/formatter.dart';
 import '../widgets/stat_card.dart';
 import 'login_screen.dart';
@@ -184,6 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _buildBillingBanner(),
               _buildAppBar(),
               _buildUserGuideBanner(),
+              _buildOnlineUsersSection(),
               const SizedBox(height: 20),
               _buildPeriodSelector(),
               const SizedBox(height: 20),
@@ -1306,6 +1309,175 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOnlineUsersSection() {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        if (!auth.isAdmin && !auth.isOwner) return const SizedBox.shrink();
+
+        final FirestoreService firestoreService = FirestoreService();
+
+        return StreamBuilder<List<Map<String, dynamic>>>(
+          stream: firestoreService.streamUsers(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const SizedBox.shrink();
+
+            final users = snapshot.data!;
+            if (users.isEmpty) return const SizedBox.shrink();
+
+            final now = DateTime.now();
+            
+            // Helper to check if a user is online
+            bool checkIsOnline(Map<String, dynamic> u) {
+              final bool isOnlineField = u['isOnline'] as bool? ?? false;
+              final dynamic lastActiveField = u['lastActive'];
+              
+              if (!isOnlineField) return false;
+              if (lastActiveField == null) return false;
+
+              DateTime lastActive;
+              if (lastActiveField is Timestamp) {
+                lastActive = lastActiveField.toDate();
+              } else if (lastActiveField is DateTime) {
+                lastActive = lastActiveField;
+              } else {
+                return isOnlineField;
+              }
+
+              // Fallback: if last active was more than 10 minutes ago, consider offline
+              return now.difference(lastActive).inMinutes <= 10;
+            }
+
+            final onlineUsers = users.where((u) => checkIsOnline(u)).toList();
+            final offlineUsers = users.where((u) => !checkIsOnline(u)).toList();
+
+            // Combine them so online shows first
+            final sortedUsers = [...onlineUsers, ...offlineUsers];
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                gradient: AppColors.cardGradient,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.border.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.people_alt_rounded, color: AppColors.primary, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Status Karyawan',
+                            style: AppTextStyles.heading3.copyWith(fontSize: 14),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                        ),
+                        child: Text(
+                          '${onlineUsers.length} Aktif',
+                          style: const TextStyle(
+                            color: AppColors.success,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    height: 64,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: sortedUsers.length,
+                      itemBuilder: (context, index) {
+                        final u = sortedUsers[index];
+                        final String name = u['name'] ?? 'Staff';
+                        final bool isOnline = checkIsOnline(u);
+                        
+                        final String initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+                        
+                        return Container(
+                          width: 56,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: Column(
+                            children: [
+                              Stack(
+                                children: [
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      gradient: isOnline 
+                                          ? AppColors.primaryGradient 
+                                          : LinearGradient(colors: [AppColors.card, AppColors.border.withOpacity(0.3)]),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: isOnline ? AppColors.success : AppColors.textHint,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppColors.background, width: 1.5),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: TextStyle(
+                                    color: isOnline ? Colors.white : AppColors.textSecondary,
+                                    fontSize: 9.5,
+                                    fontWeight: isOnline ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );

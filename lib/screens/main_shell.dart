@@ -6,6 +6,7 @@ import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import '../services/firestore_service.dart';
 import '../providers/table_provider.dart';
+import '../providers/auth_provider.dart';
 
 import 'home_screen.dart';
 import 'pos_screen.dart';
@@ -25,7 +26,7 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   late PageController _pageController;
 
   final List<Widget> _screens = const [
@@ -57,6 +58,7 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final navProv = Provider.of<NavigationProvider>(context, listen: false);
     _pageController = PageController(initialPage: navProv.currentIndex);
     
@@ -210,6 +212,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     try {
       final printerProv = Provider.of<PrinterProvider>(context, listen: false);
       printerProv.removeListener(_onPrinterStateChanged);
@@ -221,6 +224,21 @@ class _MainShellState extends State<MainShell> {
     _pendingOrdersSubscription?.cancel();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (!mounted) return;
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    if (authProv.isLoggedIn) {
+      if (state == AppLifecycleState.resumed) {
+        authProv.updateOnlineStatus(true);
+      } else if (state == AppLifecycleState.paused || 
+                 state == AppLifecycleState.detached) {
+        authProv.updateOnlineStatus(false);
+      }
+    }
   }
 
   // ============================================================

@@ -44,6 +44,7 @@ class AuthProvider extends ChangeNotifier {
       if (user != null) {
         await _fetchUserRole(user.uid);
         await saveDeviceInfo(); // Save device info on every login/restart
+        await updateOnlineStatus(true); // Mark user as online
       } else {
         _role = 'kasir';
       }
@@ -51,6 +52,18 @@ class AuthProvider extends ChangeNotifier {
       _isAuthChecked = true;
       notifyListeners();
     });
+  }
+
+  Future<void> updateOnlineStatus(bool isOnline) async {
+    if (_user == null) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(_user!.uid).set({
+        'isOnline': isOnline,
+        'lastActive': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating online status: $e');
+    }
   }
 
   Future<void> _fetchUserRole(String uid) async {
@@ -192,6 +205,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await updateOnlineStatus(false);
     await _authService.signOut();
   }
 
