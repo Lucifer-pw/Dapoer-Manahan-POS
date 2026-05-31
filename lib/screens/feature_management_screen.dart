@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../providers/feature_flags_provider.dart';
 import '../utils/constants.dart';
 
@@ -115,6 +116,66 @@ class _FeatureManagementScreenState extends State<FeatureManagementScreen> with 
 
   @override
   Widget build(BuildContext context) {
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProv.isAdmin) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xxl),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.gpp_bad_rounded,
+                    color: AppColors.error,
+                    size: 64,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Akses Ditolak',
+                  style: AppTextStyles.heading2.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Hanya administrator yang memiliki wewenang penuh untuk mengatur kontrol akses fitur.',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySecondary,
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  label: const Text(
+                    'Kembali',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final featureProvider = Provider.of<FeatureFlagsProvider>(context);
 
     return Scaffold(
