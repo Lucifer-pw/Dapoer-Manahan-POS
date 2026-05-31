@@ -21,6 +21,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   String _amountStr = '';
   String _paymentMethod = 'Tunai'; // 'Tunai' atau 'QRIS'
+  bool _isProcessing = false; // Guard: prevent double-click
 
   int get _amountPaid {
     if (_paymentMethod == 'QRIS') {
@@ -40,7 +41,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(icon: Icon(Icons.arrow_back, color: AppColors.textPrimary), onPressed: _isProcessing ? null : () => Navigator.pop(context)),
         title: Text('Pembayaran', style: AppTextStyles.heading3),
         centerTitle: true,
       ),
@@ -85,7 +86,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _paymentMethod = 'Tunai'),
+                    onTap: _isProcessing ? null : () => setState(() => _paymentMethod = 'Tunai'),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
@@ -113,7 +114,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() {
+                    onTap: _isProcessing ? null : () => setState(() {
                       _paymentMethod = 'QRIS';
                       _amountStr = cart.total.toString();
                     }),
@@ -182,9 +183,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 16),
 
               CustomNumpad(
-                onNumberTap: (val) => setState(() => _amountStr += val),
-                onDelete: () => setState(() { if (_amountStr.isNotEmpty) _amountStr = _amountStr.substring(0, _amountStr.length - 1); }),
-                onClear: () => setState(() => _amountStr = ''),
+                onNumberTap: _isProcessing ? (_) {} : (val) => setState(() => _amountStr += val),
+                onDelete: _isProcessing ? () {} : () => setState(() { if (_amountStr.isNotEmpty) _amountStr = _amountStr.substring(0, _amountStr.length - 1); }),
+                onClear: _isProcessing ? () {} : () => setState(() => _amountStr = ''),
               ),
               const SizedBox(height: 20),
             ] else ...[
@@ -249,17 +250,23 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 20),
             ],
 
-            // Confirm button
+            // Confirm button — disabled during processing
             SizedBox(
               width: double.infinity, height: 52,
               child: ElevatedButton.icon(
-                onPressed: _amountPaid >= cart.total && cart.total > 0 ? () => _processPayment(context) : null,
-                icon: const Icon(Icons.check_circle, size: 22),
-                label: Text('KONFIRMASI PEMBAYARAN', style: AppTextStyles.button.copyWith(letterSpacing: 1)),
+                onPressed: (!_isProcessing && _amountPaid >= cart.total && cart.total > 0) ? () => _processPayment(context) : null,
+                icon: _isProcessing
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.check_circle, size: 22),
+                label: Text(
+                  _isProcessing ? 'MEMPROSES...' : 'KONFIRMASI PEMBAYARAN',
+                  style: AppTextStyles.button.copyWith(letterSpacing: 1),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.success,
-                  disabledBackgroundColor: AppColors.textHint.withOpacity(0.3),
+                  disabledBackgroundColor: _isProcessing ? AppColors.success.withOpacity(0.7) : AppColors.textHint.withOpacity(0.3),
                   foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white70,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                 ),
               ),
@@ -273,7 +280,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget _buildQuickBtn(String label, int amount, CartProvider cart) {
     return Expanded(
       child: OutlinedButton(
-        onPressed: () => setState(() => _amountStr = '$amount'),
+        onPressed: _isProcessing ? null : () => setState(() => _amountStr = '$amount'),
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
@@ -286,67 +293,88 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _processPayment(BuildContext context) async {
+    // === IDEMPOTENT GUARD: prevent double-click ===
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
+
     final cart = Provider.of<CartProvider>(context, listen: false);
     final orderProv = Provider.of<OrderProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final tableProv = Provider.of<TableProvider>(context, listen: false);
     final draftProv = Provider.of<DraftProvider>(context, listen: false);
     final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-    // Hitung nomor urut yang benar (Database vs Draf)
-    int finalSequenceNumber = cart.activeDraftNumber ?? 0;
+    try {
+      // Hitung nomor urut yang benar (Database vs Draf)
+      int finalSequenceNumber = cart.activeDraftNumber ?? 0;
 
-    if (finalSequenceNumber == 0) {
-      // Jika ini transaksi langsung (bukan draf), cari nomor baru
-      final nextFromDb = await orderProv.getNextSequenceNumber();
-      int maxDraftNum = 0;
-      if (draftProv.drafts.isNotEmpty) {
-        maxDraftNum = draftProv.drafts
-            .map((d) => d.draftNumber ?? 0)
-            .reduce((a, b) => a > b ? a : b);
+      if (finalSequenceNumber == 0) {
+        // Jika ini transaksi langsung (bukan draf), cari nomor baru
+        final nextFromDb = await orderProv.getNextSequenceNumber();
+        int maxDraftNum = 0;
+        if (draftProv.drafts.isNotEmpty) {
+          maxDraftNum = draftProv.drafts
+              .map((d) => d.draftNumber ?? 0)
+              .reduce((a, b) => a > b ? a : b);
+        }
+        // Ambil yang paling besar agar tidak bentrok
+        finalSequenceNumber = (nextFromDb > maxDraftNum) ? nextFromDb : (maxDraftNum + 1);
       }
-      // Ambil yang paling besar agar tidak bentrok
-      finalSequenceNumber = (nextFromDb > maxDraftNum) ? nextFromDb : (maxDraftNum + 1);
-    }
 
-    final order = Order(
-      id: '',
-      tableNumber: cart.tableNumber,
-      cashierName: auth.cashierName,
-      cashierId: auth.user?.uid ?? '',
-      items: cart.items,
-      subtotal: cart.subtotal,
-      tax: cart.tax,
-      total: cart.total,
-      paymentMethod: _paymentMethod,
-      amountPaid: _amountPaid,
-      change: _paymentMethod == 'QRIS' ? 0 : (_amountPaid - cart.total),
-      status: OrderStatus.completed,
-      isTakeAway: cart.isTakeAway,
-    );
+      final order = Order(
+        id: '',
+        tableNumber: cart.tableNumber,
+        cashierName: auth.cashierName,
+        cashierId: auth.user?.uid ?? '',
+        items: cart.items,
+        subtotal: cart.subtotal,
+        tax: cart.tax,
+        total: cart.total,
+        paymentMethod: _paymentMethod,
+        amountPaid: _amountPaid,
+        change: _paymentMethod == 'QRIS' ? 0 : (_amountPaid - cart.total),
+        status: OrderStatus.completed,
+        isTakeAway: cart.isTakeAway,
+      );
 
-    final completedOrder = await orderProv.createOrder(
-      order, 
-      sequenceNumber: finalSequenceNumber,
-    );
-    
-    // Update table status if not takeaway
-    if (!cart.isTakeAway) {
-      final table = tableProv.getTableByNumber(cart.tableNumber);
-      if (table != null) {
-        await tableProv.setAvailable(table.id);
+      final completedOrder = await orderProv.createOrder(
+        order, 
+        sequenceNumber: finalSequenceNumber,
+      );
+      
+      // Update table status if not takeaway
+      if (!cart.isTakeAway) {
+        final table = tableProv.getTableByNumber(cart.tableNumber);
+        if (table != null) {
+          await tableProv.setAvailable(table.id);
+        }
       }
-    }
 
-    // Delete draft if this was a resumed order
-    if (cart.activeDraftId != null) {
-      await draftProv.deleteDraft(cart.activeDraftId!);
-    }
+      // Delete draft if this was a resumed order
+      if (cart.activeDraftId != null) {
+        await draftProv.deleteDraft(cart.activeDraftId!);
+      }
 
-    cart.clear();
+      cart.clear();
 
-    if (mounted) {
-      navigator.pushReplacement(MaterialPageRoute(builder: (_) => ReceiptScreen(order: completedOrder)));
+      if (mounted) {
+        navigator.pushReplacement(MaterialPageRoute(builder: (_) => ReceiptScreen(order: completedOrder)));
+      }
+    } catch (e) {
+      // Reset processing state on error so user can retry
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Gagal memproses pembayaran: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 }
+
+
