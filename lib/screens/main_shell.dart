@@ -18,6 +18,7 @@ import 'package:provider/provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/printer_provider.dart';
 import '../providers/connectivity_provider.dart';
+import '../providers/feature_flags_provider.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -247,16 +248,44 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final featureFlags = Provider.of<FeatureFlagsProvider>(context);
+    final role = authProv.role;
+
+    final List<_MainShellTabDef> allTabs = [
+      const _MainShellTabDef(0, 'dashboard', Icons.dashboard_rounded, 'Dashboard'),
+      const _MainShellTabDef(1, 'pos', Icons.point_of_sale_rounded, 'Kasir'),
+      const _MainShellTabDef(2, 'table', Icons.table_restaurant_rounded, 'Meja'),
+      const _MainShellTabDef(3, 'menu', Icons.restaurant_menu_rounded, 'Menu'),
+      const _MainShellTabDef(4, 'expense', Icons.shopping_cart_rounded, 'Belanja'),
+      const _MainShellTabDef(5, 'order_history', Icons.receipt_long_rounded, 'Riwayat'),
+    ];
+
+    final visibleTabs = allTabs.where((tab) => featureFlags.isFeatureEnabled(role, tab.featureId)).toList();
+
     return Consumer<NavigationProvider>(
       builder: (context, navProv, _) {
+        // Redirection if current index is not visible
+        if (visibleTabs.isNotEmpty && !visibleTabs.any((t) => t.index == navProv.currentIndex)) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              navProv.setIndex(visibleTabs.first.index);
+              _pageController.jumpToPage(visibleTabs.first.index);
+            }
+          });
+        }
+
         return Scaffold(
           backgroundColor: AppColors.background,
           body: Stack(
             children: [
               PageView(
                 controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(), // Prevent swipe navigation
                 onPageChanged: (index) {
-                  navProv.setIndex(index);
+                  if (visibleTabs.any((t) => t.index == index)) {
+                    navProv.setIndex(index);
+                  }
                 },
                 children: _screens,
               ),
@@ -264,105 +293,75 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
             ],
           ),
           bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(
-              color: AppColors.border.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ============================================================
-              // POWERED BY
-              // ============================================================
-
-              FutureBuilder<PackageInfo>(
-                future: PackageInfo.fromPlatform(),
-                builder: (context, snapshot) {
-                  final version = snapshot.hasData 
-                      ? ' | v${snapshot.data!.version}+${snapshot.data!.buildNumber}' 
-                      : '';
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Powered by LUCIFAX$version',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textHint.withOpacity(0.3),
-                        fontSize: 8,
-                        letterSpacing: 1,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              // ============================================================
-              // NAVIGATION
-              // ============================================================
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 8,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      0,
-                      Icons.dashboard_rounded,
-                      'Dashboard',
-                      navProv,
-                    ),
-                    _buildNavItem(
-                      1,
-                      Icons.point_of_sale_rounded,
-                      'Kasir',
-                      navProv,
-                    ),
-                    _buildNavItem(
-                      2,
-                      Icons.table_restaurant_rounded,
-                      'Meja',
-                      navProv,
-                    ),
-                    _buildNavItem(
-                      3,
-                      Icons.restaurant_menu_rounded,
-                      'Menu',
-                      navProv,
-                    ),
-                    _buildNavItem(
-                      4,
-                      Icons.shopping_cart_rounded,
-                      'Belanja',
-                      navProv,
-                    ),
-                    _buildNavItem(
-                      5,
-                      Icons.receipt_long_rounded,
-                      'Riwayat',
-                      navProv,
-                    ),
-                  ],
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.border.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
-        ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+            ),
+            child: SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ============================================================
+                  // POWERED BY
+                  // ============================================================
+
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snapshot) {
+                      final version = snapshot.hasData 
+                          ? ' | v${snapshot.data!.version}+${snapshot.data!.buildNumber}' 
+                          : '';
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Powered by LUCIFAX$version',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textHint.withOpacity(0.3),
+                            fontSize: 8,
+                            letterSpacing: 1,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  // ============================================================
+                  // NAVIGATION
+                  // ============================================================
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: visibleTabs.map((tab) {
+                        return _buildNavItem(
+                          tab.index,
+                          tab.icon,
+                          tab.label,
+                          navProv,
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -663,4 +662,13 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       ),
     );
   }
+}
+
+class _MainShellTabDef {
+  final int index;
+  final String featureId;
+  final IconData icon;
+  final String label;
+
+  const _MainShellTabDef(this.index, this.featureId, this.icon, this.label);
 }

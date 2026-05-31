@@ -20,6 +20,7 @@ import 'providers/navigation_provider.dart';
 import 'providers/connectivity_provider.dart';
 import 'providers/qr_order_provider.dart';
 import 'providers/chat_provider.dart';
+import 'providers/feature_flags_provider.dart';
 import 'screens/customer_order_screen.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
@@ -81,6 +82,7 @@ class DapoerManahanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => QrOrderProvider()..init()),
         ChangeNotifierProvider(create: (_) => ChatProvider()..init()),
+        ChangeNotifierProvider(create: (_) => FeatureFlagsProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProv, _) {

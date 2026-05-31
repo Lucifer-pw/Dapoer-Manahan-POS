@@ -9,6 +9,7 @@ import 'admin_billing_screen.dart';
 import 'billing_history_screen.dart';
 import 'salary_screen.dart';
 import 'qris_management_screen.dart';
+import 'feature_management_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -308,6 +309,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const AdminBillingScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    _buildSettingsTile(
+                      icon: Icons.tune_rounded,
+                      title: 'Kontrol Akses Fitur (Admin)',
+                      subtitle: 'ON/OFF fitur untuk Owner & Kasir',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const FeatureManagementScreen()),
                         );
                       },
                     ),

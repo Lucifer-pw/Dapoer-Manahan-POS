@@ -11,6 +11,7 @@ import '../providers/navigation_provider.dart';
 import '../providers/menu_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/printer_provider.dart';
+import '../providers/feature_flags_provider.dart';
 import '../widgets/pulsing_badge.dart';
 import '../models/order.dart';
 import '../utils/constants.dart';
@@ -163,6 +164,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final featureFlags = Provider.of<FeatureFlagsProvider>(context);
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final role = authProv.role;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -185,8 +190,10 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               _buildBillingBanner(),
               _buildAppBar(),
-              _buildUserGuideBanner(),
-              _buildOnlineUsersSection(),
+              if (featureFlags.isFeatureEnabled(role, 'user_guide'))
+                _buildUserGuideBanner(),
+              if (featureFlags.isFeatureEnabled(role, 'online_users'))
+                _buildOnlineUsersSection(),
               const SizedBox(height: 20),
               _buildPeriodSelector(),
               const SizedBox(height: 20),
@@ -199,17 +206,22 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 _buildStatsSection(),
               const SizedBox(height: 20),
-              _buildBestSellerBanner(),
-              const SizedBox(height: 12),
+              if (featureFlags.isFeatureEnabled(role, 'best_seller')) ...[
+                _buildBestSellerBanner(),
+                const SizedBox(height: 12),
+              ],
               Consumer<AuthProvider>(builder: (context, auth, _) {
                 if (!auth.isAdmin && !auth.isOwner) return const SizedBox.shrink();
+                if (!featureFlags.isFeatureEnabled(role, 'salary')) return const SizedBox.shrink();
                 return Column(children: [
                   _buildSalaryBanner(),
                   const SizedBox(height: 20),
                 ]);
               }),
-              _buildDynamicChart(),
-              const SizedBox(height: 20),
+              if (featureFlags.isFeatureEnabled(role, 'sales_chart')) ...[
+                _buildDynamicChart(),
+                const SizedBox(height: 20),
+              ],
               _buildOrdersSection(),
               const SizedBox(height: 20),
             ],
@@ -392,7 +404,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            if (auth.isAdmin || auth.isOwner)
+            if ((auth.isAdmin || auth.isOwner) && Provider.of<FeatureFlagsProvider>(context, listen: false).isFeatureEnabled(auth.role, 'cctv'))
               PopupMenuItem<String>(
                 value: 'cctv',
                 child: Row(
@@ -403,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            if (!auth.isAdmin)
+            if (!auth.isAdmin && Provider.of<FeatureFlagsProvider>(context, listen: false).isFeatureEnabled(auth.role, 'user_guide'))
               PopupMenuItem<String>(
                 value: 'guide',
                 child: Row(
