@@ -885,6 +885,36 @@ class FirestoreService {
     await syncQrOrderToCompletedOrders(orderId, cashierName: cashierName, cashierId: cashierId);
   }
 
+  Future<void> finalizeQrOrdersForTable(int tableNumber) async {
+    try {
+      final querySnapshot = await _db.collection('qr_orders')
+          .where('status', whereIn: ['pending', 'accepted', 'delivered'])
+          .get();
+
+      final batch = _db.batch();
+      bool hasUpdates = false;
+
+      for (final doc in querySnapshot.docs) {
+        final data = doc.data();
+        final tNum = data['tableNumber'];
+        if (tNum?.toString() == tableNumber.toString()) {
+          batch.update(doc.reference, {
+            'status': 'completed',
+            'paymentStatus': 'sudah_bayar',
+          });
+          hasUpdates = true;
+        }
+      }
+
+      if (hasUpdates) {
+        await batch.commit();
+      }
+    } catch (e) {
+      debugPrint('Error finalizing QR orders for table $tableNumber: $e');
+    }
+  }
+
+
   Future<void> syncQrOrderToCompletedOrders(String qrOrderId, {String? cashierName, String? cashierId}) async {
     if (qrOrderId.isEmpty) return;
 

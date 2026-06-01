@@ -349,6 +349,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         if (table != null) {
           await tableProv.setAvailable(table.id);
         }
+        // Auto-finalize any lingering active QR orders for this table
+        await FirestoreService().finalizeQrOrdersForTable(cart.tableNumber);
       }
 
       // Delete draft if this was a resumed order
