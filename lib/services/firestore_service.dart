@@ -959,8 +959,8 @@ class FirestoreService {
         return;
       }
 
-      // First-time sync: create the order in 'orders' collection when delivered or paid+processed
-      if (isPaidAndProcessed || isDelivered) {
+      // First-time sync: only create the order in 'orders' collection when FULLY complete (delivered + paid)
+      if (isFullyComplete) {
         // 1. Get next sequence number
         final int seqNum = await getNextOrderSequence();
 
