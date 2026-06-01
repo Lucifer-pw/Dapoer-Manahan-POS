@@ -1246,6 +1246,12 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                     final qrOrders = qrSnapshot.data ?? [];
                     final completedOrders = orderSnapshot.data ?? [];
 
+                    // Filter: only show truly active QR orders (not completed/rejected)
+                    final activeQrOrders = qrOrders.where((o) {
+                      final status = o['status'] as String? ?? '';
+                      return status != 'completed' && status != 'rejected';
+                    }).toList();
+
                     final hasData = qrOrders.isNotEmpty || completedOrders.isNotEmpty;
 
                     return Column(
@@ -1304,13 +1310,13 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                                   controller: scrollController,
                                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
                                   children: [
-                                    if (qrOrders.isNotEmpty) ...[
+                                    if (activeQrOrders.isNotEmpty) ...[
                                       Text(
                                         'Pesanan Aktif',
                                         style: AppTextStyles.heading3.copyWith(color: AppColors.secondary),
                                       ),
                                       const SizedBox(height: 8),
-                                      ...qrOrders.map((qr) => _buildQrOrderCard(qr)),
+                                      ...activeQrOrders.map((qr) => _buildQrOrderCard(qr)),
                                       const SizedBox(height: 16),
                                     ],
                                     if (completedOrders.isNotEmpty) ...[
