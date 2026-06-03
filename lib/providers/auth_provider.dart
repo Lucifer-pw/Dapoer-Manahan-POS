@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,7 @@ import '../services/notification/notification_helper.dart';
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
+  StreamSubscription<DocumentSnapshot>? _userRoleSubscription;
 
   User? _user;
   String _role = 'kasir';
@@ -67,6 +69,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _fetchUserRole(String uid) async {
+    // Cancel any existing listener first
+    await _userRoleSubscription?.cancel();
+
+    // Do an initial one-shot read for fast startup
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
@@ -77,8 +83,37 @@ class AuthProvider extends ChangeNotifier {
         _bankAccountName = data['bankAccountName'] ?? '';
       }
     } catch (e) {
-      debugPrint('Error fetching role: $e');
+      debugPrint('Error fetching role (initial): $e');
     }
+
+    // Then start a realtime listener to keep role in sync
+    _userRoleSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((doc) {
+      if (doc.exists) {
+        final data = doc.data() ?? {};
+        final newRole = data['role'] ?? 'kasir';
+        final newBankName = data['bankName'] ?? '';
+        final newBankAccNum = data['bankAccountNumber'] ?? '';
+        final newBankAccName = data['bankAccountName'] ?? '';
+
+        // Only notify if something actually changed
+        if (_role != newRole ||
+            _bankName != newBankName ||
+            _bankAccountNumber != newBankAccNum ||
+            _bankAccountName != newBankAccName) {
+          _role = newRole;
+          _bankName = newBankName;
+          _bankAccountNumber = newBankAccNum;
+          _bankAccountName = newBankAccName;
+          notifyListeners();
+        }
+      }
+    }, onError: (e) {
+      debugPrint('Error in role listener: $e');
+    });
   }
 
   Future<void> saveDeviceInfo() async {
@@ -206,7 +241,15 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> signOut() async {
     await updateOnlineStatus(false);
+    await _userRoleSubscription?.cancel();
+    _userRoleSubscription = null;
     await _authService.signOut();
+  }
+
+  @override
+  void dispose() {
+    _userRoleSubscription?.cancel();
+    super.dispose();
   }
 
   Future<bool> updateProfile(String name, String bankName, String bankAccountNumber, String bankAccountName) async {

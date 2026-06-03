@@ -945,7 +945,6 @@ class FirestoreService {
       // Check if order was already synced to 'orders' collection previously
       final bool alreadySynced = data['orderDocId'] != null;
 
-      final bool isPaidAndProcessed = (status == 'accepted' || status == 'delivered') && paymentStatus == 'sudah_bayar';
       final bool isDelivered = status == 'delivered';
       final bool isFullyComplete = isDelivered && paymentStatus == 'sudah_bayar';
 
