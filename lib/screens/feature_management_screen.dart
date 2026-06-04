@@ -116,7 +116,7 @@ class _FeatureManagementScreenState extends State<FeatureManagementScreen> with 
 
   @override
   Widget build(BuildContext context) {
-    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final authProv = Provider.of<AuthProvider>(context);
     if (!authProv.isAdmin) {
       return Scaffold(
         backgroundColor: AppColors.background,

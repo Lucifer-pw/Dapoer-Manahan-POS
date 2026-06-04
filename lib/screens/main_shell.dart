@@ -248,7 +248,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final authProv = Provider.of<AuthProvider>(context);
     final featureFlags = Provider.of<FeatureFlagsProvider>(context);
     final role = authProv.role;
 

@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final featureFlags = Provider.of<FeatureFlagsProvider>(context);
-    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    final authProv = Provider.of<AuthProvider>(context);
     final role = authProv.role;
 
     return Scaffold(

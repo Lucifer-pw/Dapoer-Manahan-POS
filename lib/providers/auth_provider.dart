@@ -77,7 +77,7 @@ class AuthProvider extends ChangeNotifier {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
         final data = doc.data() ?? {};
-        _role = data['role'] ?? 'kasir';
+        _role = (data['role']?.toString() ?? 'kasir').trim().toLowerCase();
         _bankName = data['bankName'] ?? '';
         _bankAccountNumber = data['bankAccountNumber'] ?? '';
         _bankAccountName = data['bankAccountName'] ?? '';
@@ -94,7 +94,7 @@ class AuthProvider extends ChangeNotifier {
         .listen((doc) {
       if (doc.exists) {
         final data = doc.data() ?? {};
-        final newRole = data['role'] ?? 'kasir';
+        final newRole = (data['role']?.toString() ?? 'kasir').trim().toLowerCase();
         final newBankName = data['bankName'] ?? '';
         final newBankAccNum = data['bankAccountNumber'] ?? '';
         final newBankAccName = data['bankAccountName'] ?? '';
