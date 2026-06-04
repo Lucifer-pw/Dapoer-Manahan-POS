@@ -205,6 +205,11 @@ class AuthProvider extends ChangeNotifier {
       await _authService.updateDisplayName(name);
       
       if (cred.user != null) {
+        // Force refresh the auth token to ensure the Firestore client is aware of the new authenticated session
+        await cred.user!.getIdToken(true);
+        // Small delay to let the Firestore client state update propagate
+        await Future.delayed(const Duration(milliseconds: 300));
+
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'name': name,
           'email': email,
