@@ -788,7 +788,7 @@ class FirestoreService {
     return names.toList()..sort();
   }
 
-  Future<Map<String, String>> getCashierBankDetails(String cashierName) async {
+  Future<Map<String, dynamic>> getCashierBankDetails(String cashierName) async {
     try {
       final snapshot = await _db.collection('users').where('name', isEqualTo: cashierName).limit(1).get();
       if (snapshot.docs.isNotEmpty) {
@@ -798,13 +798,33 @@ class FirestoreService {
           'bankAccountNumber': data['bankAccountNumber'] as String? ?? '',
           'bankAccountName': data['bankAccountName'] as String? ?? '',
           'email': data['email'] as String? ?? '',
+          'ratePerDay': data['ratePerDay'] as int? ?? 50000,
         };
       }
     } catch (e) {
       debugPrint('Error getting cashier bank details: $e');
     }
-    return {'bankName': '', 'bankAccountNumber': '', 'bankAccountName': '', 'email': ''};
+    return {
+      'bankName': '',
+      'bankAccountNumber': '',
+      'bankAccountName': '',
+      'email': '',
+      'ratePerDay': 50000,
+    };
   }
+
+  Future<void> updateCashierRate(String cashierName, int rate) async {
+    try {
+      final snapshot = await _db.collection('users').where('name', isEqualTo: cashierName).limit(1).get();
+      if (snapshot.docs.isNotEmpty) {
+        await snapshot.docs.first.reference.update({'ratePerDay': rate});
+      }
+    } catch (e) {
+      debugPrint('Error updating cashier rate: $e');
+      rethrow;
+    }
+  }
+
 
   /// Save a salary payment record
   Future<void> addSalaryPayment(Map<String, dynamic> data) async {

@@ -18,7 +18,7 @@ class SalaryScreen extends StatefulWidget {
 
 class _SalaryScreenState extends State<SalaryScreen> {
   final FirestoreService _fs = FirestoreService();
-  final int _ratePerDay = 50000;
+  int _ratePerDay = 50000;
 
   int _selectedMonth = DateTime.now().month;
   int _selectedYear = DateTime.now().year;
@@ -85,7 +85,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
     if (!mounted) return;
     final workData = results[0] as Map<String, dynamic>;
     final paid = results[1] as int;
-    final bankData = results[2] as Map<String, String>;
+    final bankData = results[2] as Map<String, dynamic>;
     
     final List<String> rawDates = List<String>.from(workData['dates'] ?? []);
     // Sort dates chronologically
@@ -104,6 +104,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
       _cashierBankAccount = bankData['bankAccountNumber'] ?? '';
       _cashierBankAccountName = bankData['bankAccountName'] ?? '';
       _cashierEmail = bankData['email'] ?? '';
+      _ratePerDay = bankData['ratePerDay'] as int? ?? 50000;
       _isLoadingWork = false;
     });
   }
@@ -237,6 +238,74 @@ class _SalaryScreenState extends State<SalaryScreen> {
       }
     } catch (_) {}
     return DateTime.tryParse(dateStr) ?? DateTime.now();
+  }
+
+  // ── Edit Tarif Gaji Dialog ──
+  void _showEditRateDialog() {
+    if (_selectedCashier == null) return;
+    final controller = TextEditingController(text: _ratePerDay.toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Edit Tarif Gaji Harian', style: AppTextStyles.heading3),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'Tarif Baru (Rp / Hari)',
+            prefixText: 'Rp ',
+            filled: true,
+            fillColor: AppColors.card,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.isNotEmpty) {
+                final rate = int.tryParse(controller.text) ?? 50000;
+                final navigator = Navigator.of(ctx);
+                
+                try {
+                  await _fs.updateCashierRate(_selectedCashier!, rate);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Tarif gaji harian berhasil diperbarui'),
+                        backgroundColor: AppColors.success,
+                      ),
+                    );
+                  }
+                  navigator.pop();
+                  _loadWorkingDays();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Gagal memperbarui tarif: $e'),
+                        backgroundColor: AppColors.error,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            child: const Text('Simpan', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Input Gaji Dialog ──
@@ -936,6 +1005,52 @@ class _SalaryScreenState extends State<SalaryScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.border.withOpacity(0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Tarif Gaji Harian',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        AppFormatter.formatRupiah(_ratePerDay),
+                        style: AppTextStyles.heading3.copyWith(letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                ),
+                Consumer<AuthProvider>(
+                  builder: (context, auth, _) {
+                    if (!auth.isAdmin && !auth.isOwner) return const SizedBox.shrink();
+                    return ElevatedButton.icon(
+                      onPressed: _showEditRateDialog,
+                      icon: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+                      label: const Text('Edit', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                      ),
+                    );
+                  }
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
