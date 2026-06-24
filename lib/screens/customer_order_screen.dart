@@ -242,6 +242,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
   Future<void> _submitOrder() async {
     if (_cart.isEmpty) return;
+    if (_isSubmitting) return; // Idempotency guard: cegah double submit
 
     setState(() {
       _isSubmitting = true;
@@ -628,7 +629,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                             width: double.infinity,
                             height: 50,
                             child: ElevatedButton(
-                              onPressed: _cart.isEmpty
+                              onPressed: (_cart.isEmpty || _isSubmitting)
                                   ? null
                                   : () {
                                       Navigator.pop(ctx);

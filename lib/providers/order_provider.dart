@@ -114,7 +114,7 @@ class OrderProvider extends ChangeNotifier {
     return await _firestoreService.getNextOrderSequence();
   }
 
-  Future<Order> createOrder(Order order, {int? sequenceNumber}) async {
+  Future<Order> createOrder(Order order, {int? sequenceNumber, String cashierRole = 'kasir'}) async {
     // Gunakan nomor urut manual (dari draf) jika ada, jika tidak baru ambil dari database
     final seq = sequenceNumber ?? await _firestoreService.getNextOrderSequence();
     final orderWithSeq = order.withSequenceNumber(seq);
@@ -123,8 +123,11 @@ class OrderProvider extends ChangeNotifier {
     await loadStats(); // Refresh stats
 
     // Record attendance for salary tracking (non-blocking)
-    _firestoreService.recordWorkingDay(
-        orderWithSeq.cashierName, orderWithSeq.createdAt);
+    // Hanya catat untuk role admin dan kasir, BUKAN owner
+    if (cashierRole != 'owner') {
+      _firestoreService.recordWorkingDay(
+          orderWithSeq.cashierName, orderWithSeq.createdAt);
+    }
     
     // Return the full order with the new ID and sequence number
     return Order(

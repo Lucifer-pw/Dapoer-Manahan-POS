@@ -341,6 +341,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       final completedOrder = await orderProv.createOrder(
         order, 
         sequenceNumber: finalSequenceNumber,
+        cashierRole: auth.role,
       );
       
       // Update table status if not takeaway
