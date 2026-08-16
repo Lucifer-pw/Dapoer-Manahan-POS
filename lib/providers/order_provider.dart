@@ -145,6 +145,7 @@ class OrderProvider extends ChangeNotifier {
       status: orderWithSeq.status,
       createdAt: orderWithSeq.createdAt,
       sequenceNumber: orderWithSeq.sequenceNumber,
+      shift: orderWithSeq.shift,
     );
   }
 

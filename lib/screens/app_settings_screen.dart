@@ -10,6 +10,7 @@ import 'billing_history_screen.dart';
 import 'salary_screen.dart';
 import 'qris_management_screen.dart';
 import 'feature_management_screen.dart';
+import 'user_management_screen.dart';
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -289,6 +290,18 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                   _buildSectionHeader(auth.isAdmin ? 'Administrator' : 'Owner'),
                   const SizedBox(height: 16),
                   if (auth.isAdmin) ...[
+                    _buildSettingsTile(
+                      icon: Icons.manage_accounts_rounded,
+                      title: 'Kelola Akun Pengguna (Admin)',
+                      subtitle: 'Tambah akun kasir/owner & kelola staf',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const UserManagementScreen()),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     _buildSettingsTile(
                       icon: Icons.qr_code_scanner_rounded,
                       title: 'Kelola QRIS (Admin)',

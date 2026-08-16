@@ -196,6 +196,7 @@ class _QrOrderFloatingCardState extends State<QrOrderFloatingCard>
                           final order = orders[index];
                           final String orderId = order['id'] ?? '';
                           final int tableNum = _toInt(order['tableNumber']);
+                          final String customerName = order['customerName'] as String? ?? '';
                           final int total = _toInt(order['totalPrice'] ?? order['total']);
                           final List<dynamic> items = order['items'] as List<dynamic>? ?? [];
 
@@ -216,23 +217,56 @@ class _QrOrderFloatingCardState extends State<QrOrderFloatingCard>
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withOpacity(0.12),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'MEJA $tableNum',
-                                        style: const TextStyle(
-                                          color: AppColors.primary,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.primary.withOpacity(0.12),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'MEJA $tableNum',
+                                            style: const TextStyle(
+                                              color: AppColors.primary,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        if (customerName.isNotEmpty) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF66BB6A).withOpacity(0.12),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: const Color(0xFF66BB6A).withOpacity(0.3)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.person_rounded, size: 13, color: Color(0xFF66BB6A)),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'a.n $customerName',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF66BB6A),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     Text(
                                       AppFormatter.formatRupiah(total),

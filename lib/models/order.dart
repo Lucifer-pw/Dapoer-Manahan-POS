@@ -19,6 +19,8 @@ class Order {
   final bool isTakeAway;
   final DateTime createdAt;
   final int sequenceNumber; // New: for sequential order numbers
+  final String shift; // e.g. 'Shift 1' or 'Shift 2'
+  final String customerName; // Name of customer who ordered via QR
 
   Order({
     required this.id,
@@ -36,6 +38,8 @@ class Order {
     this.isTakeAway = false,
     DateTime? createdAt,
     this.sequenceNumber = 0, // Default to 0
+    this.shift = '',
+    this.customerName = '',
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory Order.fromMap(Map<String, dynamic> map, String docId) {
@@ -63,6 +67,8 @@ class Order {
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
       sequenceNumber: map['sequenceNumber'] ?? 0,
+      shift: map['shift'] ?? '',
+      customerName: map['customerName'] ?? '',
     );
   }
 
@@ -82,6 +88,8 @@ class Order {
       'isTakeAway': isTakeAway,
       'createdAt': Timestamp.fromDate(createdAt),
       'sequenceNumber': sequenceNumber,
+      'shift': shift,
+      'customerName': customerName,
     };
   }
 
@@ -106,6 +114,8 @@ class Order {
       isTakeAway: isTakeAway,
       createdAt: createdAt,
       sequenceNumber: seq,
+      shift: shift,
+      customerName: customerName,
     );
   }
 }

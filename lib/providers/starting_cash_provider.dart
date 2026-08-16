@@ -22,9 +22,9 @@ class StartingCashProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStartingCash(DateTime date, int amount) async {
+  Future<void> updateStartingCash(DateTime date, int amount, {String? cashierName, String? shift}) async {
     try {
-      await _firestoreService.setStartingCash(date, amount);
+      await _firestoreService.setStartingCash(date, amount, cashierName: cashierName, shift: shift);
       _startingCash = amount;
       notifyListeners();
     } catch (e) {

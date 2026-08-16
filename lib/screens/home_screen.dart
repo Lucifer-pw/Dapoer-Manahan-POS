@@ -26,6 +26,8 @@ import 'best_seller_screen.dart';
 import 'salary_screen.dart';
 import 'user_guide_screen.dart';
 import 'cctv_screen.dart';
+import '../widgets/shift_selection_dialog.dart';
+import '../widgets/close_shift_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -260,7 +262,57 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
+              Row(
+                children: [
+                  Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
+                  if (auth.role == 'kasir' && auth.currentShift.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => ShiftSelectionDialog.show(context, isDismissible: true),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: auth.currentShift.contains('1')
+                              ? const Color(0xFFFFA726).withOpacity(0.18)
+                              : const Color(0xFFAB47BC).withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(
+                            color: auth.currentShift.contains('1')
+                                ? const Color(0xFFFFA726)
+                                : const Color(0xFFAB47BC),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              auth.currentShift.contains('1')
+                                  ? Icons.wb_sunny_rounded
+                                  : Icons.nightlight_round,
+                              size: 11,
+                              color: auth.currentShift.contains('1')
+                                  ? const Color(0xFFFFA726)
+                                  : const Color(0xFFCE93D8),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              auth.currentShift,
+                              style: AppTextStyles.caption.copyWith(
+                                color: auth.currentShift.contains('1')
+                                    ? const Color(0xFFFFA726)
+                                    : const Color(0xFFCE93D8),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
               const SizedBox(height: 2),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -361,6 +413,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const CctvScreen()),
               );
+            } else if (value == 'close_shift') {
+              CloseShiftDialog.show(context);
+            } else if (value == 'change_shift') {
+              ShiftSelectionDialog.show(context, isDismissible: true);
             } else if (value == 'settings') {
               Navigator.push(
                   context,
@@ -436,6 +492,28 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
+            if (auth.role == 'kasir') ...[
+              PopupMenuItem<String>(
+                value: 'change_shift',
+                child: Row(
+                  children: [
+                    const Icon(Icons.swap_horiz_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Text(auth.currentShift.isNotEmpty ? 'Ganti Shift (${auth.currentShift})' : 'Pilih Shift', style: AppTextStyles.body),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'close_shift',
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_clock_rounded, color: AppColors.error, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Tutup Shift & Rekap Kas', style: AppTextStyles.body.copyWith(color: AppColors.error, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
             const PopupMenuDivider(),
             const PopupMenuItem<String>(
               value: 'logout',

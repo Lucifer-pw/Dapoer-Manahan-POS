@@ -19,6 +19,7 @@ import '../providers/navigation_provider.dart';
 import '../providers/printer_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/feature_flags_provider.dart';
+import '../widgets/shift_selection_dialog.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -77,9 +78,31 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     });
 
     // Setup state listeners for printer & network connectivity
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      
+      // Tunggu hingga role selesai dimuat dari Firestore
+      if (auth.isLoggedIn && !auth.isRoleLoaded) {
+        int waitCount = 0;
+        while (!auth.isRoleLoaded && waitCount < 15 && mounted) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+        }
+      }
+
+      // Auto prompt shift selection HANYA untuk role Kasir murni (Bukan Admin, Bukan Owner)
+      if (mounted && 
+          auth.isLoggedIn && 
+          auth.isRoleLoaded && 
+          !auth.isAdmin && 
+          !auth.isOwner && 
+          auth.role == 'kasir' && 
+          auth.currentShift.isEmpty) {
+        ShiftSelectionDialog.show(context);
+      }
+
       final printerProv = Provider.of<PrinterProvider>(context, listen: false);
       _lastPrinterState = printerProv.isConnected;
       printerProv.addListener(_onPrinterStateChanged);

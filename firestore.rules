@@ -1,0 +1,155 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fungsi pembantu untuk memverifikasi role pengguna
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return request.auth != null && getUserData().role == 'admin';
+    }
+    
+    function isOwner() {
+      return request.auth != null && getUserData().role == 'owner';
+    }
+    
+    function isCashier() {
+      return request.auth != null && getUserData().role == 'kasir';
+    }
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    // ============================================================
+    // Koleksi Users (+ subcollection drafts & devices)
+    // ============================================================
+    match /users/{userId} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() || (isLoggedIn() && request.auth.uid == userId);
+      
+      // Subcollection: Drafts pesanan per kasir
+      match /drafts/{draftId} {
+        allow read, write: if isLoggedIn() && request.auth.uid == userId;
+      }
+      
+      // Subcollection: Perangkat terdaftar per user
+      match /devices/{deviceId} {
+        allow read, write: if isLoggedIn() && request.auth.uid == userId;
+      }
+    }
+    
+    // ============================================================
+    // Koleksi Settings & Feature Flags
+    // ============================================================
+    match /settings/{document} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() || isOwner();
+    }
+    
+    // ============================================================
+    // App Settings (billing, cctv, wifi, qris_config, app_version)
+    // WAJIB read: true — karena pengecekan billing/subscription
+    // terjadi di splash screen SEBELUM user login
+    // ============================================================
+    match /app_settings/{document} {
+      allow read: if true;
+      allow write: if isAdmin() || isOwner();
+    }
+
+    // ============================================================
+    // Koleksi Attendance / Kehadiran & Slip Gaji
+    // ============================================================
+    match /attendance/{docId} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() || isOwner() || isLoggedIn();
+    }
+
+    // ============================================================
+    // Koleksi Salary Payments (Riwayat Pembayaran Gaji)
+    // ============================================================
+    match /salary_payments/{paymentId} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin() || isOwner();
+    }
+
+    // ============================================================
+    // Koleksi Starting Cash (Modal Kas Awal Harian)
+    // ============================================================
+    match /starting_cash/{docId} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn();
+    }
+
+    // ============================================================
+    // Koleksi Pengeluaran / Belanja
+    // ============================================================
+    match /expenses/{expenseId} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn();
+    }
+
+    // ============================================================
+    // Koleksi Billing History (Riwayat Tagihan Aplikasi)
+    // ============================================================
+    match /billing_history/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOwner();
+    }
+
+    // ============================================================
+    // Koleksi QRIS Images
+    // ============================================================
+    match /qris_images/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() || isOwner();
+    }
+
+    // ============================================================
+    // Koleksi Order / Transaksi POS
+    // ============================================================
+    match /orders/{orderId} {
+      allow read, create: if true; 
+      allow update, delete: if isLoggedIn();
+    }
+    
+    // ============================================================
+    // Koleksi QR Orders (Pesanan Pelanggan via QR Code Meja)
+    // ============================================================
+    match /qr_orders/{orderId} {
+      allow read, create: if true;
+      allow update, delete: if isLoggedIn();
+    }
+    
+    // ============================================================
+    // Koleksi Meja Restoran
+    // ============================================================
+    match /tables/{tableId} {
+      allow read: if true;
+      allow write: if isLoggedIn();
+    }
+    
+    // ============================================================
+    // Koleksi Menu & Kategori
+    // ============================================================
+    match /menu_items/{itemId} {
+      allow read: if true;
+      allow write: if isLoggedIn();
+    }
+    
+    match /categories/{catId} {
+      allow read: if true;
+      allow write: if isLoggedIn();
+    }
+
+    // ============================================================
+    // Koleksi Chats (Chat antara Pelanggan dan Kasir)
+    // ============================================================
+    match /chats/{chatId} {
+      allow read, create, update: if true;
+      allow delete: if isLoggedIn();
+    }
+  }
+}

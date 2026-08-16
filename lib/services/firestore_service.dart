@@ -631,13 +631,15 @@ class FirestoreService {
     return 0;
   }
 
-  Future<void> setStartingCash(DateTime date, int amount) async {
+  Future<void> setStartingCash(DateTime date, int amount, {String? cashierName, String? shift}) async {
     final dateStr = "${date.year}-${date.month}-${date.day}";
     await _db.collection('starting_cash').doc(dateStr).set({
       'amount': amount,
       'date': Timestamp.fromDate(date),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
+      if (cashierName != null) 'cashierName': cashierName,
+      if (shift != null) 'shift': shift,
+    }, SetOptions(merge: true));
   }
 
   // ============================================================

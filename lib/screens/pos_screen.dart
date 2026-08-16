@@ -18,6 +18,8 @@ import '../providers/order_provider.dart';
 import 'package:uuid/uuid.dart';
 import '../widgets/qr_order_floating_card.dart';
 import '../widgets/table_chat_floating_card.dart';
+import '../widgets/shift_selection_dialog.dart';
+import '../providers/auth_provider.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -126,7 +128,41 @@ class _PosScreenState extends State<PosScreen> {
         child: Column(children: [
           Row(children: [
             Text('Kasir', style: AppTextStyles.heading2),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
+            Consumer<AuthProvider>(builder: (context, auth, _) {
+              if (auth.role == 'kasir' && auth.currentShift.isNotEmpty) {
+                return GestureDetector(
+                  onTap: () => ShiftSelectionDialog.show(context, isDismissible: true),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: auth.currentShift.contains('1')
+                          ? const Color(0xFFFFA726).withOpacity(0.18)
+                          : const Color(0xFFAB47BC).withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(
+                        color: auth.currentShift.contains('1')
+                            ? const Color(0xFFFFA726)
+                            : const Color(0xFFAB47BC),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      auth.currentShift,
+                      style: AppTextStyles.caption.copyWith(
+                        color: auth.currentShift.contains('1')
+                            ? const Color(0xFFFFA726)
+                            : const Color(0xFFCE93D8),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }),
+            const SizedBox(width: 6),
             // Drafts Button
             IconButton(
               onPressed: () => showDialog(context: context, builder: (_) => const DraftsDialog()),

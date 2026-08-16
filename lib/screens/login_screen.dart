@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../utils/constants.dart';
 import 'main_shell.dart';
-import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -253,37 +252,21 @@ class _LoginScreenState extends State<LoginScreen>
                             },
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                            const ForgotPasswordScreen()),
-                                  );
-                                },
-                                child: Text(
-                                  'Lupa Password?',
-                                  style: AppTextStyles.bodySecondary
-                                      .copyWith(color: AppColors.primary),
-                                ),
+                          Center(
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const ForgotPasswordScreen()),
+                                );
+                              },
+                              child: Text(
+                                'Lupa Password?',
+                                style: AppTextStyles.bodySecondary
+                                    .copyWith(color: AppColors.primary),
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                        builder: (_) => const RegisterScreen()),
-                                  );
-                                },
-                                child: Text(
-                                  'Daftar Akun',
-                                  style: AppTextStyles.bodySecondary
-                                      .copyWith(color: AppColors.primary),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),

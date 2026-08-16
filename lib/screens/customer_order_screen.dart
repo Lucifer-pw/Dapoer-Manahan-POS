@@ -23,10 +23,33 @@ class CustomerOrderScreen extends StatefulWidget {
 }
 
 class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
+  final TextEditingController _customerNameController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _saveTableNumber();
+    _loadSavedCustomerName();
+  }
+
+  @override
+  void dispose() {
+    _customerNameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSavedCustomerName() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedName = prefs.getString('saved_customer_name');
+      if (savedName != null && savedName.isNotEmpty && mounted) {
+        setState(() {
+          _customerNameController.text = savedName;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading customer name: $e');
+    }
   }
 
   Future<void> _saveTableNumber() async {
@@ -244,11 +267,26 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
     if (_cart.isEmpty) return;
     if (_isSubmitting) return; // Idempotency guard: cegah double submit
 
+    final customerName = _customerNameController.text.trim();
+    if (customerName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Harap masukkan Nama Pemesan terlebih dahulu agar pelayan tahu pesanan Anda.'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
 
     try {
+      // Simpan nama agar otomatis terisi saat pesan tambahan
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('saved_customer_name', customerName);
+
       final List<Map<String, dynamic>> orderItems = _cart.values.map((elem) {
         final item = elem['item'] as MenuItem;
         final qty = elem['quantity'] as int;
@@ -266,6 +304,7 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
 
       final Map<String, dynamic> qrOrderData = {
         'tableNumber': widget.tableNumber,
+        'customerName': customerName,
         'items': orderItems,
         'totalPrice': totalPrice,
         'status': 'pending',
@@ -494,6 +533,80 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Input Nama Pemesan
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceDark,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: Border.all(
+                                color: _customerNameController.text.trim().isEmpty
+                                    ? const Color(0xFFFFA726)
+                                    : AppColors.border.withOpacity(0.3),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.person_pin_rounded, color: AppColors.primary, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Nama Pemesan',
+                                      style: AppTextStyles.subtitle.copyWith(fontSize: 14, fontWeight: FontWeight.bold),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _customerNameController.text.trim().isEmpty
+                                            ? const Color(0xFFFFA726).withOpacity(0.2)
+                                            : AppColors.success.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        _customerNameController.text.trim().isEmpty ? 'Wajib Diisi' : 'Terisi',
+                                        style: TextStyle(
+                                          color: _customerNameController.text.trim().isEmpty ? const Color(0xFFFFA726) : AppColors.success,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _customerNameController,
+                                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                  decoration: InputDecoration(
+                                    hintText: 'Contoh: Mas Budi / Kak Siti',
+                                    hintStyle: AppTextStyles.caption.copyWith(color: AppColors.textHint),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    filled: true,
+                                    fillColor: AppColors.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                    ),
+                                  ),
+                                  onChanged: (val) => setModalState(() {}),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
                           Text(
                             'Pilih Metode Pembayaran',
                             style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
@@ -632,6 +745,15 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                               onPressed: (_cart.isEmpty || _isSubmitting)
                                   ? null
                                   : () {
+                                      if (_customerNameController.text.trim().isEmpty) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('⚠️ Harap masukkan Nama Pemesan terlebih dahulu agar pelayan tahu pesanan Anda.'),
+                                            backgroundColor: AppColors.error,
+                                          ),
+                                        );
+                                        return;
+                                      }
                                       Navigator.pop(ctx);
                                       _submitOrder();
                                     },
@@ -1416,10 +1538,32 @@ class _CustomerOrderScreenState extends State<CustomerOrderScreen> {
                         AppFormatter.formatDateTime(date),
                         style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Metode: $paymentMethod',
-                        style: AppTextStyles.caption.copyWith(fontSize: 11, fontStyle: FontStyle.italic),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          if ((qr['customerName'] as String? ?? '').isNotEmpty) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'a.n ${qr['customerName']}',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
+                          Text(
+                            'Metode: $paymentMethod',
+                            style: AppTextStyles.caption.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -13,7 +13,9 @@ class AuthProvider extends ChangeNotifier {
   StreamSubscription<DocumentSnapshot>? _userRoleSubscription;
 
   User? _user;
-  String _role = 'kasir';
+  String _role = '';
+  bool _isRoleLoaded = false;
+  String _currentShift = ''; // 'Shift 1 (Pagi)' or 'Shift 2 (Malam)'
   String _bankName = '';
   String _bankAccountNumber = '';
   String _bankAccountName = '';
@@ -23,11 +25,13 @@ class AuthProvider extends ChangeNotifier {
 
   User? get user => _user;
   String get role => _role;
+  bool get isRoleLoaded => _isRoleLoaded;
+  String get currentShift => _currentShift;
   String get bankName => _bankName;
   String get bankAccountNumber => _bankAccountNumber;
   String get bankAccountName => _bankAccountName;
-  bool get isAdmin => _role == 'admin';
-  bool get isOwner => _role == 'owner';
+  bool get isAdmin => _role.toLowerCase() == 'admin';
+  bool get isOwner => _role.toLowerCase() == 'owner';
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _user != null;
   bool get isAuthChecked => _isAuthChecked;
@@ -35,6 +39,16 @@ class AuthProvider extends ChangeNotifier {
   
   String get cashierName =>
       _user?.displayName ?? _user?.email?.split('@').first ?? 'Kasir';
+
+  void setShift(String shift) {
+    _currentShift = shift;
+    notifyListeners();
+  }
+
+  void clearShift() {
+    _currentShift = '';
+    notifyListeners();
+  }
 
   AuthProvider() {
     _initAuth();
@@ -44,11 +58,15 @@ class AuthProvider extends ChangeNotifier {
     _authService.authStateChanges.listen((user) async {
       _user = user;
       if (user != null) {
+        _isRoleLoaded = false;
         await _fetchUserRole(user.uid);
+        _isRoleLoaded = true;
         await saveDeviceInfo(); // Save device info on every login/restart
         await updateOnlineStatus(true); // Mark user as online
       } else {
-        _role = 'kasir';
+        _role = '';
+        _isRoleLoaded = true;
+        _currentShift = '';
       }
       _isLoading = false;
       _isAuthChecked = true;
@@ -180,16 +198,28 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> signIn(String email, String password) async {
     _isLoading = true;
+    _isRoleLoaded = false;
     _error = null;
     notifyListeners();
 
     try {
-      await _authService.signIn(email, password);
-      // Device info will be saved by the listener
+      final cred = await _authService.signIn(email, password);
+      if (cred.user != null) {
+        _user = cred.user;
+        await _fetchUserRole(cred.user!.uid);
+        await saveDeviceInfo();
+        await updateOnlineStatus(true);
+      }
+      _isLoading = false;
+      _isAuthChecked = true;
+      _isRoleLoaded = true;
+      notifyListeners();
       return true;
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
+      _isAuthChecked = true;
+      _isRoleLoaded = true;
       notifyListeners();
       return false;
     }
@@ -245,6 +275,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    _currentShift = '';
     await updateOnlineStatus(false);
     await _userRoleSubscription?.cancel();
     _userRoleSubscription = null;

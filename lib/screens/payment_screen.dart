@@ -336,6 +336,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         change: _paymentMethod == 'QRIS' ? 0 : (_amountPaid - cart.total),
         status: OrderStatus.completed,
         isTakeAway: cart.isTakeAway,
+        shift: auth.currentShift,
       );
 
       final completedOrder = await orderProv.createOrder(

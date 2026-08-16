@@ -1128,10 +1128,39 @@ class _TableScreenState extends State<TableScreen> {
                       AppFormatter.formatDateTime(date),
                       style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Metode: $paymentMethod',
-                      style: AppTextStyles.caption.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        if ((qr['customerName'] as String? ?? '').isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.person_rounded, size: 12, color: AppColors.primary),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'a.n ${qr['customerName']}',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                        Text(
+                          'Metode: $paymentMethod',
+                          style: AppTextStyles.caption.copyWith(fontSize: 10, fontStyle: FontStyle.italic),
+                        ),
+                      ],
                     ),
                   ],
                 ),
