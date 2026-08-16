@@ -633,6 +633,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final showAvgDaily = orderProv.currentPeriod != ReportPeriod.daily;
 
       final modalAwal = cashProv.startingCash;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
 
       final orders = stats['orders'] as List? ?? [];
       // Support for both Order objects and Map objects from Firestore (if mixed)
@@ -840,8 +841,362 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Air Mineral: $countAirMineral\nFruitea: $countFruitea\nTeh Botol: $countTehBotol\nTebs: $countTebs',
           );
         }),
+        if (orderProv.currentPeriod == ReportPeriod.daily) ...[
+          const SizedBox(height: 12),
+          _buildShiftBreakdownSection(orders, expenseProv, cashProv, auth),
+        ],
       ]);
     });
+  }
+
+  bool _isShift1(dynamic order) {
+    String shiftStr = '';
+    if (order is Order) {
+      shiftStr = order.shift;
+    } else if (order is Map<String, dynamic>) {
+      shiftStr = order['shift'] as String? ?? '';
+    }
+    if (shiftStr.isNotEmpty) {
+      return shiftStr.contains('1') || shiftStr.toLowerCase().contains('pagi');
+    }
+    DateTime? dt;
+    if (order is Order) {
+      dt = order.createdAt;
+    } else if (order is Map<String, dynamic>) {
+      final c = order['createdAt'];
+      if (c is Timestamp) {
+        dt = c.toDate();
+      } else if (c is DateTime) {
+        dt = c;
+      }
+    }
+    if (dt != null) {
+      return dt.hour < 16;
+    }
+    return true;
+  }
+
+  bool _isShift2(dynamic order) {
+    String shiftStr = '';
+    if (order is Order) {
+      shiftStr = order.shift;
+    } else if (order is Map<String, dynamic>) {
+      shiftStr = order['shift'] as String? ?? '';
+    }
+    if (shiftStr.isNotEmpty) {
+      return shiftStr.contains('2') || shiftStr.toLowerCase().contains('malam');
+    }
+    DateTime? dt;
+    if (order is Order) {
+      dt = order.createdAt;
+    } else if (order is Map<String, dynamic>) {
+      final c = order['createdAt'];
+      if (c is Timestamp) {
+        dt = c.toDate();
+      } else if (c is DateTime) {
+        dt = c;
+      }
+    }
+    if (dt != null) {
+      return dt.hour >= 16;
+    }
+    return false;
+  }
+
+  bool _isOrderCompleted(dynamic o) {
+    if (o is Order) return o.status == OrderStatus.completed;
+    if (o is Map<String, dynamic>) return o['status'] == 'completed';
+    return false;
+  }
+
+  int _getOrderAmount(dynamic o) {
+    if (o is Order) return o.total;
+    if (o is Map<String, dynamic>) return (o['total'] as int?) ?? 0;
+    return 0;
+  }
+
+  String _getOrderPaymentMethod(dynamic o) {
+    if (o is Order) return o.paymentMethod;
+    if (o is Map<String, dynamic>) return o['paymentMethod'] as String? ?? '';
+    return '';
+  }
+
+  String _getOrderCashierName(dynamic o) {
+    if (o is Order) return o.cashierName;
+    if (o is Map<String, dynamic>) return o['cashierName'] as String? ?? '';
+    return '';
+  }
+
+  Widget _buildShiftBreakdownSection(
+    List<dynamic> orders,
+    ExpenseProvider expenseProv,
+    StartingCashProvider cashProv,
+    AuthProvider auth,
+  ) {
+    // 1. Shift 1 Calculations
+    final orders1 = orders.where((o) => _isShift1(o)).toList();
+    final completed1 = orders1.where((o) => _isOrderCompleted(o)).toList();
+    final cash1 = completed1
+        .where((o) => _getOrderPaymentMethod(o) == 'Tunai')
+        .fold(0, (acc, o) => acc + _getOrderAmount(o));
+    final qris1 = completed1
+        .where((o) => _getOrderPaymentMethod(o) == 'QRIS')
+        .fold(0, (acc, o) => acc + _getOrderAmount(o));
+    final gross1 = cash1 + qris1;
+    final count1 = completed1.length;
+    final cashier1 = completed1.isNotEmpty ? _getOrderCashierName(completed1.first) : 'Kasir 1';
+    final expense1 = expenseProv.todayExpenses
+        .where((e) => e.date.hour < 16)
+        .fold(0, (acc, e) => acc + e.price);
+    final expenseCash1 = expenseProv.todayExpenses
+        .where((e) => e.date.hour < 16 && e.paymentMethod == 'Cash')
+        .fold(0, (acc, e) => acc + e.price);
+    final modalAwal1 = cashProv.startingCash;
+    final drawerCash1 = modalAwal1 + cash1 - expenseCash1;
+
+    // 2. Shift 2 Calculations
+    final orders2 = orders.where((o) => _isShift2(o)).toList();
+    final completed2 = orders2.where((o) => _isOrderCompleted(o)).toList();
+    final cash2 = completed2
+        .where((o) => _getOrderPaymentMethod(o) == 'Tunai')
+        .fold(0, (acc, o) => acc + _getOrderAmount(o));
+    final qris2 = completed2
+        .where((o) => _getOrderPaymentMethod(o) == 'QRIS')
+        .fold(0, (acc, o) => acc + _getOrderAmount(o));
+    final gross2 = cash2 + qris2;
+    final count2 = completed2.length;
+    final cashier2 = completed2.isNotEmpty ? _getOrderCashierName(completed2.first) : 'Kasir 2';
+    final expense2 = expenseProv.todayExpenses
+        .where((e) => e.date.hour >= 16)
+        .fold(0, (acc, e) => acc + e.price);
+    final expenseCash2 = expenseProv.todayExpenses
+        .where((e) => e.date.hour >= 16 && e.paymentMethod == 'Cash')
+        .fold(0, (acc, e) => acc + e.price);
+    final drawerCash2 = cash2 - expenseCash2;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: const Icon(Icons.splitscreen_rounded, color: AppColors.primary, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Rincian Per Shift (Hari Ini)',
+              style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final isWide = constraints.maxWidth >= 600;
+
+            final card1 = _buildShiftDetailCard(
+              title: 'Shift 1 (Pagi)',
+              icon: Icons.wb_sunny_rounded,
+              color: const Color(0xFFFFA726),
+              timeLabel: '08:00 - 16:00',
+              cashierName: cashier1,
+              txCount: count1,
+              cash: cash1,
+              qris: qris1,
+              expense: expense1,
+              gross: gross1,
+              drawerCash: drawerCash1,
+              modalAwal: modalAwal1,
+              isCurrentShift: auth.currentShift.contains('1') || auth.currentShift.toLowerCase().contains('pagi'),
+            );
+
+            final card2 = _buildShiftDetailCard(
+              title: 'Shift 2 (Malam)',
+              icon: Icons.nightlight_round,
+              color: const Color(0xFFAB47BC),
+              timeLabel: '15:45 - Tutup',
+              cashierName: cashier2,
+              txCount: count2,
+              cash: cash2,
+              qris: qris2,
+              expense: expense2,
+              gross: gross2,
+              drawerCash: drawerCash2,
+              modalAwal: 0,
+              isCurrentShift: auth.currentShift.contains('2') || auth.currentShift.toLowerCase().contains('malam'),
+            );
+
+            if (isWide) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: card1),
+                  const SizedBox(width: 14),
+                  Expanded(child: card2),
+                ],
+              );
+            } else {
+              return Column(
+                children: [
+                  card1,
+                  const SizedBox(height: 12),
+                  card2,
+                ],
+              );
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShiftDetailCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required String timeLabel,
+    required String cashierName,
+    required int txCount,
+    required int cash,
+    required int qris,
+    required int expense,
+    required int gross,
+    required int drawerCash,
+    required int modalAwal,
+    required bool isCurrentShift,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: isCurrentShift ? color.withOpacity(0.5) : AppColors.border.withOpacity(0.2),
+          width: isCurrentShift ? 1.5 : 1,
+        ),
+        boxShadow: isCurrentShift
+            ? [
+                BoxShadow(
+                  color: color.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: AppTextStyles.subtitle.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13.5,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        'Petugas: $cashierName',
+                        style: AppTextStyles.caption.copyWith(fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  border: Border.all(color: AppColors.border.withOpacity(0.3)),
+                ),
+                child: Text(
+                  '$txCount Trx',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.border.withOpacity(0.3)),
+          const SizedBox(height: 10),
+
+          if (modalAwal > 0) ...[
+            _buildShiftRowItem('Modal Awal di Laci', AppFormatter.formatRupiah(modalAwal), AppColors.textSecondary),
+            const SizedBox(height: 6),
+          ],
+          _buildShiftRowItem('Penjualan Tunai', '+ ${AppFormatter.formatRupiah(cash)}', AppColors.info),
+          const SizedBox(height: 6),
+          _buildShiftRowItem('Penjualan QRIS', '+ ${AppFormatter.formatRupiah(qris)}', AppColors.primary),
+          const SizedBox(height: 6),
+          _buildShiftRowItem('Belanja Bahan', '- ${AppFormatter.formatRupiah(expense)}', AppColors.error),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: AppColors.border.withOpacity(0.3)),
+          const SizedBox(height: 10),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Omset $title', style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                AppFormatter.formatRupiah(gross),
+                style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, color: color),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Fisik Kas Laci (Est.)', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+              Text(
+                AppFormatter.formatRupiah(drawerCash),
+                style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.bold, color: AppColors.success, fontSize: 11.5),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShiftRowItem(String label, String value, Color valueColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11.5)),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildDynamicChart() {
