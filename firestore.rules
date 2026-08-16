@@ -68,6 +68,14 @@ service cloud.firestore {
     }
 
     // ============================================================
+    // Koleksi Shift Logs (Sesi Kerja, Jam Datang & Jam Tutup Kasir)
+    // ============================================================
+    match /shift_logs/{logId} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn();
+    }
+
+    // ============================================================
     // Koleksi Salary Payments (Riwayat Pembayaran Gaji)
     // ============================================================
     match /salary_payments/{paymentId} {
