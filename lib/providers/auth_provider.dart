@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/notification/notification_helper.dart';
 
@@ -51,6 +52,17 @@ class AuthProvider extends ChangeNotifier {
     _currentShiftStartTime = startTime ?? DateTime.now();
     notifyListeners();
 
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('active_shift_${_user?.uid}', shift);
+      if (_currentShiftLogId.isNotEmpty) {
+        await prefs.setString('active_shift_log_id_${_user?.uid}', _currentShiftLogId);
+      }
+      if (_currentShiftStartTime != null) {
+        await prefs.setString('active_shift_start_${_user?.uid}', _currentShiftStartTime!.toIso8601String());
+      }
+    } catch (_) {}
+
     if (_user != null) {
       try {
         await FirebaseFirestore.instance.collection('users').doc(_user!.uid).update({
@@ -65,10 +77,20 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> clearShift() async {
+    final uid = _user?.uid;
     _currentShift = '';
     _currentShiftLogId = '';
     _currentShiftStartTime = null;
     notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (uid != null) {
+        await prefs.remove('active_shift_$uid');
+        await prefs.remove('active_shift_log_id_$uid');
+        await prefs.remove('active_shift_start_$uid');
+      }
+    } catch (_) {}
 
     if (_user != null) {
       try {
@@ -104,6 +126,8 @@ class AuthProvider extends ChangeNotifier {
         _role = '';
         _isRoleLoaded = true;
         _currentShift = '';
+        _currentShiftLogId = '';
+        _currentShiftStartTime = null;
       }
       _isLoading = false;
       _isAuthChecked = true;
@@ -141,7 +165,19 @@ class AuthProvider extends ChangeNotifier {
     // Cancel any existing listener first
     await _userRoleSubscription?.cancel();
 
-    // Do an initial one-shot read for fast startup
+    // 1. Cek cache lokal SharedPreferences terlebih dahulu agar instan saat refresh
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localShift = prefs.getString('active_shift_$uid');
+      if (localShift != null && localShift.isNotEmpty) {
+        _currentShift = localShift;
+        _currentShiftLogId = prefs.getString('active_shift_log_id_$uid') ?? '';
+        final localStart = prefs.getString('active_shift_start_$uid');
+        if (localStart != null) _currentShiftStartTime = DateTime.tryParse(localStart);
+      }
+    } catch (_) {}
+
+    // 2. Baca dari Firestore untuk mendapatkan status shift & role terkini
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
       if (doc.exists) {
@@ -150,12 +186,28 @@ class AuthProvider extends ChangeNotifier {
         _bankName = data['bankName'] ?? '';
         _bankAccountNumber = data['bankAccountNumber'] ?? '';
         _bankAccountName = data['bankAccountName'] ?? '';
+        
+        final remoteShift = data['currentShift'] as String? ?? '';
+        if (remoteShift.isNotEmpty) {
+          _currentShift = remoteShift;
+          _currentShiftLogId = data['currentShiftLogId'] as String? ?? '';
+          final sTime = data['shiftStartedAt'];
+          if (sTime is Timestamp) {
+            _currentShiftStartTime = sTime.toDate();
+          } else if (sTime is DateTime) {
+            _currentShiftStartTime = sTime;
+          }
+        } else if (_currentShift.isEmpty) {
+          _currentShift = '';
+          _currentShiftLogId = '';
+          _currentShiftStartTime = null;
+        }
       }
     } catch (e) {
       debugPrint('Error fetching role (initial): $e');
     }
 
-    // Then start a realtime listener to keep role in sync
+    // 3. Listener realtime Firestore
     _userRoleSubscription = FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -167,16 +219,20 @@ class AuthProvider extends ChangeNotifier {
         final newBankName = data['bankName'] ?? '';
         final newBankAccNum = data['bankAccountNumber'] ?? '';
         final newBankAccName = data['bankAccountName'] ?? '';
+        final newShift = data['currentShift'] as String? ?? '';
+        final newShiftLogId = data['currentShiftLogId'] as String? ?? '';
 
-        // Only notify if something actually changed
         if (_role != newRole ||
             _bankName != newBankName ||
             _bankAccountNumber != newBankAccNum ||
-            _bankAccountName != newBankAccName) {
+            _bankAccountName != newBankAccName ||
+            _currentShift != newShift) {
           _role = newRole;
           _bankName = newBankName;
           _bankAccountNumber = newBankAccNum;
           _bankAccountName = newBankAccName;
+          _currentShift = newShift;
+          _currentShiftLogId = newShiftLogId;
           notifyListeners();
         }
       }
