@@ -1479,7 +1479,28 @@ class _HomeScreenState extends State<HomeScreen> {
             String getFullLastSeenText(Map<String, dynamic> u, bool isOnline) {
               final String name = u['name'] ?? 'Staff';
               final String role = (u['role'] ?? 'kasir').toString().toUpperCase();
-              if (isOnline) return '$name ($role)\n🟢 Sedang Online';
+              final String currentShift = u['currentShift'] as String? ?? '';
+              final dynamic shiftStartField = u['shiftStartedAt'];
+              
+              String shiftTimeInfo = '';
+              if (shiftStartField != null) {
+                DateTime? sTime;
+                if (shiftStartField is Timestamp) sTime = shiftStartField.toDate();
+                if (shiftStartField is DateTime) sTime = shiftStartField;
+                if (sTime != null) {
+                  final h = sTime.hour.toString().padLeft(2, '0');
+                  final m = sTime.minute.toString().padLeft(2, '0');
+                  shiftTimeInfo = ' • Masuk: $h:$m WIB';
+                }
+              }
+
+              if (isOnline) {
+                if (currentShift.isNotEmpty) {
+                  final isPagi = currentShift.toLowerCase().contains('pagi') || currentShift.contains('1');
+                  return '$name ($role)\n${isPagi ? "☀️" : "🌙"} $currentShift\n🟢 Sedang Bertugas$shiftTimeInfo';
+                }
+                return '$name ($role)\n🟢 Sedang Online';
+              }
 
               final dynamic lastActiveField = u['lastActive'] ?? u['lastLogin'];
               if (lastActiveField == null) return '$name ($role)\n⚪ Status: Offline';
@@ -1619,7 +1640,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  lastSeen,
+                                  isOnline && (u['currentShift'] as String? ?? '').isNotEmpty
+                                      ? ((u['currentShift'] as String).toLowerCase().contains('pagi') || (u['currentShift'] as String).contains('1') ? '☀️ Shift 1' : '🌙 Shift 2')
+                                      : lastSeen,
                                   style: TextStyle(
                                     color: isOnline ? AppColors.success : AppColors.textHint.withOpacity(0.85),
                                     fontSize: 8.5,

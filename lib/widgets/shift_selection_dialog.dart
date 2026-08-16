@@ -46,20 +46,38 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Simpan shift di AuthProvider
-      auth.setShift(_selectedShift);
+      final now = DateTime.now();
 
-      // 2. Simpan modal awal kasir
+      // 1. Catat log shift di Firestore
+      final shiftLogId = await FirestoreService().startShiftLog(
+        cashierName: auth.cashierName,
+        userId: auth.user?.uid,
+        shift: _selectedShift,
+        startingCash: amount,
+        date: now,
+      );
+
+      // 2. Simpan shift di AuthProvider
+      await auth.setShift(_selectedShift, shiftLogId: shiftLogId, startTime: now);
+
+      // 3. Simpan modal awal kasir
       await cashProv.updateStartingCash(
-        DateTime.now(),
+        now,
         amount,
         cashierName: auth.cashierName,
         shift: _selectedShift,
       );
 
-      // 3. Rekam kehadiran otomatis (menjamin hak gaji Rp 50.000)
+      // 4. Rekam kehadiran otomatis (menjamin hak gaji Rp 50.000)
       if (auth.role != 'owner') {
-        await FirestoreService().recordWorkingDay(auth.cashierName, DateTime.now());
+        await FirestoreService().recordWorkingDay(
+          auth.cashierName,
+          now,
+          shift: _selectedShift,
+          shiftLogId: shiftLogId,
+          startTime: now,
+          startingCash: amount,
+        );
       }
 
       if (mounted) {

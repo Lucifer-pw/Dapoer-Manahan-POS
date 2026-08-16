@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/starting_cash_provider.dart';
+import '../services/firestore_service.dart';
 import '../screens/login_screen.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
@@ -197,6 +198,17 @@ class CloseShiftDialog extends StatelessWidget {
                     onPressed: () async {
                       final navigator = Navigator.of(context, rootNavigator: true);
                       navigator.pop();
+
+                      // 1. Catat jam tutup shift & closing cash di Firestore
+                      await FirestoreService().closeShiftLog(
+                        shiftLogId: auth.currentShiftLogId,
+                        cashierName: auth.cashierName,
+                        closingCash: totalKasLaci,
+                        date: DateTime.now(),
+                      );
+
+                      // 2. Clear shift state & logout
+                      await auth.clearShift();
                       await auth.signOut();
                       navigator.pushAndRemoveUntil(
                         MaterialPageRoute(builder: (_) => const LoginScreen()),

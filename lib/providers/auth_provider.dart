@@ -23,10 +23,15 @@ class AuthProvider extends ChangeNotifier {
   String? _error;
   bool _isAuthChecked = false;
 
+  String _currentShiftLogId = '';
+  DateTime? _currentShiftStartTime;
+
   User? get user => _user;
   String get role => _role;
   bool get isRoleLoaded => _isRoleLoaded;
   String get currentShift => _currentShift;
+  String get currentShiftLogId => _currentShiftLogId;
+  DateTime? get currentShiftStartTime => _currentShiftStartTime;
   String get bankName => _bankName;
   String get bankAccountNumber => _bankAccountNumber;
   String get bankAccountName => _bankAccountName;
@@ -40,14 +45,42 @@ class AuthProvider extends ChangeNotifier {
   String get cashierName =>
       _user?.displayName ?? _user?.email?.split('@').first ?? 'Kasir';
 
-  void setShift(String shift) {
+  Future<void> setShift(String shift, {String? shiftLogId, DateTime? startTime}) async {
     _currentShift = shift;
+    if (shiftLogId != null) _currentShiftLogId = shiftLogId;
+    _currentShiftStartTime = startTime ?? DateTime.now();
     notifyListeners();
+
+    if (_user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(_user!.uid).update({
+          'currentShift': shift,
+          'currentShiftLogId': _currentShiftLogId,
+          'shiftStartedAt': _currentShiftStartTime != null ? Timestamp.fromDate(_currentShiftStartTime!) : FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('Error updating shift on user doc: $e');
+      }
+    }
   }
 
-  void clearShift() {
+  Future<void> clearShift() async {
     _currentShift = '';
+    _currentShiftLogId = '';
+    _currentShiftStartTime = null;
     notifyListeners();
+
+    if (_user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(_user!.uid).update({
+          'currentShift': '',
+          'currentShiftLogId': '',
+          'shiftEndedAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint('Error clearing shift on user doc: $e');
+      }
+    }
   }
 
   Timer? _heartbeatTimer;

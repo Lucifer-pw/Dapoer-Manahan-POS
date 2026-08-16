@@ -26,6 +26,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
   List<String> _cashierNames = [];
   String? _selectedCashier;
   List<String> _workingDates = [];
+  List<Map<String, dynamic>> _shiftLogs = [];
 
   // Data
   int _totalWorkDays = 0;
@@ -80,12 +81,14 @@ class _SalaryScreenState extends State<SalaryScreen> {
       _fs.getWorkingDays(_selectedCashier!, start, end),
       _fs.getTotalPaidForCashier(_selectedCashier!, _selectedMonth, _selectedYear),
       _fs.getCashierBankDetails(_selectedCashier!),
+      _fs.getShiftLogsForMonth(_selectedCashier!, _selectedMonth, _selectedYear),
     ]);
 
     if (!mounted) return;
     final workData = results[0] as Map<String, dynamic>;
     final paid = results[1] as int;
     final bankData = results[2] as Map<String, dynamic>;
+    final shiftLogs = results[3] as List<Map<String, dynamic>>;
     
     final List<String> rawDates = List<String>.from(workData['dates'] ?? []);
     // Sort dates chronologically
@@ -97,6 +100,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
 
     setState(() {
       _workingDates = rawDates;
+      _shiftLogs = shiftLogs;
       _totalWorkDays = workData['workingDays'] as int;
       _totalTransactions = workData['totalTransactions'] as int;
       _totalPaid = paid;
@@ -1193,25 +1197,204 @@ class _SalaryScreenState extends State<SalaryScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                const SizedBox(height: 10),
+                Column(
                   children: _unpaidDates.map((dateStr) {
                     final date = _parseCustomDate(dateStr);
+                    final shiftForDate = _shiftLogs.where((l) => l['date'] == dateStr).toList();
+                    
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                         border: Border.all(color: AppColors.error.withOpacity(0.15)),
                       ),
-                      child: Text(
-                        AppFormatter.formatDate(date),
-                        style: AppTextStyles.caption.copyWith(fontSize: 11, color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            AppFormatter.formatDate(date),
+                            style: AppTextStyles.caption.copyWith(
+                              fontSize: 12,
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (shiftForDate.isNotEmpty) ...[
+                            ...shiftForDate.map((s) {
+                              final shiftName = s['shift']?.toString() ?? 'Kasir';
+                              final isPagi = shiftName.toLowerCase().contains('pagi') || shiftName.contains('1');
+                              final sTime = s['startTime'] is Timestamp ? (s['startTime'] as Timestamp).toDate() : null;
+                              final eTime = s['endTime'] is Timestamp ? (s['endTime'] as Timestamp).toDate() : null;
+                              String timeLabel = '';
+                              if (sTime != null && eTime != null) {
+                                timeLabel = '${AppFormatter.formatTime(sTime)} - ${AppFormatter.formatTime(eTime)}';
+                              } else if (sTime != null) {
+                                timeLabel = 'Masuk: ${AppFormatter.formatTime(sTime)}';
+                              }
+                              
+                              return Container(
+                                margin: const EdgeInsets.only(left: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '${isPagi ? "☀️" : "🌙"} $shiftName ${timeLabel.isNotEmpty ? "($timeLabel)" : ""}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ] else ...[
+                            Text(
+                              'Shift Kasir',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                            ),
+                          ],
+                        ],
                       ),
                     );
                   }).toList(),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        // Rincian Riwayat Jam Kerja Shift
+        if (_shiftLogs.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.border.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_filled_rounded, color: AppColors.primary, size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Riwayat Jam Masuk & Tutup Shift (${_shiftLogs.length} sesi):',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _shiftLogs.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, idx) {
+                    final log = _shiftLogs[idx];
+                    final dateStr = log['date']?.toString() ?? '';
+                    final date = _parseCustomDate(dateStr);
+                    final shiftName = log['shift']?.toString() ?? 'Kasir';
+                    final isPagi = shiftName.toLowerCase().contains('pagi') || shiftName.contains('1');
+                    final sTime = log['startTime'] is Timestamp ? (log['startTime'] as Timestamp).toDate() : null;
+                    final eTime = log['endTime'] is Timestamp ? (log['endTime'] as Timestamp).toDate() : null;
+                    final status = log['status']?.toString() ?? 'closed';
+                    final isLive = status == 'active';
+                    final startingCash = log['startingCash'] as int? ?? 0;
+                    final closingCash = log['closingCash'] as int?;
+
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isLive ? AppColors.success.withOpacity(0.08) : AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(
+                          color: isLive ? AppColors.success.withOpacity(0.4) : AppColors.border.withOpacity(0.15),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(isPagi ? '☀️' : '🌙', style: const TextStyle(fontSize: 16)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '$shiftName • ${AppFormatter.formatDate(date)}',
+                                    style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 12.5),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: isLive ? AppColors.success.withOpacity(0.15) : AppColors.surfaceDark,
+                                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                                ),
+                                child: Text(
+                                  isLive ? '🟢 Sedang Bertugas' : '✅ Selesai',
+                                  style: TextStyle(
+                                    color: isLive ? AppColors.success : AppColors.textSecondary,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.schedule_rounded, size: 14, color: AppColors.textHint),
+                              const SizedBox(width: 6),
+                              Text(
+                                sTime != null && eTime != null
+                                    ? 'Jam Kerja: ${AppFormatter.formatTime(sTime)} - ${AppFormatter.formatTime(eTime)} WIB'
+                                    : sTime != null
+                                        ? 'Jam Masuk: ${AppFormatter.formatTime(sTime)} WIB ${isLive ? "(Belum tutup shift)" : ""}'
+                                        : 'Waktu tidak tercatat',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11.5),
+                              ),
+                            ],
+                          ),
+                          if (startingCash > 0 || closingCash != null) ...[
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.account_balance_wallet_outlined, size: 14, color: AppColors.textHint),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Modal Awal: ${AppFormatter.formatRupiah(startingCash)}${closingCash != null ? " • Kas Akhir: ${AppFormatter.formatRupiah(closingCash)}" : ""}',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

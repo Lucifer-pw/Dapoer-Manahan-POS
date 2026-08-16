@@ -643,12 +643,117 @@ class FirestoreService {
   }
 
   // ============================================================
-  // SALARY / GAJI KARYAWAN
+  // SALARY / GAJI KARYAWAN & LOG SHIFT
   // ============================================================
 
-  /// Record a working day for a cashier (called when order is completed)
+  /// Start a new shift log when cashier selects a shift
+  Future<String> startShiftLog({
+    required String cashierName,
+    String? userId,
+    required String shift,
+    required int startingCash,
+    required DateTime date,
+  }) async {
+    final dayStr = "${date.year}-${date.month}-${date.day}";
+    final docRef = _db.collection('shift_logs').doc();
+
+    await docRef.set({
+      'cashierName': cashierName,
+      'userId': userId ?? '',
+      'shift': shift,
+      'startingCash': startingCash,
+      'date': dayStr,
+      'month': date.month,
+      'year': date.year,
+      'startTime': FieldValue.serverTimestamp(),
+      'endTime': null,
+      'closingCash': null,
+      'status': 'active',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    return docRef.id;
+  }
+
+  /// Close an active shift log with end time and closing cash
+  Future<void> closeShiftLog({
+    String? shiftLogId,
+    required String cashierName,
+    required int closingCash,
+    DateTime? date,
+  }) async {
+    try {
+      if (shiftLogId != null && shiftLogId.isNotEmpty) {
+        await _db.collection('shift_logs').doc(shiftLogId).update({
+          'endTime': FieldValue.serverTimestamp(),
+          'closingCash': closingCash,
+          'status': 'closed',
+        });
+      } else {
+        // Fallback: find active shift for this cashier today
+        final today = date ?? DateTime.now();
+        final dayStr = "${today.year}-${today.month}-${today.day}";
+        final snap = await _db
+            .collection('shift_logs')
+            .where('cashierName', isEqualTo: cashierName)
+            .where('date', isEqualTo: dayStr)
+            .where('status', isEqualTo: 'active')
+            .limit(1)
+            .get();
+
+        if (snap.docs.isNotEmpty) {
+          await snap.docs.first.reference.update({
+            'endTime': FieldValue.serverTimestamp(),
+            'closingCash': closingCash,
+            'status': 'closed',
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error closing shift log: $e');
+    }
+  }
+
+  /// Get all shift logs for a cashier in a specific month & year
+  Future<List<Map<String, dynamic>>> getShiftLogsForMonth(
+    String cashierName,
+    int month,
+    int year,
+  ) async {
+    try {
+      final snap = await _db
+          .collection('shift_logs')
+          .where('cashierName', isEqualTo: cashierName)
+          .where('year', isEqualTo: year)
+          .where('month', isEqualTo: month)
+          .get();
+
+      final list = snap.docs.map((d) => {...d.data(), 'id': d.id}).toList();
+
+      list.sort((a, b) {
+        final tA = a['startTime'] as Timestamp?;
+        final tB = b['startTime'] as Timestamp?;
+        if (tA == null || tB == null) return 0;
+        return tA.compareTo(tB);
+      });
+
+      return list;
+    } catch (e) {
+      debugPrint('Error getting shift logs: $e');
+      return [];
+    }
+  }
+
+  /// Record a working day for a cashier (called when shift starts or order is completed)
   /// Uses Firestore document per cashier per month for O(1) reads
-  Future<void> recordWorkingDay(String cashierName, DateTime date) async {
+  Future<void> recordWorkingDay(
+    String cashierName,
+    DateTime date, {
+    String? shift,
+    String? shiftLogId,
+    DateTime? startTime,
+    int? startingCash,
+  }) async {
     final month = date.month;
     final year = date.year;
     final dayStr = "${date.year}-${date.month}-${date.day}";
