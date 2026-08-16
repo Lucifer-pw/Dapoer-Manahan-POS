@@ -744,6 +744,16 @@ class FirestoreService {
     }
   }
 
+  /// Stream shift logs for a specific day
+  Stream<List<Map<String, dynamic>>> streamTodayShiftLogs(DateTime date) {
+    final dayStr = "${date.year}-${date.month}-${date.day}";
+    return _db
+        .collection('shift_logs')
+        .where('date', isEqualTo: dayStr)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {...d.data(), 'id': d.id}).toList());
+  }
+
   /// Record a working day for a cashier (called when shift starts or order is completed)
   /// Uses Firestore document per cashier per month for O(1) reads
   Future<void> recordWorkingDay(

@@ -843,7 +843,19 @@ class _HomeScreenState extends State<HomeScreen> {
         }),
         if (orderProv.currentPeriod == ReportPeriod.daily) ...[
           const SizedBox(height: 12),
-          _buildShiftBreakdownSection(orders, expenseProv, cashProv, auth),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: FirestoreService().streamTodayShiftLogs(orderProv.targetDate),
+            builder: (context, snapshot) {
+              final shiftLogs = snapshot.data ?? [];
+              return _buildShiftBreakdownSection(
+                orders,
+                expenseProv,
+                cashProv,
+                auth,
+                shiftLogs,
+              );
+            },
+          ),
         ],
       ]);
     });
@@ -932,6 +944,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ExpenseProvider expenseProv,
     StartingCashProvider cashProv,
     AuthProvider auth,
+    List<Map<String, dynamic>> shiftLogs,
   ) {
     // 1. Shift 1 Calculations
     final orders1 = orders.where((o) => _isShift1(o)).toList();
@@ -944,15 +957,12 @@ class _HomeScreenState extends State<HomeScreen> {
         .fold(0, (acc, o) => acc + _getOrderAmount(o));
     final gross1 = cash1 + qris1;
     final count1 = completed1.length;
-    final cashier1 = completed1.isNotEmpty ? _getOrderCashierName(completed1.first) : 'Kasir 1';
     final expense1 = expenseProv.todayExpenses
         .where((e) => e.date.hour < 16)
         .fold(0, (acc, e) => acc + e.price);
     final expenseCash1 = expenseProv.todayExpenses
         .where((e) => e.date.hour < 16 && e.paymentMethod == 'Cash')
         .fold(0, (acc, e) => acc + e.price);
-    final modalAwal1 = cashProv.startingCash;
-    final drawerCash1 = modalAwal1 + cash1 - expenseCash1;
 
     // 2. Shift 2 Calculations
     final orders2 = orders.where((o) => _isShift2(o)).toList();
@@ -965,14 +975,42 @@ class _HomeScreenState extends State<HomeScreen> {
         .fold(0, (acc, o) => acc + _getOrderAmount(o));
     final gross2 = cash2 + qris2;
     final count2 = completed2.length;
-    final cashier2 = completed2.isNotEmpty ? _getOrderCashierName(completed2.first) : 'Kasir 2';
     final expense2 = expenseProv.todayExpenses
         .where((e) => e.date.hour >= 16)
         .fold(0, (acc, e) => acc + e.price);
     final expenseCash2 = expenseProv.todayExpenses
         .where((e) => e.date.hour >= 16 && e.paymentMethod == 'Cash')
         .fold(0, (acc, e) => acc + e.price);
-    final drawerCash2 = cash2 - expenseCash2;
+
+    // Extract modal awal & cashier names from shift_logs
+    int modalAwal1 = cashProv.startingCash;
+    int modalAwal2 = 0;
+    String cashier1 = 'Kasir 1';
+    String cashier2 = 'Kasir 2';
+
+    for (final log in shiftLogs) {
+      final s = (log['shift'] as String? ?? '').toLowerCase();
+      final sc = (log['startingCash'] as num?)?.toInt() ?? 0;
+      final cName = log['cashierName'] as String? ?? '';
+
+      if (s.contains('1') || s.contains('pagi')) {
+        if (sc > 0) modalAwal1 = sc;
+        if (cName.isNotEmpty) cashier1 = cName;
+      } else if (s.contains('2') || s.contains('malam')) {
+        if (sc > 0) modalAwal2 = sc;
+        if (cName.isNotEmpty) cashier2 = cName;
+      }
+    }
+
+    if (completed1.isNotEmpty && (cashier1 == 'Kasir 1' || cashier1.isEmpty)) {
+      cashier1 = _getOrderCashierName(completed1.first);
+    }
+    if (completed2.isNotEmpty && (cashier2 == 'Kasir 2' || cashier2.isEmpty)) {
+      cashier2 = _getOrderCashierName(completed2.first);
+    }
+
+    final drawerCash1 = modalAwal1 + cash1 - expenseCash1;
+    final drawerCash2 = modalAwal2 + cash2 - expenseCash2;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1027,7 +1065,7 @@ class _HomeScreenState extends State<HomeScreen> {
               expense: expense2,
               gross: gross2,
               drawerCash: drawerCash2,
-              modalAwal: 0,
+              modalAwal: modalAwal2,
               isCurrentShift: auth.currentShift.contains('2') || auth.currentShift.toLowerCase().contains('malam'),
             );
 
@@ -1143,10 +1181,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Divider(height: 1, color: AppColors.border.withOpacity(0.3)),
           const SizedBox(height: 10),
 
-          if (modalAwal > 0) ...[
-            _buildShiftRowItem('Modal Awal di Laci', AppFormatter.formatRupiah(modalAwal), AppColors.textSecondary),
-            const SizedBox(height: 6),
-          ],
+          _buildShiftRowItem('Modal Awal di Laci', AppFormatter.formatRupiah(modalAwal), AppColors.textSecondary),
+          const SizedBox(height: 6),
           _buildShiftRowItem('Penjualan Tunai', '+ ${AppFormatter.formatRupiah(cash)}', AppColors.info),
           const SizedBox(height: 6),
           _buildShiftRowItem('Penjualan QRIS', '+ ${AppFormatter.formatRupiah(qris)}', AppColors.primary),
