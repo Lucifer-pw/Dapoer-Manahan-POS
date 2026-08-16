@@ -178,60 +178,59 @@ class CloseShiftDialog extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Tombol Aksi
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: BorderSide(color: AppColors.border.withOpacity(0.4)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Batal / Lanjut Kerja'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final navigator = Navigator.of(context, rootNavigator: true);
+                  navigator.pop();
+
+                  // 1. Catat jam tutup shift & closing cash di Firestore
+                  await FirestoreService().closeShiftLog(
+                    shiftLogId: auth.currentShiftLogId,
+                    cashierName: auth.cashierName,
+                    closingCash: totalKasLaci,
+                    date: DateTime.now(),
+                  );
+
+                  // 2. Clear shift state & logout
+                  await auth.clearShift();
+                  await auth.signOut();
+                  navigator.pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                },
+                icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                label: const Text(
+                  'Tutup Shift & Logout',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      final navigator = Navigator.of(context, rootNavigator: true);
-                      navigator.pop();
-
-                      // 1. Catat jam tutup shift & closing cash di Firestore
-                      await FirestoreService().closeShiftLog(
-                        shiftLogId: auth.currentShiftLogId,
-                        cashierName: auth.cashierName,
-                        closingCash: totalKasLaci,
-                        date: DateTime.now(),
-                      );
-
-                      // 2. Clear shift state & logout
-                      await auth.clearShift();
-                      await auth.signOut();
-                      navigator.pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                        (route) => false,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.logout_rounded, color: Colors.white, size: 18),
-                        const SizedBox(width: 8),
-                        Text('Tutup Shift & Logout', style: AppTextStyles.button),
-                      ],
-                    ),
-                  ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.error,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  side: BorderSide(color: AppColors.border.withOpacity(0.4)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Batal / Lanjut Kerja', style: TextStyle(fontSize: 13)),
+              ),
             ),
           ],
         ),

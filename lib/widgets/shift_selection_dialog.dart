@@ -270,7 +270,14 @@ class _ShiftSelectionDialogState extends State<ShiftSelectionDialog> {
                           children: [
                             const Icon(Icons.login_rounded, color: Colors.white, size: 20),
                             const SizedBox(width: 8),
-                            Text('Buka & Mulai $_selectedShift', style: AppTextStyles.button),
+                            Flexible(
+                              child: Text(
+                                'Buka & Mulai $_selectedShift',
+                                style: AppTextStyles.button,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                 ),

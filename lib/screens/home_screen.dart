@@ -262,15 +262,32 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
+              Text(
+                'Halo, ${auth.cashierName} 👋',
+                style: AppTextStyles.subtitle.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 3),
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
                 children: [
-                  Text('Halo, ${auth.cashierName} 👋', style: AppTextStyles.subtitle),
-                  if (auth.role == 'kasir' && auth.currentShift.isNotEmpty) ...[
-                    const SizedBox(width: 8),
+                  Text(
+                    !isToday
+                        ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
+                        : AppFormatter.formatDate(DateTime.now()),
+                    style: AppTextStyles.caption.copyWith(fontSize: 11),
+                  ),
+                  if (auth.role == 'kasir' && auth.currentShift.isNotEmpty)
                     GestureDetector(
                       onTap: () => ShiftSelectionDialog.show(context, isDismissible: true),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: auth.currentShift.contains('1')
                               ? const Color(0xFFFFA726).withOpacity(0.18)
@@ -290,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               auth.currentShift.contains('1')
                                   ? Icons.wb_sunny_rounded
                                   : Icons.nightlight_round,
-                              size: 11,
+                              size: 10,
                               color: auth.currentShift.contains('1')
                                   ? const Color(0xFFFFA726)
                                   : const Color(0xFFCE93D8),
@@ -303,35 +320,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                     ? const Color(0xFFFFA726)
                                     : const Color(0xFFCE93D8),
                                 fontWeight: FontWeight.bold,
-                                fontSize: 10,
+                                fontSize: 9.5,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      !isToday
-                          ? 'Laporan: ${AppFormatter.formatDate(orderProv.targetDate)}'
-                          : AppFormatter.formatDate(DateTime.now()),
-                      style: AppTextStyles.caption,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (!isToday) ...[
-                    const SizedBox(width: 6),
+                  if (!isToday)
                     GestureDetector(
                       onTap: _clearFilter,
                       child: Container(
-                        padding: const EdgeInsets.all(3),
+                        padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: AppColors.error.withOpacity(0.12),
                           shape: BoxShape.circle,
@@ -343,7 +343,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  ],
                 ],
               ),
             ],
