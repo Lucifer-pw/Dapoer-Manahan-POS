@@ -860,17 +860,24 @@ class FirestoreService {
     };
   }
 
-  /// Get all unique cashier names (from users collection first, fallback to recent orders)
+  /// Get all unique cashier and admin employee names (excluding owner)
   Future<List<String>> getAllCashierNames() async {
     try {
-      // Fast path: read from users collection (only a few docs)
+      // Fast path: read from users collection (only non-owner users)
       final usersSnapshot = await _db.collection('users').get();
       Set<String> names = {};
+      Set<String> ownerNames = {};
+
       for (final doc in usersSnapshot.docs) {
         final data = doc.data();
+        final role = (data['role'] as String? ?? 'kasir').trim().toLowerCase();
         final name = data['name'] as String?;
         if (name != null && name.isNotEmpty) {
-          names.add(name);
+          if (role == 'owner') {
+            ownerNames.add(name);
+          } else {
+            names.add(name);
+          }
         }
       }
       if (names.isNotEmpty) return names.toList()..sort();

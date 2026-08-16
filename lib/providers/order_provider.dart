@@ -124,7 +124,7 @@ class OrderProvider extends ChangeNotifier {
 
     // Record attendance for salary tracking (non-blocking)
     // Hanya catat untuk role admin dan kasir, BUKAN owner
-    if (cashierRole != 'owner') {
+    if (cashierRole.trim().toLowerCase() != 'owner') {
       _firestoreService.recordWorkingDay(
           orderWithSeq.cashierName, orderWithSeq.createdAt);
     }
