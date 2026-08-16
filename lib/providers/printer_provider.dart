@@ -223,6 +223,28 @@ class PrinterProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> printTestReceipt() async {
+    if (_isWeb || !_isConnected) return false;
+    try {
+      bluetooth.printNewLine();
+      bluetooth.printCustom("DAPOER MANAHAN", 3, 1);
+      bluetooth.printCustom("TES KONEKSI PRINTER", 1, 1);
+      bluetooth.printCustom("--------------------------------", 1, 1);
+      bluetooth.printLeftRight("Status:", "BERHASIL", 1);
+      bluetooth.printLeftRight("Waktu:", DateTime.now().toString().substring(0, 19), 0);
+      bluetooth.printCustom("--------------------------------", 1, 1);
+      bluetooth.printCustom("Printer siap digunakan!", 1, 1);
+      bluetooth.printCustom("Koneksi Bluetooth Lancar", 0, 1);
+      bluetooth.printNewLine();
+      bluetooth.printNewLine();
+      bluetooth.paperCut();
+      return true;
+    } catch (e) {
+      debugPrint("Error printing test receipt: $e");
+      return false;
+    }
+  }
+
   @override
   void dispose() {
     _reconnectDebounce?.cancel();

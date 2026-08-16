@@ -173,9 +173,11 @@ class _UserGuideScreenState extends State<UserGuideScreen> with SingleTickerProv
         'color': const Color(0xFF9C27B0),
         'desc': 'Mencetak bukti transaksi menggunakan printer thermal Bluetooth.',
         'details': [
-          'Aktifkan Bluetooth di HP/Tablet Anda.',
-          'Ketuk ikon "Printer" di pojok kanan atas Dashboard untuk masuk ke Pengaturan Printer.',
-          'Pilih printer yang sesuai, hubungkan, dan tekan "Cetak Struk" pada halaman sukses transaksi.',
+          'Nyalakan printer thermal dan pasang kertas struk 58mm/80mm.',
+          'Buka menu Bluetooth di pengaturan HP/Tablet Anda, lakukan Pairing (Sandingkan) dengan printer (PIN standar: 0000 atau 1234).',
+          'Buka aplikasi POS, ketuk ikon "Printer" di pojok kanan atas Dashboard untuk masuk ke Pengaturan Printer.',
+          'Cari nama printer Anda (misal: RPP02N, PT-210, PMA 9320) pada daftar perangkat, lalu tekan tombol "Hubung".',
+          'Tekan tombol "Tes Cetak Struk" untuk memastikan printer berfungsi dengan baik.',
         ]
       },
       {
