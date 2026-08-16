@@ -50,6 +50,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Timer? _heartbeatTimer;
+
   AuthProvider() {
     _initAuth();
   }
@@ -63,7 +65,9 @@ class AuthProvider extends ChangeNotifier {
         _isRoleLoaded = true;
         await saveDeviceInfo(); // Save device info on every login/restart
         await updateOnlineStatus(true); // Mark user as online
+        _startHeartbeat();
       } else {
+        _stopHeartbeat();
         _role = '';
         _isRoleLoaded = true;
         _currentShift = '';
@@ -72,6 +76,20 @@ class AuthProvider extends ChangeNotifier {
       _isAuthChecked = true;
       notifyListeners();
     });
+  }
+
+  void _startHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(minutes: 2), (_) {
+      if (_user != null) {
+        updateOnlineStatus(true);
+      }
+    });
+  }
+
+  void _stopHeartbeat() {
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
   }
 
   Future<void> updateOnlineStatus(bool isOnline) async {

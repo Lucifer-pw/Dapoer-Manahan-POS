@@ -428,6 +428,37 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+  String _formatLastSeen(Map<String, dynamic> data, bool isOnline) {
+    if (isOnline) return 'Online';
+
+    final dynamic lastActiveField = data['lastActive'] ?? data['lastLogin'] ?? data['createdAt'];
+    if (lastActiveField == null) return 'Offline';
+
+    DateTime lastActive;
+    if (lastActiveField is Timestamp) {
+      lastActive = lastActiveField.toDate();
+    } else if (lastActiveField is DateTime) {
+      lastActive = lastActiveField;
+    } else {
+      return 'Offline';
+    }
+
+    final diff = DateTime.now().difference(lastActive);
+    if (diff.inMinutes < 1) {
+      return 'Baru saja';
+    } else if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}m lalu';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours}j lalu';
+    } else if (diff.inDays == 1) {
+      return 'Kemarin';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays}h lalu';
+    } else {
+      return '${lastActive.day}/${lastActive.month}';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentAdmin = Provider.of<app_auth.AuthProvider>(context, listen: false);
@@ -624,10 +655,11 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              isOnline ? 'Online' : 'Offline',
+                              _formatLastSeen(data, isOnline),
                               style: AppTextStyles.caption.copyWith(
                                 color: isOnline ? const Color(0xFF4CAF50) : AppColors.textHint,
                                 fontSize: 10,
+                                fontWeight: isOnline ? FontWeight.bold : FontWeight.normal,
                               ),
                             ),
                           ],

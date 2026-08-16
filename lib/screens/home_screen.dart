@@ -1438,8 +1438,63 @@ class _HomeScreenState extends State<HomeScreen> {
                 return isOnlineField;
               }
 
-              // Fallback: if last active was more than 10 minutes ago, consider offline
-              return now.difference(lastActive).inMinutes <= 10;
+              // Fallback: if last active was more than 5 minutes ago, consider offline
+              return now.difference(lastActive).inMinutes <= 5;
+            }
+
+            // Helper to format last seen text
+            String formatLastSeen(Map<String, dynamic> u, bool isOnline) {
+              if (isOnline) return 'Online';
+
+              final dynamic lastActiveField = u['lastActive'] ?? u['lastLogin'] ?? u['createdAt'];
+              if (lastActiveField == null) return 'Offline';
+
+              DateTime lastActive;
+              if (lastActiveField is Timestamp) {
+                lastActive = lastActiveField.toDate();
+              } else if (lastActiveField is DateTime) {
+                lastActive = lastActiveField;
+              } else {
+                return 'Offline';
+              }
+
+              final diff = now.difference(lastActive);
+              if (diff.inMinutes < 1) {
+                return 'Baru saja';
+              } else if (diff.inMinutes < 60) {
+                return '${diff.inMinutes}m lalu';
+              } else if (diff.inHours < 24) {
+                return '${diff.inHours}j lalu';
+              } else if (diff.inDays == 1) {
+                return 'Kemarin';
+              } else if (diff.inDays < 7) {
+                return '${diff.inDays}h lalu';
+              } else {
+                return '${lastActive.day}/${lastActive.month}';
+              }
+            }
+
+            // Helper for detailed tooltip
+            String getFullLastSeenText(Map<String, dynamic> u, bool isOnline) {
+              final String name = u['name'] ?? 'Staff';
+              final String role = (u['role'] ?? 'kasir').toString().toUpperCase();
+              if (isOnline) return '$name ($role)\n🟢 Sedang Online';
+
+              final dynamic lastActiveField = u['lastActive'] ?? u['lastLogin'];
+              if (lastActiveField == null) return '$name ($role)\n⚪ Status: Offline';
+
+              DateTime lastActive;
+              if (lastActiveField is Timestamp) {
+                lastActive = lastActiveField.toDate();
+              } else if (lastActiveField is DateTime) {
+                lastActive = lastActiveField;
+              } else {
+                return '$name ($role)\n⚪ Status: Offline';
+              }
+
+              final hour = lastActive.hour.toString().padLeft(2, '0');
+              final minute = lastActive.minute.toString().padLeft(2, '0');
+              return '$name ($role)\n⚪ Terakhir aktif: ${lastActive.day}/${lastActive.month}/${lastActive.year} $hour:$minute';
             }
 
             final onlineUsers = users.where((u) => checkIsOnline(u)).toList();
@@ -1491,7 +1546,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 14),
                   SizedBox(
-                    height: 64,
+                    height: 80,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: sortedUsers.length,
@@ -1499,66 +1554,82 @@ class _HomeScreenState extends State<HomeScreen> {
                         final u = sortedUsers[index];
                         final String name = u['name'] ?? 'Staff';
                         final bool isOnline = checkIsOnline(u);
-                        
+                        final String lastSeen = formatLastSeen(u, isOnline);
                         final String initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+                        final String tooltipText = getFullLastSeenText(u, isOnline);
                         
-                        return Container(
-                          width: 56,
-                          margin: const EdgeInsets.only(right: 12),
-                          child: Column(
-                            children: [
-                              Stack(
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      gradient: isOnline 
-                                          ? AppColors.primaryGradient 
-                                          : LinearGradient(colors: [AppColors.card, AppColors.border.withOpacity(0.3)]),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
+                        return Tooltip(
+                          message: tooltipText,
+                          preferBelow: false,
+                          child: Container(
+                            width: 62,
+                            margin: const EdgeInsets.only(right: 12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Stack(
+                                  children: [
+                                    Container(
+                                      width: 38,
+                                      height: 38,
+                                      decoration: BoxDecoration(
+                                        gradient: isOnline 
+                                            ? AppColors.primaryGradient 
+                                            : LinearGradient(colors: [AppColors.card, AppColors.border.withOpacity(0.3)]),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          initial,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  Positioned(
-                                    right: 0,
-                                    bottom: 0,
-                                    child: Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: isOnline ? AppColors.success : AppColors.textHint,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: AppColors.background, width: 1.5),
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: isOnline ? AppColors.success : AppColors.textHint,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: AppColors.background, width: 1.5),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Expanded(
-                                child: Text(
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
                                   name,
                                   style: TextStyle(
                                     color: isOnline ? Colors.white : AppColors.textSecondary,
-                                    fontSize: 9.5,
+                                    fontSize: 10,
+                                    fontWeight: isOnline ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  lastSeen,
+                                  style: TextStyle(
+                                    color: isOnline ? AppColors.success : AppColors.textHint.withOpacity(0.85),
+                                    fontSize: 8.5,
                                     fontWeight: isOnline ? FontWeight.bold : FontWeight.normal,
                                   ),
                                   textAlign: TextAlign.center,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
