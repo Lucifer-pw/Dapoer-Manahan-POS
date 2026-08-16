@@ -674,7 +674,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       const TextStyle(color: AppColors.primary, fontSize: 12)),
             ),
         ]),
-        const SizedBox(height: 14),
+        if (orderProv.currentPeriod == ReportPeriod.daily) ...[
+          const SizedBox(height: 14),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: FirestoreService().streamTodayShiftLogs(orderProv.targetDate),
+            builder: (context, snapshot) {
+              final shiftLogs = snapshot.data ?? [];
+              return _buildShiftBreakdownSection(
+                orders,
+                expenseProv,
+                cashProv,
+                auth,
+                shiftLogs,
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+        ] else ...[
+          const SizedBox(height: 14),
+        ],
         StatCard(
             title: 'Modal Awal (Kasir)',
             value: AppFormatter.formatRupiah(modalAwal),
@@ -841,22 +859,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Air Mineral: $countAirMineral\nFruitea: $countFruitea\nTeh Botol: $countTehBotol\nTebs: $countTebs',
           );
         }),
-        if (orderProv.currentPeriod == ReportPeriod.daily) ...[
-          const SizedBox(height: 12),
-          StreamBuilder<List<Map<String, dynamic>>>(
-            stream: FirestoreService().streamTodayShiftLogs(orderProv.targetDate),
-            builder: (context, snapshot) {
-              final shiftLogs = snapshot.data ?? [];
-              return _buildShiftBreakdownSection(
-                orders,
-                expenseProv,
-                cashProv,
-                auth,
-                shiftLogs,
-              );
-            },
-          ),
-        ],
       ]);
     });
   }
