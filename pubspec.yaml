@@ -1,7 +1,7 @@
 name: dapoer_pos
 description: "Dapoer Manahan - Aplikasi POS Restoran"
 publish_to: 'none'
-version: 1.5.0+94
+version: 1.5.1+95
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

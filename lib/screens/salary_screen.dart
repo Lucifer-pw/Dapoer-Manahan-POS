@@ -73,44 +73,60 @@ class _SalaryScreenState extends State<SalaryScreen> {
     if (_selectedCashier == null) return;
     setState(() => _isLoadingWork = true);
 
-    final start = DateTime(_selectedYear, _selectedMonth, 1);
-    final end = DateTime(_selectedYear, _selectedMonth + 1, 1);
+    try {
+      final start = DateTime(_selectedYear, _selectedMonth, 1);
+      final end = DateTime(_selectedYear, _selectedMonth + 1, 1);
 
-    // Run queries in parallel for speed
-    final results = await Future.wait([
-      _fs.getWorkingDays(_selectedCashier!, start, end),
-      _fs.getTotalPaidForCashier(_selectedCashier!, _selectedMonth, _selectedYear),
-      _fs.getCashierBankDetails(_selectedCashier!),
-      _fs.getShiftLogsForMonth(_selectedCashier!, _selectedMonth, _selectedYear),
-    ]);
+      // Run queries in parallel for speed
+      final results = await Future.wait([
+        _fs.getWorkingDays(_selectedCashier!, start, end),
+        _fs.getTotalPaidForCashier(_selectedCashier!, _selectedMonth, _selectedYear),
+        _fs.getCashierBankDetails(_selectedCashier!),
+        _fs.getShiftLogsForMonth(_selectedCashier!, _selectedMonth, _selectedYear),
+      ]);
 
-    if (!mounted) return;
-    final workData = results[0] as Map<String, dynamic>;
-    final paid = results[1] as int;
-    final bankData = results[2] as Map<String, dynamic>;
-    final shiftLogs = results[3] as List<Map<String, dynamic>>;
-    
-    final List<String> rawDates = List<String>.from(workData['dates'] ?? []);
-    // Sort dates chronologically
-    rawDates.sort((a, b) {
-      final da = _parseCustomDate(a);
-      final db = _parseCustomDate(b);
-      return da.compareTo(db);
-    });
+      if (!mounted) return;
+      final workData = results[0] as Map<String, dynamic>;
+      final paid = results[1] as int;
+      final bankData = results[2] as Map<String, dynamic>;
+      final shiftLogs = results[3] as List<Map<String, dynamic>>;
+      
+      final List<String> rawDates = List<String>.from(workData['dates'] ?? []);
+      // Sort dates chronologically
+      rawDates.sort((a, b) {
+        final da = _parseCustomDate(a);
+        final db = _parseCustomDate(b);
+        return da.compareTo(db);
+      });
 
-    setState(() {
-      _workingDates = rawDates;
-      _shiftLogs = shiftLogs;
-      _totalWorkDays = workData['workingDays'] as int;
-      _totalTransactions = workData['totalTransactions'] as int;
-      _totalPaid = paid;
-      _cashierBankName = bankData['bankName'] ?? '';
-      _cashierBankAccount = bankData['bankAccountNumber'] ?? '';
-      _cashierBankAccountName = bankData['bankAccountName'] ?? '';
-      _cashierEmail = bankData['email'] ?? '';
-      _ratePerDay = bankData['ratePerDay'] as int? ?? 50000;
-      _isLoadingWork = false;
-    });
+      setState(() {
+        _workingDates = rawDates;
+        _shiftLogs = shiftLogs;
+        _totalWorkDays = workData['workingDays'] as int;
+        _totalTransactions = workData['totalTransactions'] as int;
+        _totalPaid = paid;
+        _cashierBankName = bankData['bankName'] ?? '';
+        _cashierBankAccount = bankData['bankAccountNumber'] ?? '';
+        _cashierBankAccountName = bankData['bankAccountName'] ?? '';
+        _cashierEmail = bankData['email'] ?? '';
+        _ratePerDay = bankData['ratePerDay'] as int? ?? 50000;
+      });
+    } catch (e) {
+      debugPrint('Error loading working days: $e');
+      if (mounted) {
+        setState(() {
+          _workingDates = [];
+          _shiftLogs = [];
+          _totalWorkDays = 0;
+          _totalTransactions = 0;
+          _totalPaid = 0;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingWork = false);
+      }
+    }
   }
 
   // ── Month/Year Picker ──
@@ -1111,6 +1127,70 @@ class _SalaryScreenState extends State<SalaryScreen> {
       return const Center(child: Padding(
         padding: EdgeInsets.all(32),
         child: CircularProgressIndicator(color: AppColors.primary)));
+    }
+
+    if (_totalWorkDays == 0 && _shiftLogs.isEmpty && _totalPaid == 0) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.border.withOpacity(0.2)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.event_busy_rounded,
+                color: AppColors.primary,
+                size: 38,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum Ada Riwayat Kerja',
+              style: AppTextStyles.subtitle.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kasir "$_selectedCashier" belum memiliki catatan shift, kehadiran, atau transaksi pada periode ${AppFormatter.getMonthName(_selectedMonth)} $_selectedYear.',
+              style: AppTextStyles.bodySecondary.copyWith(fontSize: 12.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.full),
+                border: Border.all(color: AppColors.border.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 14, color: AppColors.textHint),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Pilih kasir lain atau ubah bulan di pojok kanan atas',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return Container(
