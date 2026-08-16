@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/order_provider.dart';
 import '../providers/starting_cash_provider.dart';
+import '../screens/login_screen.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 
@@ -194,8 +195,13 @@ class CloseShiftDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      Navigator.of(context).pop();
+                      final navigator = Navigator.of(context, rootNavigator: true);
+                      navigator.pop();
                       await auth.signOut();
+                      navigator.pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                        (route) => false,
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,

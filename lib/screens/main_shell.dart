@@ -20,6 +20,7 @@ import '../providers/printer_provider.dart';
 import '../providers/connectivity_provider.dart';
 import '../providers/feature_flags_provider.dart';
 import '../widgets/shift_selection_dialog.dart';
+import 'login_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -103,6 +104,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
         ShiftSelectionDialog.show(context);
       }
 
+      auth.addListener(_onAuthStateChanged);
+
       final printerProv = Provider.of<PrinterProvider>(context, listen: false);
       _lastPrinterState = printerProv.isConnected;
       printerProv.addListener(_onPrinterStateChanged);
@@ -114,6 +117,17 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
     _firestoreService = FirestoreService();
     _startListeningToPendingOrders();
+  }
+
+  void _onAuthStateChanged() {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.isAuthChecked && !auth.isLoggedIn) {
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   void _onPrinterStateChanged() {
@@ -237,6 +251,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      auth.removeListener(_onAuthStateChanged);
+    } catch (_) {}
     try {
       final printerProv = Provider.of<PrinterProvider>(context, listen: false);
       printerProv.removeListener(_onPrinterStateChanged);

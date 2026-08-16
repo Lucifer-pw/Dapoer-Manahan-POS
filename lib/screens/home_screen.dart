@@ -422,7 +422,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   context,
                   MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
             } else if (value == 'logout') {
-              final navigator = Navigator.of(context);
               final confirm = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -444,8 +443,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ));
               if (confirm == true && mounted) {
                 await auth.signOut();
-                navigator.pushReplacement(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()));
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
               }
             }
           },
