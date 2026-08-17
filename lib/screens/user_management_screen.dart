@@ -377,6 +377,227 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+  void _showResetPasswordDialog(String targetUid, String targetName, String targetEmail, String targetRole) {
+    final adminPasswordController = TextEditingController();
+    bool obscureAdminPassword = true;
+    bool isSubmitting = false;
+    final formKey = GlobalKey<FormState>();
+    final currentAdmin = Provider.of<app_auth.AuthProvider>(context, listen: false);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFA726).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child: const Icon(Icons.key_rounded, color: Color(0xFFFFA726), size: 22),
+              ),
+              const SizedBox(width: 12),
+              Text('Reset Password Pengguna', style: AppTextStyles.heading3),
+            ],
+          ),
+          content: SizedBox(
+            width: 440,
+            child: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Target User Info Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceDark,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: const Color(0xFF66BB6A).withOpacity(0.2),
+                            child: const Icon(Icons.person, color: Color(0xFF66BB6A), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  targetName,
+                                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  '$targetEmail (${targetRole.toUpperCase()})',
+                                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Link reset password resmi dari Google Firebase akan otomatis dikirimkan ke email akun ini. Demi keamanan, mohon verifikasi password Admin Anda.',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, height: 1.4),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Password Admin untuk Verifikasi Keamanan
+                    Text('Password Admin Anda (Verifikasi Keamanan)',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      controller: adminPasswordController,
+                      obscureText: obscureAdminPassword,
+                      style: AppTextStyles.body,
+                      decoration: InputDecoration(
+                        hintText: 'Masukkan password admin Anda',
+                        hintStyle: AppTextStyles.body.copyWith(color: AppColors.textHint),
+                        prefixIcon: Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            obscureAdminPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            color: AppColors.textHint,
+                            size: 20,
+                          ),
+                          onPressed: () => setDialogState(() => obscureAdminPassword = !obscureAdminPassword),
+                        ),
+                        filled: true,
+                        fillColor: AppColors.surfaceDark,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) return 'Password Admin wajib diisi untuk verifikasi';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: Text('Batal', style: TextStyle(color: AppColors.textHint)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFA726),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+              ),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (!formKey.currentState!.validate()) return;
+                      setDialogState(() => isSubmitting = true);
+
+                      final adminPassword = adminPasswordController.text.trim();
+
+                      try {
+                        // 1. Verifikasi Re-autentikasi Admin terlebih dahulu
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        if (currentUser == null || currentUser.email == null) {
+                          throw Exception('Sesi login admin tidak valid');
+                        }
+
+                        final cred = EmailAuthProvider.credential(
+                          email: currentUser.email!,
+                          password: adminPassword,
+                        );
+                        await currentUser.reauthenticateWithCredential(cred);
+
+                        // 2. Kirim email reset password resmi dari Firebase
+                        await FirebaseAuth.instance.sendPasswordResetEmail(email: targetEmail);
+
+                        // 3. Rekam jejak audit log keamanan di Firestore
+                        await _db.collection('audit_logs').add({
+                          'action': 'RESET_PASSWORD_REQUEST',
+                          'targetUserId': targetUid,
+                          'targetName': targetName,
+                          'targetEmail': targetEmail,
+                          'targetRole': targetRole,
+                          'performedByUid': currentAdmin.user?.uid,
+                          'performedByName': currentAdmin.cashierName,
+                          'performedByRole': currentAdmin.role,
+                          'timestamp': FieldValue.serverTimestamp(),
+                        });
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.success,
+                              duration: const Duration(seconds: 4),
+                              content: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Berhasil! Link reset password telah dikirim ke $targetEmail dan log keamanan telah tercatat.',
+                                      style: const TextStyle(color: Colors.white),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+                      } on FirebaseAuthException catch (e) {
+                        if (ctx.mounted) {
+                          setDialogState(() => isSubmitting = false);
+                          String errorMsg = 'Verifikasi Admin gagal: ${e.message}';
+                          if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+                            errorMsg = 'Password Admin yang Anda masukkan salah! Reset password dibatalkan.';
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(backgroundColor: AppColors.error, content: Text(errorMsg)),
+                          );
+                        }
+                      } catch (e) {
+                        if (ctx.mounted) {
+                          setDialogState(() => isSubmitting = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(backgroundColor: AppColors.error, content: Text('Gagal melakukan reset: $e')),
+                          );
+                        }
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.send_rounded, color: Colors.white, size: 16),
+                        SizedBox(width: 6),
+                        Text('Kirim Link Reset', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _confirmDeleteUser(String docId, String name, String email) {
     showDialog(
       context: context,
@@ -667,15 +888,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       ],
                     ),
 
-                    // Action Buttons (Ubah Role & Hapus)
+                    // Action Buttons (Reset Password, Ubah Role & Hapus)
                     if (!isSelf) ...[
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      if ((currentAdmin.isOwner || (currentAdmin.isAdmin && role == 'kasir')) && role != 'owner')
+                        IconButton(
+                          icon: const Icon(Icons.key_rounded, color: Color(0xFFFFA726), size: 20),
+                          tooltip: 'Reset Password',
+                          onPressed: () => _showResetPasswordDialog(doc.id, name, email, role),
+                        ),
                       IconButton(
                         icon: const Icon(Icons.edit_outlined, color: AppColors.primary, size: 20),
                         tooltip: 'Ubah Role',
                         onPressed: () => _showEditRoleDialog(doc.id, name, role),
                       ),
-                      if (role != 'admin')
+                      if (role != 'admin' && role != 'owner')
                         IconButton(
                           icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 20),
                           tooltip: 'Hapus Akun',
