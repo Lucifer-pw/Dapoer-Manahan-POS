@@ -28,7 +28,7 @@ service cloud.firestore {
     // ============================================================
     match /users/{userId} {
       allow read: if isLoggedIn();
-      allow write: if isAdmin() || (isLoggedIn() && request.auth.uid == userId);
+      allow write: if isAdmin() || isOwner() || (isLoggedIn() && request.auth.uid == userId);
       
       // Subcollection: Drafts pesanan per kasir
       match /drafts/{draftId} {
@@ -39,6 +39,13 @@ service cloud.firestore {
       match /devices/{deviceId} {
         allow read, write: if isLoggedIn() && request.auth.uid == userId;
       }
+    }
+    
+    // ============================================================
+    // Koleksi Audit Logs (Log Keamanan & Reset Password)
+    // ============================================================
+    match /audit_logs/{logId} {
+      allow read, write: if isAdmin() || isOwner() || isLoggedIn();
     }
     
     // ============================================================

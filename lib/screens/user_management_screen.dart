@@ -524,17 +524,21 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         await FirebaseAuth.instance.sendPasswordResetEmail(email: targetEmail);
 
                         // 3. Rekam jejak audit log keamanan di Firestore
-                        await _db.collection('audit_logs').add({
-                          'action': 'RESET_PASSWORD_REQUEST',
-                          'targetUserId': targetUid,
-                          'targetName': targetName,
-                          'targetEmail': targetEmail,
-                          'targetRole': targetRole,
-                          'performedByUid': currentAdmin.user?.uid,
-                          'performedByName': currentAdmin.cashierName,
-                          'performedByRole': currentAdmin.role,
-                          'timestamp': FieldValue.serverTimestamp(),
-                        });
+                        try {
+                          await _db.collection('audit_logs').add({
+                            'action': 'RESET_PASSWORD_REQUEST',
+                            'targetUserId': targetUid,
+                            'targetName': targetName,
+                            'targetEmail': targetEmail,
+                            'targetRole': targetRole,
+                            'performedByUid': currentAdmin.user?.uid,
+                            'performedByName': currentAdmin.cashierName,
+                            'performedByRole': currentAdmin.role,
+                            'timestamp': FieldValue.serverTimestamp(),
+                          });
+                        } catch (logErr) {
+                          debugPrint('Failed to record audit log: $logErr');
+                        }
 
                         if (ctx.mounted) {
                           Navigator.pop(ctx);
