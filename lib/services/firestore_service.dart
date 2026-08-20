@@ -466,9 +466,11 @@ class FirestoreService {
   }
 
   Future<void> updateBillingStatus(int month, int year) async {
+    final activeUntilDate = DateTime.now().add(const Duration(days: 30));
     await _db.collection('app_settings').doc('billing').set({
       'lastPaidMonth': month,
       'lastPaidYear': year,
+      'activeUntil': Timestamp.fromDate(activeUntilDate),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -1027,6 +1029,29 @@ class FirestoreService {
   Future<void> updateQrOrderPaymentStatus(String orderId, String paymentStatus, {String? cashierName, String? cashierId}) async {
     await _db.collection('qr_orders').doc(orderId).update({'paymentStatus': paymentStatus});
     await syncQrOrderToCompletedOrders(orderId, cashierName: cashierName, cashierId: cashierId);
+  }
+
+  Future<void> updateQrOrderItems(String orderId, List<Map<String, dynamic>> items, int newTotal) async {
+    final docRef = _db.collection('qr_orders').doc(orderId);
+    final doc = await docRef.get();
+    if (!doc.exists) return;
+
+    await docRef.update({
+      'items': items,
+      'totalPrice': newTotal,
+      'total': newTotal,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    final String? orderDocId = doc.data()?['orderDocId'];
+    if (orderDocId != null && orderDocId.isNotEmpty) {
+      await _ordersRef.doc(orderDocId).update({
+        'items': items,
+        'subtotal': newTotal,
+        'total': newTotal,
+        'amountPaid': newTotal,
+      });
+    }
   }
 
   Future<void> finalizeQrOrdersForTable(int tableNumber) async {

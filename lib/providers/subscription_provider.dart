@@ -52,24 +52,25 @@ class SubscriptionProvider extends ChangeNotifier {
             : int.tryParse(data['lastPaidYear'].toString()) ?? 0;
       }
 
-      final isPaidThisMonth =
-          (lastPaidMonth == now.month && lastPaidYear == now.year);
+      final activeUntilTs = data['activeUntil'] as Timestamp?;
+      final activeUntil = activeUntilTs?.toDate();
 
-      // Logika Jatuh Tempo
-      // Tanggal 4-5: Warning (Jika belum bayar)
-      // Tanggal > 5: Blocked (Jika belum bayar)
+      final isPaidByMonthYear = (lastPaidYear > now.year) ||
+          (lastPaidYear == now.year && lastPaidMonth >= now.month);
+      final isPaidByExpiry = activeUntil != null && now.isBefore(activeUntil);
 
-      if (isPaidThisMonth) {
+      if (isPaidByMonthYear || isPaidByExpiry) {
         _status = SubscriptionStatus.active;
 
-        // Tambahkan ke riwayat secara otomatis jika belum ada
+        final month = lastPaidMonth > 0 ? lastPaidMonth : now.month;
+        final year = lastPaidYear > 0 ? lastPaidYear : now.year;
         final recordId =
-            'pay_${lastPaidYear}_${lastPaidMonth.toString().padLeft(2, '0')}';
+            'pay_${year}_${month.toString().padLeft(2, '0')}';
         await _firestoreService.addBillingRecordIfNotExist({
           'amount': 50000,
           'date': Timestamp.now(),
-          'month': lastPaidMonth,
-          'year': lastPaidYear,
+          'month': month,
+          'year': year,
           'status': 'Lunas',
         }, recordId);
       } else {

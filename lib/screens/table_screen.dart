@@ -1218,6 +1218,21 @@ class _TableScreenState extends State<TableScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          // Edit Pesanan Button (Hapus Menu Kosong)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _showEditQrOrderDialog(context, qr),
+              icon: const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.primary),
+              label: const Text('Edit Pesanan (Hapus Menu Kosong)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: AppColors.primary.withOpacity(0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           // Action buttons
           if (status == 'pending') ...[
             Row(
@@ -1323,6 +1338,257 @@ class _TableScreenState extends State<TableScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  void _showEditQrOrderDialog(BuildContext context, Map<String, dynamic> qrOrder) {
+    final String orderId = qrOrder['id'] ?? '';
+    final String customerName = qrOrder['customerName'] as String? ?? '';
+    final dynamic tableNum = qrOrder['tableNumber'] ?? 0;
+    final List<dynamic> rawItems = qrOrder['items'] as List<dynamic>? ?? [];
+
+    List<Map<String, dynamic>> localItems = rawItems.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            int calculateTotal() {
+              int sum = 0;
+              for (final item in localItems) {
+                final int price = _toInt(item['price']);
+                final int qty = _toInt(item['quantity'], fallback: 1);
+                sum += price * qty;
+              }
+              return sum;
+            }
+
+            final currentTotal = calculateTotal();
+
+            return AlertDialog(
+              backgroundColor: AppColors.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.lg)),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: const Icon(Icons.edit_note_rounded, color: AppColors.primary, size: 22),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Edit Pesanan QR', style: AppTextStyles.heading3),
+                        Text(
+                          'Meja $tableNum ${customerName.isNotEmpty ? "• a.n $customerName" : ""}',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 480,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.card,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: AppColors.info),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Hapus menu yang kosong atau sesuaikan jumlah item jika ada perubahan dari pelanggan.',
+                              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (localItems.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        width: double.infinity,
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Semua menu telah dihapus dari pesanan.',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                        ),
+                      )
+                    else
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 280),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: localItems.length,
+                          separatorBuilder: (_, __) => Divider(color: AppColors.border.withOpacity(0.2), height: 12),
+                          itemBuilder: (ctx, index) {
+                            final item = localItems[index];
+                            final String name = item['name'] ?? item['menuItemName'] ?? '';
+                            final int qty = _toInt(item['quantity'], fallback: 1);
+                            final int price = _toInt(item['price']);
+                            final String? variant = item['variant'];
+                            final String notes = item['notes'] ?? '';
+
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+                                      ),
+                                      if (variant != null && variant.isNotEmpty)
+                                        Text('Opsi: $variant', style: AppTextStyles.caption.copyWith(color: AppColors.secondary, fontSize: 11)),
+                                      if (notes.isNotEmpty)
+                                        Text('Catatan: "$notes"', style: AppTextStyles.caption.copyWith(fontStyle: FontStyle.italic, fontSize: 11)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '${AppFormatter.formatRupiah(price)} x $qty = ${AppFormatter.formatRupiah(price * qty)}',
+                                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceDark,
+                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    border: Border.all(color: AppColors.border.withOpacity(0.3)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          setModalState(() {
+                                            if (qty > 1) {
+                                              localItems[index]['quantity'] = qty - 1;
+                                            } else {
+                                              localItems.removeAt(index);
+                                            }
+                                          });
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(6),
+                                          child: Icon(
+                                            qty == 1 ? Icons.delete_outline : Icons.remove,
+                                            size: 16,
+                                            color: qty == 1 ? AppColors.error : AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text(
+                                          '$qty',
+                                          style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () {
+                                          setModalState(() {
+                                            localItems[index]['quantity'] = qty + 1;
+                                          });
+                                        },
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(Icons.add, size: 16, color: AppColors.primary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(width: 4),
+
+                                IconButton(
+                                  icon: const Icon(Icons.delete_forever_rounded, color: AppColors.error, size: 20),
+                                  tooltip: 'Hapus Menu Kosong',
+                                  onPressed: () {
+                                    setModalState(() {
+                                      localItems.removeAt(index);
+                                    });
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 14),
+                    Divider(color: AppColors.border.withOpacity(0.4)),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Total Pesanan Baru:', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          AppFormatter.formatRupiah(currentTotal),
+                          style: AppTextStyles.heading3.copyWith(color: AppColors.success),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: Text('Batal', style: TextStyle(color: AppColors.textHint)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                  ),
+                  onPressed: () async {
+                    if (localItems.isEmpty) {
+                      await FirestoreService().updateQrOrderStatus(orderId, 'rejected');
+                    } else {
+                      await FirestoreService().updateQrOrderItems(orderId, localItems, currentTotal);
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(dialogCtx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppColors.success,
+                          content: Text(localItems.isEmpty
+                              ? 'Seluruh item telah dihapus. Pesanan dibatalkan!'
+                              : 'Pesanan berhasil diperbarui!'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Simpan Perubahan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
