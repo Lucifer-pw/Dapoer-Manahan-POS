@@ -96,6 +96,25 @@ class Order {
   // Changed: Use sequenceNumber if available, otherwise fallback to ID
   String get orderNumber => sequenceNumber > 0 ? 'DM-$sequenceNumber' : 'DM-${id.substring(0, 8).toUpperCase()}';
   
+  /// Display label combining customer name and table/takeaway status
+  String get displayName {
+    final name = customerName.trim();
+    if (isTakeAway) {
+      return name.isNotEmpty ? '$name (Takeaway)' : 'Takeaway';
+    }
+    if (tableNumber > 0) {
+      return name.isNotEmpty ? '$name (Meja $tableNumber)' : 'Meja $tableNumber';
+    }
+    return name.isNotEmpty ? name : 'Takeaway';
+  }
+
+  /// Call-out name for staff when delivering order (e.g. "Budi" if provided, fallback to "Meja 4" or "Takeaway")
+  String get callName {
+    final name = customerName.trim();
+    if (name.isNotEmpty) return name;
+    return isTakeAway ? 'Takeaway' : 'Meja $tableNumber';
+  }
+  
   // Method to create a copy with a sequence number
   Order withSequenceNumber(int seq) {
     return Order(

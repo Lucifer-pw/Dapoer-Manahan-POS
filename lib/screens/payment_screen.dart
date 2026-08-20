@@ -56,7 +56,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               decoration: BoxDecoration(gradient: AppColors.cardGradient, borderRadius: BorderRadius.circular(AppRadius.lg), border: Border.all(color: AppColors.border.withOpacity(0.2))),
               child: Column(children: [
                 Text(
-                  cart.isTakeAway ? 'DIBAWA PULANG' : 'Meja ${cart.tableNumber}',
+                  cart.customerName.isNotEmpty
+                      ? '${cart.customerName} (${cart.isTakeAway ? "DIBAWA PULANG" : "Meja ${cart.tableNumber}"})'
+                      : (cart.isTakeAway ? 'DIBAWA PULANG' : 'Meja ${cart.tableNumber}'),
                   style: AppTextStyles.subtitle.copyWith(
                     color: cart.isTakeAway ? AppColors.primary : AppColors.secondary,
                     fontWeight: FontWeight.bold,
@@ -337,6 +339,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         status: OrderStatus.completed,
         isTakeAway: cart.isTakeAway,
         shift: auth.currentShift,
+        customerName: cart.customerName,
       );
 
       final completedOrder = await orderProv.createOrder(

@@ -7,12 +7,14 @@ class CartProvider extends ChangeNotifier {
   final List<OrderItem> _items = [];
   int _tableNumber = 0;
   bool _isTakeAway = false;
+  String _customerName = '';
   String? _activeDraftId;
   int? _activeDraftNumber;
 
   List<OrderItem> get items => List.unmodifiable(_items);
   int get tableNumber => _tableNumber;
   bool get isTakeAway => _isTakeAway;
+  String get customerName => _customerName;
   String? get activeDraftId => _activeDraftId;
   int? get activeDraftNumber => _activeDraftNumber;
   bool get isEmpty => _items.isEmpty;
@@ -27,6 +29,11 @@ class CartProvider extends ChangeNotifier {
   int get tax => 0; 
 
   int get total => subtotal + tax;
+
+  void setCustomerName(String name) {
+    _customerName = name;
+    notifyListeners();
+  }
 
   void setTableNumber(int number) {
     _tableNumber = number;
@@ -124,16 +131,18 @@ class CartProvider extends ChangeNotifier {
     _items.addAll(draft.items);
     _isTakeAway = draft.isTakeAway;
     _tableNumber = draft.tableNumber ?? 0;
+    _customerName = draft.customerName;
     _activeDraftId = draft.id;
     _activeDraftNumber = draft.draftNumber;
     notifyListeners();
   }
 
-  void loadQrOrder(int tableNum, List<OrderItem> qrItems) {
+  void loadQrOrder(int tableNum, List<OrderItem> qrItems, {String customerName = ''}) {
     _items.clear();
     _items.addAll(qrItems);
     _tableNumber = tableNum;
     _isTakeAway = false;
+    _customerName = customerName;
     _activeDraftId = null;
     _activeDraftNumber = null;
     notifyListeners();
@@ -143,6 +152,7 @@ class CartProvider extends ChangeNotifier {
     _items.clear();
     _tableNumber = 0;
     _isTakeAway = false;
+    _customerName = '';
     _activeDraftId = null;
     _activeDraftNumber = null;
     notifyListeners();

@@ -291,9 +291,19 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
                 const SizedBox(width: 6),
                 Text(AppFormatter.formatDateTime(order.createdAt), style: AppTextStyles.caption),
                 const Spacer(),
-                Icon(Icons.table_restaurant, size: 14, color: AppColors.textHint),
+                Icon(
+                  order.customerName.isNotEmpty ? Icons.person_outline : (order.isTakeAway ? Icons.shopping_bag_outlined : Icons.table_restaurant),
+                  size: 14,
+                  color: order.customerName.isNotEmpty ? AppColors.primary : AppColors.textHint,
+                ),
                 const SizedBox(width: 6),
-                Text('Meja ${order.tableNumber}', style: AppTextStyles.caption),
+                Text(
+                  order.displayName,
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: order.customerName.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                    color: order.customerName.isNotEmpty ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
             Padding(

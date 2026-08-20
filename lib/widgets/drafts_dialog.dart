@@ -66,7 +66,7 @@ class DraftsDialog extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     title: Text(
-                      '#${draft.draftNumber} - ${draft.isTakeAway ? 'Dibawa Pulang' : 'Meja ${draft.tableNumber}'}',
+                      '#${draft.draftNumber} - ${draft.customerName.isNotEmpty ? draft.customerName : (draft.isTakeAway ? 'Dibawa Pulang' : 'Meja ${draft.tableNumber}')}',
                       style: AppTextStyles.subtitle,
                     ),
                     subtitle: Text(

@@ -29,10 +29,12 @@ class PosScreen extends StatefulWidget {
 
 class _PosScreenState extends State<PosScreen> {
   final _searchController = TextEditingController();
+  final _customerNameController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _customerNameController.dispose();
     super.dispose();
   }
 
@@ -265,6 +267,14 @@ class _PosScreenState extends State<PosScreen> {
 
   Widget _buildCartSection() {
     return Consumer2<CartProvider, TableProvider>(builder: (context, cartProv, tableProv, _) {
+      // Sync customer name controller if updated externally (e.g. from draft or QR order)
+      if (_customerNameController.text != cartProv.customerName) {
+        _customerNameController.value = TextEditingValue(
+          text: cartProv.customerName,
+          selection: TextSelection.collapsed(offset: cartProv.customerName.length),
+        );
+      }
+
       return Container(
         color: AppColors.surface,
         child: Column(children: [
@@ -317,6 +327,35 @@ class _PosScreenState extends State<PosScreen> {
                       cartProv.setTableNumber(val);
                     } 
                   },
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _customerNameController,
+              onChanged: (val) => cartProv.setCustomerName(val.trim()),
+              style: AppTextStyles.body.copyWith(fontSize: 13),
+              decoration: InputDecoration(
+                hintText: 'Nama Pelanggan (Opsional)',
+                hintStyle: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 12),
+                prefixIcon: const Icon(Icons.person_outline, size: 18, color: AppColors.primary),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                filled: true,
+                fillColor: AppColors.card,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: BorderSide(color: AppColors.border.withOpacity(0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderSide: const BorderSide(color: AppColors.primary),
                 ),
               ),
             ),
@@ -428,7 +467,7 @@ class _PosScreenState extends State<PosScreen> {
                           final draft = DraftOrder(
                             id: draftId,
                             draftNumber: draftNumber,
-                            customerName: 'Pesanan #$draftNumber',
+                            customerName: cartProv.customerName.isNotEmpty ? cartProv.customerName : 'Pesanan #$draftNumber',
                             tableNumber: cartProv.tableNumber > 0 ? cartProv.tableNumber : null,
                             isTakeAway: cartProv.isTakeAway,
                             items: List.from(cartProv.items),

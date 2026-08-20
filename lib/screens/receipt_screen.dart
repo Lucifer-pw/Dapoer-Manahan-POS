@@ -48,6 +48,7 @@ class ReceiptScreen extends StatelessWidget {
                   // Order info
                   _receiptRow('No. Pesanan', order.orderNumber, Colors.black87),
                   _receiptRow('Tanggal', AppFormatter.formatDateTime(order.createdAt), Colors.black54),
+                  if (order.customerName.isNotEmpty) _receiptRow('Pelanggan', order.customerName, Colors.black87),
                   _receiptRow(order.isTakeAway ? 'Tipe' : 'Meja', order.isTakeAway ? 'DIBAWA PULANG' : '${order.tableNumber}', Colors.black54),
                   _receiptRow('Kasir', order.cashierName, Colors.black54),
                   const Divider(height: 20),
@@ -168,6 +169,7 @@ class ReceiptScreen extends StatelessWidget {
             .replaceAll(', ', ' ')
             .replaceAll('2026', '26'); // Shorten year to fit
         bluetooth.printLeftRight("Tanggal", receiptDate, 1);
+        if (order.customerName.isNotEmpty) bluetooth.printLeftRight("Pelanggan", order.customerName, 1);
         bluetooth.printLeftRight(order.isTakeAway ? "Tipe" : "Meja", order.isTakeAway ? "TAKE AWAY" : '${order.tableNumber}', 1);
         bluetooth.printLeftRight("Kasir", order.cashierName, 1);
         bluetooth.printNewLine();
@@ -242,6 +244,7 @@ class ReceiptScreen extends StatelessWidget {
                 // Order Info
                 _pdfRow('No. Pesanan', order.orderNumber),
                 _pdfRow('Tanggal', AppFormatter.formatDateTime(order.createdAt)),
+                if (order.customerName.isNotEmpty) _pdfRow('Pelanggan', order.customerName),
                 _pdfRow(order.isTakeAway ? 'Tipe' : 'Meja', order.isTakeAway ? 'TAKE AWAY' : '${order.tableNumber}'),
                 _pdfRow('Kasir', order.cashierName),
                 pw.Divider(height: 20),
