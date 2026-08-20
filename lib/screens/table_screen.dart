@@ -16,6 +16,8 @@ import '../models/order.dart' as app;
 import '../utils/formatter.dart';
 import 'order_detail_screen.dart';
 import '../providers/auth_provider.dart';
+import 'receipt_screen.dart';
+import '../models/order_item.dart';
 
 class TableScreen extends StatefulWidget {
   const TableScreen({super.key});
@@ -1332,6 +1334,64 @@ class _TableScreenState extends State<TableScreen> {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+              ),
+            ),
+          ],
+          // Cetak Struk Button — only show if order has been synced (has sequenceNumber)
+          if (status != 'pending' && (qr['sequenceNumber'] != null || qr['orderDocId'] != null)) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final int seqNum = _toInt(qr['sequenceNumber']);
+                  final String custName = qr['customerName'] as String? ?? '';
+                  final int tableNum = _toInt(qr['tableNumber']);
+
+                  final List<OrderItem> orderItems = items.map((it) {
+                    return OrderItem(
+                      menuItemId: it['menuItemId'] ?? it['id'] ?? '',
+                      menuItemName: it['name'] ?? it['menuItemName'] ?? '',
+                      quantity: _toInt(it['quantity'], fallback: 1),
+                      price: _toInt(it['price']),
+                      variant: it['variant'],
+                      notes: it['notes'] ?? '',
+                    );
+                  }).toList();
+
+                  final receiptOrder = app.Order(
+                    id: orderId,
+                    tableNumber: tableNum,
+                    cashierName: cashierName ?? 'Kasir',
+                    cashierId: cashierId ?? '',
+                    items: orderItems,
+                    subtotal: total,
+                    total: total,
+                    paymentMethod: paymentMethod,
+                    amountPaid: total,
+                    change: 0,
+                    status: app.OrderStatus.completed,
+                    isTakeAway: false,
+                    createdAt: date,
+                    sequenceNumber: seqNum,
+                    customerName: custName,
+                  );
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => ReceiptScreen(order: receiptOrder)),
+                  );
+                },
+                icon: const Icon(Icons.receipt_long_rounded, size: 16, color: AppColors.secondary),
+                label: Text(
+                  'Cetak Struk (DM-${_toInt(qr['sequenceNumber'])})',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.secondary),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.secondary.withOpacity(0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                 ),
               ),
             ),

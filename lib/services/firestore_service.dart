@@ -1114,6 +1114,7 @@ class FirestoreService {
       // Check if order was already synced to 'orders' collection previously
       final bool alreadySynced = data['orderDocId'] != null;
 
+      final bool isAcceptedOrLater = status == 'accepted' || status == 'delivered';
       final bool isDelivered = status == 'delivered';
       final bool isFullyComplete = isDelivered && paymentStatus == 'sudah_bayar';
 
@@ -1127,8 +1128,9 @@ class FirestoreService {
         return;
       }
 
-      // First-time sync: only create the order in 'orders' collection when FULLY complete (delivered + paid)
-      if (isFullyComplete) {
+      // First-time sync: create the order in 'orders' collection as soon as accepted
+      // so that it gets a sequenceNumber (invoice DM-XXX) immediately.
+      if (isAcceptedOrLater) {
         // 1. Get next sequence number
         final int seqNum = await getNextOrderSequence();
 
@@ -1169,20 +1171,20 @@ class FirestoreService {
           'paymentMethod': data['paymentMethod'] ?? 'QRIS',
           'amountPaid': totalPrice,
           'change': 0,
-          'status': 'completed',
+          'status': isFullyComplete ? 'completed' : 'pending',
           'isTakeAway': false,
           'createdAt': data['createdAt'] ?? FieldValue.serverTimestamp(),
           'sequenceNumber': seqNum,
+          'customerName': data['customerName'] ?? '',
         };
 
         // 4. Write to 'orders' collection
         final orderDocRef = await _ordersRef.add(completedOrderMap);
 
-        // 5. Save the order doc ID and optionally finalize status
-        // Only set status to 'completed' if BOTH delivered AND paid.
-        // Otherwise keep the current status so the order stays active for further actions (e.g. mark paid).
+        // 5. Save the order doc ID, sequenceNumber, and optionally finalize status
         final Map<String, dynamic> updateData = {
           'orderDocId': orderDocRef.id,
+          'sequenceNumber': seqNum,
         };
         if (isFullyComplete) {
           updateData['status'] = 'completed';
