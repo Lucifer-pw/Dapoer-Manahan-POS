@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/theme_provider.dart';
+import '../providers/subscription_provider.dart';
 import '../utils/constants.dart';
+import '../utils/formatter.dart';
 import 'admin_billing_screen.dart';
 import 'billing_history_screen.dart';
 import 'salary_screen.dart';
@@ -267,6 +269,103 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
             const SizedBox(height: 32),
             _buildSectionHeader('Billing'),
             const SizedBox(height: 16),
+            Consumer2<SubscriptionProvider, AuthProvider>(
+              builder: (context, sub, auth, _) {
+                final expiryDate = sub.effectiveExpiryDate;
+                final remaining = sub.remainingDays;
+                final isBlocked = sub.status == SubscriptionStatus.blocked;
+                final isWarning = sub.status == SubscriptionStatus.warning;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.cardGradient,
+                    borderRadius: BorderRadius.circular(AppRadius.lg),
+                    border: Border.all(
+                      color: isBlocked
+                          ? AppColors.error.withOpacity(0.5)
+                          : (isWarning ? AppColors.warning.withOpacity(0.5) : AppColors.primary.withOpacity(0.3)),
+                    ),
+                    boxShadow: AppShadows.card,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                isBlocked
+                                    ? Icons.lock_clock_rounded
+                                    : (isWarning ? Icons.warning_amber_rounded : Icons.verified_user_rounded),
+                                color: isBlocked ? AppColors.error : (isWarning ? AppColors.warning : AppColors.success),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 8),
+                              Text('Status Langganan POS', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (isBlocked
+                                      ? AppColors.error
+                                      : (isWarning ? AppColors.warning : AppColors.success))
+                                  .withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(AppRadius.full),
+                            ),
+                            child: Text(
+                              isBlocked ? 'Terkunci' : (isWarning ? 'Mendekati Expired' : 'Aktif'),
+                              style: TextStyle(
+                                color: isBlocked ? AppColors.error : (isWarning ? AppColors.warning : AppColors.success),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Sisa Masa Aktif', style: AppTextStyles.caption.copyWith(color: AppColors.textHint)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isBlocked ? '0 Hari' : '$remaining Hari Lagi',
+                                  style: AppTextStyles.heading3.copyWith(
+                                    color: isBlocked ? AppColors.error : AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Berlaku Sampai', style: AppTextStyles.caption.copyWith(color: AppColors.textHint)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  expiryDate != null ? AppFormatter.formatDate(expiryDate) : '-',
+                                  style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
             _buildSettingsTile(
               icon: Icons.history_rounded,
               title: 'Riwayat Pembayaran',

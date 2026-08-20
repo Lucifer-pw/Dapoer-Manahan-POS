@@ -11,10 +11,34 @@ class SubscriptionProvider extends ChangeNotifier {
   SubscriptionStatus _status = SubscriptionStatus.active;
   bool _isLoading = true;
   List<BillingRecord> _history = [];
+  DateTime? _activeUntil;
+  int _lastPaidMonth = 0;
+  int _lastPaidYear = 0;
 
   SubscriptionStatus get status => _status;
   bool get isLoading => _isLoading;
   List<BillingRecord> get history => _history;
+  DateTime? get activeUntil => _activeUntil;
+  int get lastPaidMonth => _lastPaidMonth;
+  int get lastPaidYear => _lastPaidYear;
+
+  DateTime? get effectiveExpiryDate {
+    if (_activeUntil != null) return _activeUntil;
+    if (_lastPaidMonth > 0 && _lastPaidYear > 0) {
+      return DateTime(_lastPaidYear, _lastPaidMonth + 1, 0, 23, 59, 59);
+    }
+    return null;
+  }
+
+  int get remainingDays {
+    final expiry = effectiveExpiryDate;
+    if (expiry == null) return 0;
+    final now = DateTime.now();
+    if (expiry.isBefore(now)) return 0;
+    final diff = expiry.difference(now);
+    final days = diff.inDays;
+    return (days == 0 && diff.inHours > 0) ? 1 : days;
+  }
 
   SubscriptionProvider() {
     _initHistoryStream();
@@ -54,6 +78,10 @@ class SubscriptionProvider extends ChangeNotifier {
 
       final activeUntilTs = data['activeUntil'] as Timestamp?;
       final activeUntil = activeUntilTs?.toDate();
+
+      _lastPaidMonth = lastPaidMonth;
+      _lastPaidYear = lastPaidYear;
+      _activeUntil = activeUntil;
 
       final isPaidByMonthYear = (lastPaidYear > now.year) ||
           (lastPaidYear == now.year && lastPaidMonth >= now.month);

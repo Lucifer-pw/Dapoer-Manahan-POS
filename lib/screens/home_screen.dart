@@ -22,6 +22,7 @@ import 'login_screen.dart';
 import 'printer_settings_screen.dart';
 import 'app_settings_screen.dart';
 import 'billing_screen.dart';
+import 'billing_history_screen.dart';
 import 'best_seller_screen.dart';
 import 'salary_screen.dart';
 import 'user_guide_screen.dart';
@@ -1589,108 +1590,211 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildBillingBanner() {
     return Consumer2<SubscriptionProvider, AuthProvider>(
       builder: (context, sub, auth, _) {
-        // ★ ADMIN BANNER: Saat status blocked dan user adalah admin
-        // Admin tetap bisa masuk app, tapi tampilkan banner info
-        if (sub.status == SubscriptionStatus.blocked && auth.isAdmin) {
+        // ★ ADMIN / BLOCKED BANNER: Saat status blocked
+        if (sub.status == SubscriptionStatus.blocked) {
+          if (auth.isAdmin) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.info.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.admin_panel_settings_rounded, color: AppColors.info, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Billing Belum Diperbarui',
+                          style: AppTextStyles.body.copyWith(
+                            color: AppColors.info,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          'Sebagai Admin, Anda bisa mengupdate status pembayaran di Pengaturan → Kelola Billing.',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.info, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
+                    },
+                    child: const Text('KELOLA', style: TextStyle(color: AppColors.info, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lock_clock_rounded, color: AppColors.error, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Masa Berlaku Billing Habis',
+                          style: AppTextStyles.body.copyWith(color: AppColors.error, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        Text(
+                          'Silakan lakukan perpanjangan billing Rp 50.000 agar layanan tetap aktif.',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.error, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BillingScreen()));
+                    },
+                    child: const Text('BAYAR', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+
+        // ★ WARNING BANNER: Saat mendekati jatuh tempo
+        if (sub.status == SubscriptionStatus.warning) {
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.info.withOpacity(0.12),
+              color: AppColors.warning.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+              border: Border.all(color: AppColors.warning.withOpacity(0.4)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.admin_panel_settings_rounded,
-                    color: AppColors.info, size: 20),
+                const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Billing Belum Dibayar',
+                        'Jatuh Tempo Pembayaran (Sisa ${sub.remainingDays} Hari)',
                         style: AppTextStyles.body.copyWith(
-                          color: AppColors.info,
+                          color: AppColors.warning,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                         ),
                       ),
                       Text(
-                        'Sebagai Admin, Anda bisa mengupdate status pembayaran di Pengaturan → Kelola Billing.',
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.info, fontSize: 11),
+                        sub.effectiveExpiryDate != null
+                            ? 'Masa aktif berakhir pada ${AppFormatter.formatDate(sub.effectiveExpiryDate!)}. Segera perpanjang agar tidak terkunci.'
+                            : 'Segera lakukan pembayaran Rp 50.000 agar aplikasi tidak terkunci.',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.warning, fontSize: 11),
                       ),
                     ],
                   ),
                 ),
                 TextButton(
                   onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const AppSettingsScreen()));
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BillingScreen()));
                   },
-                  child: const Text('KELOLA',
-                      style: TextStyle(
-                          color: AppColors.info, fontWeight: FontWeight.bold)),
+                  child: const Text('BAYAR', style: TextStyle(color: AppColors.warning, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
           );
         }
 
-        // Warning banner untuk user biasa saat jatuh tempo
-        if (sub.status != SubscriptionStatus.warning) {
-          return const SizedBox.shrink();
+        // ★ ACTIVE STATUS CARD: Khusus Owner & Admin untuk memantau sisa hari billing
+        if (auth.isOwner || auth.isAdmin) {
+          final expiryDate = sub.effectiveExpiryDate;
+          final remaining = sub.remainingDays;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: AppColors.cardGradient,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              boxShadow: AppShadows.card,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  child: const Icon(Icons.verified_user_rounded, color: AppColors.success, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Status Billing: ',
+                            style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Aktif • Sisa $remaining Hari',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        expiryDate != null
+                            ? 'Berlaku s/d ${AppFormatter.formatDate(expiryDate)} (Biaya: Rp 50.000 / bln)'
+                            : 'Masa aktif langganan normal',
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BillingHistoryScreen()));
+                  },
+                  icon: const Icon(Icons.history_rounded, size: 14, color: AppColors.primary),
+                  label: const Text('RIWAYAT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+                ),
+              ],
+            ),
+          );
         }
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.error.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.error.withOpacity(0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded,
-                  color: AppColors.error, size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Jatuh Tempo Pembayaran',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.error,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                    Text(
-                      'Segera lakukan pembayaran Rp 50.000 sebelum tanggal 6 agar aplikasi tidak terkunci.',
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.error),
-                    ),
-                  ],
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const BillingScreen()));
-                },
-                child: const Text('BAYAR',
-                    style: TextStyle(
-                        color: AppColors.error, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        );
+        return const SizedBox.shrink();
       },
     );
   }
