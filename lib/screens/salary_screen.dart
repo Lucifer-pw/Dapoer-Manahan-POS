@@ -39,6 +39,10 @@ class _SalaryScreenState extends State<SalaryScreen> {
   bool _isLoading = true;
   bool _isLoadingWork = false;
 
+  // Multi-month unpaid tracking
+  Map<String, int> _cashierUnpaidBadges = {};
+  Map<String, dynamic> _unpaidSummaryAllMonths = {};
+
   List<String> get _unpaidDates {
     if (_paidDays >= _workingDates.length) return [];
     return _workingDates.sublist(_paidDays);
@@ -64,9 +68,26 @@ class _SalaryScreenState extends State<SalaryScreen> {
       _isLoading = false;
       if (names.isNotEmpty && _selectedCashier == null) {
         _selectedCashier = names.first;
-        _loadWorkingDays();
       }
     });
+
+    // Load badges for all cashiers in background
+    _loadBadges();
+
+    if (_selectedCashier != null) {
+      _loadWorkingDays();
+    }
+  }
+
+  Future<void> _loadBadges() async {
+    try {
+      final badges = await _fs.getAllCashiersUnpaidBadges({});
+      if (mounted) {
+        setState(() => _cashierUnpaidBadges = badges);
+      }
+    } catch (e) {
+      debugPrint('Error loading badges: $e');
+    }
   }
 
   Future<void> _loadWorkingDays() async {
@@ -90,6 +111,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
       final paid = results[1] as int;
       final bankData = results[2] as Map<String, dynamic>;
       final shiftLogs = results[3] as List<Map<String, dynamic>>;
+      final rate = bankData['ratePerDay'] as int? ?? 50000;
       
       final List<String> rawDates = List<String>.from(workData['dates'] ?? []);
       // Sort dates chronologically
@@ -98,6 +120,11 @@ class _SalaryScreenState extends State<SalaryScreen> {
         final db = _parseCustomDate(b);
         return da.compareTo(db);
       });
+
+      // Load all-time unpaid summary for this cashier
+      final summary = await _fs.getCashierUnpaidSummaryAllMonths(_selectedCashier!, rate);
+
+      if (!mounted) return;
 
       setState(() {
         _workingDates = rawDates;
@@ -109,7 +136,9 @@ class _SalaryScreenState extends State<SalaryScreen> {
         _cashierBankAccount = bankData['bankAccountNumber'] ?? '';
         _cashierBankAccountName = bankData['bankAccountName'] ?? '';
         _cashierEmail = bankData['email'] ?? '';
-        _ratePerDay = bankData['ratePerDay'] as int? ?? 50000;
+        _ratePerDay = rate;
+        _unpaidSummaryAllMonths = summary;
+        _cashierUnpaidBadges[_selectedCashier!] = (summary['totalUnpaidDays'] as int? ?? 0);
       });
     } catch (e) {
       debugPrint('Error loading working days: $e');
@@ -120,6 +149,7 @@ class _SalaryScreenState extends State<SalaryScreen> {
           _totalWorkDays = 0;
           _totalTransactions = 0;
           _totalPaid = 0;
+          _unpaidSummaryAllMonths = {};
         });
       }
     } finally {
@@ -908,7 +938,9 @@ class _SalaryScreenState extends State<SalaryScreen> {
               onRefresh: _loadWorkingDays,
               child: ListView(padding: const EdgeInsets.all(AppSpacing.xl), children: [
                 _buildCashierSelector(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                _buildAllTimeUnpaidCard(),
+                const SizedBox(height: 16),
                 _buildBankDetailsCard(),
                 const SizedBox(height: 20),
                 _buildSalaryCard(),
@@ -1085,13 +1117,24 @@ class _SalaryScreenState extends State<SalaryScreen> {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.border.withOpacity(0.2))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Pilih Kasir', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Pilih Kasir', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              'Badge merah: Total hari belum lunas',
+              style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 10.5),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         if (_cashierNames.isEmpty)
           Text('Belum ada data kasir', style: AppTextStyles.bodySecondary)
         else
           Wrap(spacing: 8, runSpacing: 8, children: _cashierNames.map((name) {
             final sel = name == _selectedCashier;
+            final unpaidDays = _cashierUnpaidBadges[name] ?? 0;
+
             return GestureDetector(
               onTap: () {
                 setState(() => _selectedCashier = name);
@@ -1099,12 +1142,14 @@ class _SalaryScreenState extends State<SalaryScreen> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   gradient: sel ? AppColors.primaryGradient : null,
                   color: sel ? null : AppColors.card,
                   borderRadius: BorderRadius.circular(AppRadius.full),
-                  border: sel ? null : Border.all(color: AppColors.border.withOpacity(0.3)),
+                  border: sel ? null : Border.all(
+                    color: unpaidDays > 0 ? AppColors.warning.withOpacity(0.5) : AppColors.border.withOpacity(0.3),
+                  ),
                   boxShadow: sel ? [BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8)] : null),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.person_rounded, size: 16,
@@ -1113,11 +1158,328 @@ class _SalaryScreenState extends State<SalaryScreen> {
                   Text(name, style: AppTextStyles.body.copyWith(
                     fontWeight: sel ? FontWeight.bold : FontWeight.normal,
                     color: sel ? Colors.white : AppColors.textPrimary, fontSize: 13)),
+                  if (unpaidDays > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: sel ? Colors.white.withOpacity(0.25) : AppColors.warning.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(AppRadius.full),
+                        border: Border.all(
+                          color: sel ? Colors.white.withOpacity(0.6) : AppColors.warning.withOpacity(0.6),
+                        ),
+                      ),
+                      child: Text(
+                        '$unpaidDays hari',
+                        style: TextStyle(
+                          color: sel ? Colors.white : AppColors.warning,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ]),
               ),
             );
           }).toList()),
       ]),
+    );
+  }
+
+  // ── Multi-Month Unpaid Summary Card ──
+  Widget _buildAllTimeUnpaidCard() {
+    if (_selectedCashier == null || _isLoadingWork) return const SizedBox.shrink();
+
+    final totalUnpaidDays = _unpaidSummaryAllMonths['totalUnpaidDays'] as int? ?? 0;
+    final totalUnpaidAmount = _unpaidSummaryAllMonths['totalUnpaidAmount'] as int? ?? 0;
+    final unpaidMonths = List<Map<String, dynamic>>.from(_unpaidSummaryAllMonths['unpaidMonths'] ?? []);
+
+    if (totalUnpaidDays == 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.success.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Status Gaji: Semua Bulan Lunas ✓',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.success,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tidak ada tunggakan gaji dari bulan-bulan sebelumnya untuk $_selectedCashier.',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.warning.withOpacity(0.15),
+            AppColors.error.withOpacity(0.06),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.warning.withOpacity(0.4)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.warning.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    child: const Icon(Icons.warning_amber_rounded, color: AppColors.warning, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Total Tunggakan Gaji (Semua Bulan)',
+                    style: AppTextStyles.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(AppRadius.full),
+                  border: Border.all(color: AppColors.warning.withOpacity(0.5)),
+                ),
+                child: Text(
+                  '${unpaidMonths.length} Bulan Belum Lunas',
+                  style: const TextStyle(
+                    color: AppColors.warning,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Big Total
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.border.withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sisa Hari Belum Dibayar',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 11),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$totalUnpaidDays Hari Kerja',
+                      style: AppTextStyles.heading2.copyWith(color: AppColors.warning, fontSize: 18),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Total Nominal',
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textHint, fontSize: 11),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      AppFormatter.formatRupiah(totalUnpaidAmount),
+                      style: AppTextStyles.heading2.copyWith(color: AppColors.primary, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Breakdown per Month
+          Text(
+            'Rincian Tunggakan Per Bulan:',
+            style: AppTextStyles.caption.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: unpaidMonths.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, idx) {
+              final mData = unpaidMonths[idx];
+              final m = mData['month'] as int? ?? 1;
+              final y = mData['year'] as int? ?? 2026;
+              final unDays = mData['unpaidDays'] as int? ?? 0;
+              final unAmount = mData['unpaidAmount'] as int? ?? 0;
+              final isCurrent = m == _selectedMonth && y == _selectedYear;
+
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isCurrent ? AppColors.primary.withOpacity(0.1) : AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: isCurrent ? AppColors.primary.withOpacity(0.4) : AppColors.border.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 15,
+                          color: isCurrent ? AppColors.primary : AppColors.textHint,
+                        ),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${AppFormatter.getMonthName(m)} $y',
+                              style: AppTextStyles.body.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: isCurrent ? AppColors.primary : AppColors.textPrimary,
+                              ),
+                            ),
+                            Text(
+                              '$unDays hari (${AppFormatter.formatRupiah(unAmount)})',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.warning,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (isCurrent)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.visibility_rounded, size: 12, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Sedang Dibuka',
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _selectedMonth = m;
+                            _selectedYear = y;
+                          });
+                          _loadWorkingDays();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Membuka rincian gaji bulan ${AppFormatter.getMonthName(m)} $y'),
+                              backgroundColor: AppColors.info,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.white),
+                        label: const Text(
+                          'Buka Bulan',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          elevation: 0,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

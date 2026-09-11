@@ -995,6 +995,133 @@ class FirestoreService {
     return total;
   }
 
+  /// Get summary of all unpaid months for a specific cashier
+  Future<Map<String, dynamic>> getCashierUnpaidSummaryAllMonths(
+      String cashierName, int ratePerDay) async {
+    try {
+      final results = await Future.wait([
+        _db.collection('attendance').where('cashierName', isEqualTo: cashierName).get(),
+        _db.collection('salary_payments').where('cashierName', isEqualTo: cashierName).get(),
+      ]);
+
+      final attDocs = results[0].docs;
+      final payDocs = results[1].docs;
+
+      Map<String, int> paidByMonth = {};
+      for (final doc in payDocs) {
+        final data = doc.data();
+        final m = data['month'] as int? ?? 0;
+        final y = data['year'] as int? ?? 0;
+        final nominal = data['nominal'] as int? ?? 0;
+        final key = "${y}_$m";
+        paidByMonth[key] = (paidByMonth[key] ?? 0) + nominal;
+      }
+
+      List<Map<String, dynamic>> unpaidMonths = [];
+      int totalUnpaidDays = 0;
+      int totalUnpaidAmount = 0;
+
+      for (final doc in attDocs) {
+        final data = doc.data();
+        final m = data['month'] as int? ?? 0;
+        final y = data['year'] as int? ?? 0;
+        final totalDays = data['days'] as int? ?? 0;
+        if (m == 0 || y == 0 || totalDays == 0) continue;
+
+        final key = "${y}_$m";
+        final paidAmount = paidByMonth[key] ?? 0;
+        final paidDays = ratePerDay > 0 ? (paidAmount ~/ ratePerDay) : 0;
+        final unpaidDays = (totalDays - paidDays).clamp(0, 999999);
+        final unpaidAmount = (totalDays * ratePerDay - paidAmount).clamp(0, 999999999);
+
+        if (unpaidDays > 0 || unpaidAmount > 0) {
+          totalUnpaidDays += unpaidDays;
+          totalUnpaidAmount += unpaidAmount;
+          unpaidMonths.add({
+            'month': m,
+            'year': y,
+            'totalDays': totalDays,
+            'paidDays': paidDays,
+            'unpaidDays': unpaidDays,
+            'totalAmount': totalDays * ratePerDay,
+            'paidAmount': paidAmount,
+            'unpaidAmount': unpaidAmount,
+            'dates': List<String>.from(data['dates'] ?? []),
+          });
+        }
+      }
+
+      // Sort chronological: oldest to newest
+      unpaidMonths.sort((a, b) {
+        if (a['year'] != b['year']) return (a['year'] as int).compareTo(b['year'] as int);
+        return (a['month'] as int).compareTo(b['month'] as int);
+      });
+
+      return {
+        'totalUnpaidDays': totalUnpaidDays,
+        'totalUnpaidAmount': totalUnpaidAmount,
+        'unpaidMonths': unpaidMonths,
+      };
+    } catch (e) {
+      debugPrint('Error getting unpaid summary: $e');
+      return {
+        'totalUnpaidDays': 0,
+        'totalUnpaidAmount': 0,
+        'unpaidMonths': <Map<String, dynamic>>[],
+      };
+    }
+  }
+
+  /// Get unpaid days count badge for all cashiers
+  Future<Map<String, int>> getAllCashiersUnpaidBadges(Map<String, int> rateMap) async {
+    try {
+      final results = await Future.wait([
+        _db.collection('attendance').get(),
+        _db.collection('salary_payments').get(),
+      ]);
+
+      final attDocs = results[0].docs;
+      final payDocs = results[1].docs;
+
+      Map<String, int> paidByCashierMonth = {};
+      for (final doc in payDocs) {
+        final data = doc.data();
+        final name = data['cashierName'] as String? ?? '';
+        final m = data['month'] as int? ?? 0;
+        final y = data['year'] as int? ?? 0;
+        final nominal = data['nominal'] as int? ?? 0;
+        final key = "${name}_${y}_$m";
+        paidByCashierMonth[key] = (paidByCashierMonth[key] ?? 0) + nominal;
+      }
+
+      Map<String, int> unpaidDaysByCashier = {};
+
+      for (final doc in attDocs) {
+        final data = doc.data();
+        final name = data['cashierName'] as String? ?? '';
+        final m = data['month'] as int? ?? 0;
+        final y = data['year'] as int? ?? 0;
+        final totalDays = data['days'] as int? ?? 0;
+        if (name.isEmpty || m == 0 || y == 0 || totalDays == 0) continue;
+
+        final key = "${name}_${y}_$m";
+        final paidAmount = paidByCashierMonth[key] ?? 0;
+        final rate = rateMap[name] ?? 50000;
+        final paidDays = rate > 0 ? (paidAmount ~/ rate) : 0;
+        final unpaidDays = (totalDays - paidDays).clamp(0, 999999);
+
+        if (unpaidDays > 0) {
+          unpaidDaysByCashier[name] = (unpaidDaysByCashier[name] ?? 0) + unpaidDays;
+        }
+      }
+
+      return unpaidDaysByCashier;
+    } catch (e) {
+      debugPrint('Error getting unpaid badges: $e');
+      return {};
+    }
+  }
+
   // ============================================================
   // QR ORDERS (SELF SERVICE)
   // ============================================================
