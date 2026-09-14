@@ -182,16 +182,32 @@ window.WebBluetoothPrinter = {
       throw new Error("Printer belum terhubung.");
     }
 
-    const data = new Uint8Array(byteList);
+    let data;
+    if (byteList instanceof Uint8Array) {
+      data = byteList;
+    } else if (Array.isArray(byteList)) {
+      data = new Uint8Array(byteList);
+    } else if (byteList && typeof byteList === 'object') {
+      const len = byteList.length || 0;
+      data = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        data[i] = byteList[i];
+      }
+    } else {
+      data = new Uint8Array(byteList || []);
+    }
 
     if (this.mode === 'serial' && this.serialPort) {
+      if (!this.serialPort.writable) {
+        throw new Error("Port serial printer tidak siap menerima data. Coba putus dan hubungkan ulang.");
+      }
       const writer = this.serialPort.writable.getWriter();
       try {
-        const chunkSize = 1024;
+        const chunkSize = 256;
         for (let i = 0; i < data.length; i += chunkSize) {
           const chunk = data.slice(i, i + chunkSize);
           await writer.write(chunk);
-          await new Promise(r => setTimeout(r, 20));
+          await new Promise(r => setTimeout(r, 25));
         }
       } finally {
         writer.releaseLock();

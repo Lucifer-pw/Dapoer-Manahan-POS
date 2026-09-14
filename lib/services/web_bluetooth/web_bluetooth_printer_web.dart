@@ -1,5 +1,6 @@
 import 'dart:html' as html;
 import 'dart:js_util' as js_util;
+import 'dart:typed_data';
 
 class WebBluetoothPrinterService {
   static final WebBluetoothPrinterService instance = WebBluetoothPrinterService._();
@@ -118,7 +119,8 @@ class WebBluetoothPrinterService {
     }
 
     try {
-      final promise = js_util.callMethod(jsObj, 'printData', [bytes]);
+      final uint8Array = Uint8List.fromList(bytes);
+      final promise = js_util.callMethod(jsObj, 'printData', [uint8Array]);
       final result = await js_util.promiseToFuture(promise);
       return result == true;
     } catch (e) {

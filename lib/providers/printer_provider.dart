@@ -345,12 +345,14 @@ class PrinterProvider extends ChangeNotifier {
 
   Future<bool> printTestReceipt() async {
     if (_isWeb) {
-      if (!_isWebConnected) return false;
+      if (!_isWebConnected) {
+        throw 'Printer Web Bluetooth/Serial belum terhubung. Silakan hubungkan terlebih dahulu.';
+      }
       try {
         final builder = EscPosBuilder();
         builder.feed(1);
         builder.text("DAPOER MANAHAN", align: 1, bold: true, size: 2);
-        builder.text("TES KONEKSI WEB BLUETOOTH", align: 1, bold: true);
+        builder.text("TES KONEKSI PRINTER", align: 1, bold: true);
         builder.divider();
         builder.row("Status:", "BERHASIL (TERKONEKSI)");
         builder.row("Printer:", _webDeviceName.isNotEmpty ? _webDeviceName : "Iware Thermal");
@@ -363,7 +365,7 @@ class PrinterProvider extends ChangeNotifier {
         return await _webBt.printBytes(builder.toBytes());
       } catch (e) {
         debugPrint("Error printing web test receipt: $e");
-        return false;
+        rethrow;
       }
     }
 

@@ -604,14 +604,25 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            final success = await printerProv.printTestReceipt();
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(success ? 'Tes cetak berhasil dikirim ke printer!' : 'Gagal mengirim tes cetak.'),
-                                  backgroundColor: success ? AppColors.success : AppColors.error,
-                                ),
-                              );
+                            try {
+                              final success = await printerProv.printTestReceipt();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(success ? 'Tes cetak berhasil dikirim ke printer!' : 'Gagal mengirim tes cetak.'),
+                                    backgroundColor: success ? AppColors.success : AppColors.error,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Gagal mencetak: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
                             }
                           },
                           icon: const Icon(Icons.receipt_long_rounded, size: 18),
