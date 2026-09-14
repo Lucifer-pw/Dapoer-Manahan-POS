@@ -685,6 +685,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
+                  // Button 1: Web Serial (Bluetooth SPP & USB) - Recommended for Iware Windows
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -693,7 +694,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                           ? null
                           : () async {
                               try {
-                                final ok = await printerProv.connectWebBluetooth();
+                                final ok = await printerProv.connectWebSerial();
                                 if (ok && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -715,15 +716,57 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                             },
                       icon: printerProv.isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.bluetooth_connected_rounded, size: 20),
+                          : const Icon(Icons.usb_rounded, size: 20),
                       label: Text(
-                        printerProv.isLoading ? 'Menghubungkan...' : 'Scan & Hubungkan Printer Iware',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        printerProv.isLoading ? 'Menghubungkan...' : 'Hubungkan Iware (Bluetooth SPP / USB)',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  // Button 2: Web Bluetooth BLE
+                  SizedBox(
+                    width: double.infinity,
+                    height: 42,
+                    child: OutlinedButton.icon(
+                      onPressed: printerProv.isLoading
+                          ? null
+                          : () async {
+                              try {
+                                final ok = await printerProv.connectWebBle();
+                                if (ok && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Gagal menghubungkan: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.bluetooth_rounded, size: 18),
+                      label: const Text(
+                        'Hubungkan via Bluetooth BLE',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: BorderSide(color: AppColors.border.withOpacity(0.4)),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
                       ),
                     ),
@@ -735,15 +778,15 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
           const SizedBox(height: 24),
 
           // 2. Panduan Singkat
-          Text('Panduan Hubungkan Printer di Laptop:', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+          Text('Panduan Hubungkan Printer Iware di Laptop:', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          _buildWebStepItem('1', 'Nyalakan Printer Iware & Bluetooth Laptop', 'Pastikan tombol power printer menyala dan lampu indikator aktif.'),
+          _buildWebStepItem('1', 'Pairing Printer di Windows Laptop', 'Buka Settings Windows > Bluetooth & devices > Add device > Sambungkan printer Iware (PIN standar: 0000 atau 1234). Jika memakai kabel USB, cukup tancapkan kabel ke laptop.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('2', 'Klik Tombol Scan di Atas', 'Browser Google Chrome / Edge akan membuka jendela pencarian perangkat Bluetooth.'),
+          _buildWebStepItem('2', 'Klik Tombol Oranye di Atas', 'Tekan tombol "Hubungkan Iware (Bluetooth SPP / USB)" di atas.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('3', 'Pilih Nama Printer & Klik "Pair / Sandingkan"', 'Pilih nama printer Iware Anda (biasanya muncul sebagai Iware, RPP02N, POS-58, dll).'),
+          _buildWebStepItem('3', 'Pilih Port Printer & Klik "Connect / Hubungkan"', 'Pada jendela popup browser Google Chrome / Edge, pilih port printer Iware Anda lalu klik Connect.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('4', 'Selesai!', 'Saat transaksi selesai di POS, struk akan otomatis langsung dicetak via Bluetooth tanpa dialog print.'),
+          _buildWebStepItem('4', 'Selesai!', 'Printer Iware akan langsung terhubung (Status Hijau) dan siap mencetak struk secara otomatis saat transaksi POS.'),
 
           const SizedBox(height: 24),
           // 3. Alternative info

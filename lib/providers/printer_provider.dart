@@ -62,7 +62,61 @@ class PrinterProvider extends ChangeNotifier {
     }
   }
 
-  // ── Web Bluetooth Methods ──
+  // ── Web Bluetooth / Serial Methods ──
+  Future<bool> connectWebSerial() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final name = await _webBt.connectSerial();
+      if (name != null && name.isNotEmpty) {
+        _webDeviceName = name;
+        _isWebConnected = true;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Web Serial connect error: $e");
+      _isWebConnected = false;
+      _webDeviceName = '';
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
+  Future<bool> connectWebBle() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final name = await _webBt.connectBle();
+      if (name != null && name.isNotEmpty) {
+        _webDeviceName = name;
+        _isWebConnected = true;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Web BLE connect error: $e");
+      _isWebConnected = false;
+      _webDeviceName = '';
+      _isLoading = false;
+      notifyListeners();
+      rethrow;
+    }
+
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+
   Future<bool> connectWebBluetooth() async {
     _isLoading = true;
     notifyListeners();

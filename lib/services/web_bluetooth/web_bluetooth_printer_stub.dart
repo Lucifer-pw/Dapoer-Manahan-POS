@@ -1,4 +1,4 @@
-﻿class WebBluetoothPrinterService {
+class WebBluetoothPrinterService {
   static final WebBluetoothPrinterService instance = WebBluetoothPrinterService._();
   WebBluetoothPrinterService._();
 
@@ -9,6 +9,14 @@
   void setOnDisconnectedCallback(void Function() callback) {}
 
   Future<String?> connect() async {
+    return null;
+  }
+
+  Future<String?> connectSerial() async {
+    return null;
+  }
+
+  Future<String?> connectBle() async {
     return null;
   }
 

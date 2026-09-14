@@ -1,4 +1,4 @@
-﻿import 'dart:html' as html;
+import 'dart:html' as html;
 import 'dart:js_util' as js_util;
 
 class WebBluetoothPrinterService {
@@ -48,7 +48,45 @@ class WebBluetoothPrinterService {
     try {
       final promise = js_util.callMethod(jsObj, 'connect', []);
       final result = await js_util.promiseToFuture(promise);
-      _deviceName = result?.toString() ?? 'Printer Iware Bluetooth';
+      _deviceName = result?.toString() ?? 'Printer Iware Thermal';
+      _isConnected = true;
+      return _deviceName;
+    } catch (e) {
+      _isConnected = false;
+      _deviceName = '';
+      rethrow;
+    }
+  }
+
+  Future<String?> connectSerial() async {
+    final jsObj = js_util.getProperty(html.window, 'WebBluetoothPrinter');
+    if (jsObj == null) {
+      throw 'Web Bluetooth library belum terinisialisasi. Silakan refresh browser.';
+    }
+
+    try {
+      final promise = js_util.callMethod(jsObj, 'connectSerial', []);
+      final result = await js_util.promiseToFuture(promise);
+      _deviceName = result?.toString() ?? 'Iware Thermal (Bluetooth/USB)';
+      _isConnected = true;
+      return _deviceName;
+    } catch (e) {
+      _isConnected = false;
+      _deviceName = '';
+      rethrow;
+    }
+  }
+
+  Future<String?> connectBle() async {
+    final jsObj = js_util.getProperty(html.window, 'WebBluetoothPrinter');
+    if (jsObj == null) {
+      throw 'Web Bluetooth library belum terinisialisasi. Silakan refresh browser.';
+    }
+
+    try {
+      final promise = js_util.callMethod(jsObj, 'connectBle', []);
+      final result = await js_util.promiseToFuture(promise);
+      _deviceName = result?.toString() ?? 'Iware Bluetooth Printer';
       _isConnected = true;
       return _deviceName;
     } catch (e) {
