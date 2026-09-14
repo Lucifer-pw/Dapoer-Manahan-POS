@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../providers/printer_provider.dart';
 import '../providers/settings_provider.dart';
+import '../services/web_bluetooth/esc_pos_builder.dart';
 import '../utils/constants.dart';
 import '../utils/formatter.dart';
 import 'main_shell.dart';
@@ -157,7 +158,88 @@ class ReceiptScreen extends StatelessWidget {
   Future<void> _printReceipt(BuildContext context) async {
     final printerProv = Provider.of<PrinterProvider>(context, listen: false);
 
-    if (printerProv.isConnected) {
+    // 1. Web Bluetooth Direct Printing (Laptop / Google Chrome / Edge)
+    if (printerProv.isWeb && printerProv.isWebConnected) {
+      try {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        final builder = EscPosBuilder();
+        builder.feed(1);
+        builder.text(DefaultData.restaurantName, align: 1, bold: true, size: 2);
+        builder.text("Struk Pembayaran", align: 1);
+        builder.feed(1);
+
+        builder.row("No. Pesanan", order.orderNumber);
+        final receiptDate = AppFormatter.formatDateTime(order.createdAt)
+            .replaceAll(', ', ' ')
+            .replaceAll('2026', '26');
+        builder.row("Tanggal", receiptDate);
+        if (order.customerName.isNotEmpty) {
+          builder.row("Pelanggan", order.customerName);
+        }
+        builder.row(order.isTakeAway ? "Tipe" : "Meja", order.isTakeAway ? "TAKE AWAY" : '${order.tableNumber}');
+        builder.row("Kasir", order.cashierName);
+        builder.feed(1);
+
+        builder.divider();
+        for (var item in order.items) {
+          builder.text(item.menuItemName, align: 0, bold: true);
+          if (item.variant != null) {
+            builder.text("(${item.variant})", align: 0);
+          }
+          builder.row(
+            "${item.quantity} x ${AppFormatter.formatRupiah(item.price)}",
+            AppFormatter.formatRupiah(item.subtotal),
+          );
+        }
+        builder.divider();
+
+        builder.row("Subtotal", AppFormatter.formatRupiah(order.subtotal));
+        if (order.tax > 0) {
+          builder.row("Pajak", AppFormatter.formatRupiah(order.tax));
+        }
+        builder.row("TOTAL", AppFormatter.formatRupiah(order.total), bold: true);
+        builder.feed(1);
+
+        builder.row("Bayar (${order.paymentMethod})", AppFormatter.formatRupiah(order.amountPaid));
+        builder.row("Kembalian", AppFormatter.formatRupiah(order.change), bold: true);
+        builder.feed(1);
+
+        builder.divider();
+        builder.text("WIFI: ${settings.wifiSsid}", align: 1, bold: true);
+        builder.text("Pass: ${settings.wifiPassword}", align: 1);
+        builder.divider();
+        builder.feed(1);
+
+        builder.text("Terima kasih!", align: 1);
+        builder.text(DefaultData.restaurantName, align: 1);
+        builder.cut();
+
+        await printerProv.printWebBytes(builder.toBytes());
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Struk berhasil dicetak via Web Bluetooth!'),
+              backgroundColor: AppColors.success,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mencetak Web Bluetooth: $e. Mengalihkan ke jendela cetak...'),
+              backgroundColor: AppColors.warning,
+            ),
+          );
+        }
+        // Fallback continues to PDF below
+      }
+    }
+
+    // 2. Android Native Bluetooth Printing
+    if (!printerProv.isWeb && printerProv.isConnected) {
       try {
         final bluetooth = printerProv.bluetooth;
         bluetooth.printCustom(DefaultData.restaurantName, 3, 1);
@@ -216,7 +298,7 @@ class ReceiptScreen extends StatelessWidget {
       return;
     }
 
-    // Fallback to PDF Print
+    // 3. Fallback to PDF / System Print Dialog (USB or Unpaired)
     final settings = Provider.of<SettingsProvider>(context, listen: false);
     final pdf = pw.Document();
 

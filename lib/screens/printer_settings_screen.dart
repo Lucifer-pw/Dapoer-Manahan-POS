@@ -174,60 +174,9 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
       ),
       body: Consumer<PrinterProvider>(
         builder: (context, printerProv, child) {
-          // Show info message on web platform
+          // Web Bluetooth Interface for Laptop/Web Browser
           if (printerProv.isWeb) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.print_disabled_rounded, size: 40, color: AppColors.primary),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Fitur Printer Bluetooth Tersedia di Android',
-                      style: AppTextStyles.heading3,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Koneksi printer thermal Bluetooth langsung via sistem operasi Android.\n\nSilakan buka aplikasi Dapoer Manahan POS di tablet/smartphone Android kasir.',
-                      style: AppTextStyles.bodySecondary,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      decoration: BoxDecoration(
-                        color: AppColors.info.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.md),
-                        border: Border.all(color: AppColors.info.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Gunakan aplikasi versi Android untuk menghubungkan printer kasir Bluetooth.',
-                              style: AppTextStyles.caption.copyWith(color: AppColors.info),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _buildWebPrinterSettings(context, printerProv);
           }
 
           if (printerProv.isLoading) {
@@ -571,6 +520,296 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ── Web Bluetooth Settings UI ──
+  Widget _buildWebPrinterSettings(BuildContext context, PrinterProvider printerProv) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Status Connection Card
+          if (printerProv.isWebConnected) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.success.withOpacity(0.18),
+                    AppColors.success.withOpacity(0.06),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.success.withOpacity(0.4)),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.success.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.print_rounded, color: AppColors.success, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Printer Web Bluetooth Terhubung',
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    color: AppColors.success,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              printerProv.webDeviceName.isNotEmpty ? printerProv.webDeviceName : 'Iware Bluetooth Printer',
+                              style: AppTextStyles.heading3.copyWith(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(color: Colors.white12),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final success = await printerProv.printTestReceipt();
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(success ? 'Tes cetak berhasil dikirim ke printer!' : 'Gagal mengirim tes cetak.'),
+                                  backgroundColor: success ? AppColors.success : AppColors.error,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                          label: const Text('Tes Cetak Struk'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await printerProv.disconnectWebBluetooth();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Koneksi printer Bluetooth diputus.'),
+                                backgroundColor: AppColors.info,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.link_off_rounded, size: 18),
+                        label: const Text('Putus'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: BorderSide(color: AppColors.error.withOpacity(0.5)),
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: AppColors.cardGradient,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.bluetooth_searching_rounded, size: 38, color: AppColors.primary),
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Hubungkan Printer Bluetooth di Laptop',
+                    style: AppTextStyles.heading3,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sambungkan printer Iware / thermal Bluetooth langsung dari Google Chrome atau Microsoft Edge tanpa perlu install driver Windows.',
+                    style: AppTextStyles.bodySecondary.copyWith(fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton.icon(
+                      onPressed: printerProv.isLoading
+                          ? null
+                          : () async {
+                              try {
+                                final ok = await printerProv.connectWebBluetooth();
+                                if (ok && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Gagal menghubungkan: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      icon: printerProv.isLoading
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.bluetooth_connected_rounded, size: 20),
+                      label: Text(
+                        printerProv.isLoading ? 'Menghubungkan...' : 'Scan & Hubungkan Printer Iware',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+
+          // 2. Panduan Singkat
+          Text('Panduan Hubungkan Printer di Laptop:', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildWebStepItem('1', 'Nyalakan Printer Iware & Bluetooth Laptop', 'Pastikan tombol power printer menyala dan lampu indikator aktif.'),
+          const SizedBox(height: 10),
+          _buildWebStepItem('2', 'Klik Tombol Scan di Atas', 'Browser Google Chrome / Edge akan membuka jendela pencarian perangkat Bluetooth.'),
+          const SizedBox(height: 10),
+          _buildWebStepItem('3', 'Pilih Nama Printer & Klik "Pair / Sandingkan"', 'Pilih nama printer Iware Anda (biasanya muncul sebagai Iware, RPP02N, POS-58, dll).'),
+          const SizedBox(height: 10),
+          _buildWebStepItem('4', 'Selesai!', 'Saat transaksi selesai di POS, struk akan otomatis langsung dicetak via Bluetooth tanpa dialog print.'),
+
+          const SizedBox(height: 24),
+          // 3. Alternative info
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.info.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: AppColors.info.withOpacity(0.3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Alternatif USB / System Print: Jika tidak menggunakan Web Bluetooth, Anda juga dapat menghubungkan printer via kabel USB dan mencetak menggunakan jendela cetak browser standar.',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.info, fontSize: 11.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWebStepItem(String stepNum, String title, String desc) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border.withOpacity(0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                stepNum,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                const SizedBox(height: 2),
+                Text(desc, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
