@@ -125,6 +125,14 @@ window.WebBluetoothPrinter = {
     }
 
     const serviceUUIDs = [
+      0x18f0,
+      0xffe0,
+      0xff00,
+      0xfff0,
+      0xfee7,
+      0xae00,
+      0xae30,
+      0xff02,
       '000018f0-0000-1000-8000-00805f9b34fb',
       '0000ffe0-0000-1000-8000-00805f9b34fb',
       '0000ff00-0000-1000-8000-00805f9b34fb',
