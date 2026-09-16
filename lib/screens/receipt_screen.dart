@@ -160,9 +160,31 @@ class ReceiptScreen extends StatelessWidget {
                               ),
                             ),
                             ElevatedButton.icon(
-                              onPressed: () => _showWebConnectOptions(context, printerProv, autoPrintAfterConnect: false),
-                              icon: const Icon(Icons.bluetooth_rounded, size: 14),
-                              label: const Text('Hubungkan', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: printerProv.isLoading
+                                  ? null
+                                  : () async {
+                                      try {
+                                        final ok = await printerProv.connectWebSerial();
+                                        if (ok && context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('✅ Printer ${printerProv.webDeviceName} terhubung!'),
+                                              backgroundColor: AppColors.success,
+                                            ),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('❌ Gagal: $e'), backgroundColor: AppColors.error),
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: printerProv.isLoading
+                                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.bluetooth_rounded, size: 14),
+                              label: Text(printerProv.isLoading ? 'Menyambung...' : 'Hubungkan', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
@@ -232,8 +254,19 @@ class ReceiptScreen extends StatelessWidget {
         await _printWebEscPos(context, printerProv);
         return;
       } else {
-        // Printer not connected yet on web -> Show quick connect dialog
-        _showWebConnectOptions(context, printerProv, autoPrintAfterConnect: true);
+        // Try direct connect first
+        try {
+          final ok = await printerProv.connectWebSerial(forcePicker: false);
+          if (ok && context.mounted) {
+            await _printWebEscPos(context, printerProv);
+            return;
+          }
+        } catch (_) {
+          // If connect fails or cancelled, show options (Retry / PDF)
+          if (context.mounted) {
+            _showWebConnectOptions(context, printerProv, autoPrintAfterConnect: true);
+          }
+        }
         return;
       }
     }
@@ -463,51 +496,7 @@ class ReceiptScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Option 2: Bluetooth BLE (Alternative)
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  side: BorderSide(color: AppColors.border.withOpacity(0.4)),
-                ),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.bluetooth_rounded, color: AppColors.textPrimary, size: 22),
-                ),
-                title: const Text('Bluetooth BLE (Opsional)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                subtitle: Text('Khusus printer dengan dukungan Bluetooth BLE', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  try {
-                    final ok = await printerProv.connectWebBle();
-                    if (ok && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('✅ Printer ${printerProv.webDeviceName} terhubung!'),
-                          backgroundColor: AppColors.success,
-                        ),
-                      );
-                      if (autoPrintAfterConnect) {
-                        await _printWebEscPos(context, printerProv);
-                      }
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('❌ Gagal menghubungkan: $e'), backgroundColor: AppColors.error),
-                      );
-                    }
-                  }
-                },
-              ),
-              const SizedBox(height: 10),
-
-              // Option 3: Browser PDF Dialog
+              // Option 2: Browser PDF Dialog (Fallback)
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 shape: RoundedRectangleBorder(

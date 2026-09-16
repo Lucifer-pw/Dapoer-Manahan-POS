@@ -774,49 +774,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       style: TextStyle(fontSize: 12, color: AppColors.primary.withOpacity(0.85)),
                     ),
                   ),
-                  const SizedBox(height: 6),
-
-                  // Button 2: Web Bluetooth BLE (Alternative)
-                  SizedBox(
-                    width: double.infinity,
-                    height: 42,
-                    child: OutlinedButton.icon(
-                      onPressed: printerProv.isLoading
-                          ? null
-                          : () async {
-                              try {
-                                final ok = await printerProv.connectWebBle();
-                                if (ok && context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
-                                      backgroundColor: AppColors.success,
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Gagal menghubungkan: $e'),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                      icon: const Icon(Icons.bluetooth_rounded, size: 18),
-                      label: const Text(
-                        'Hubungkan via Bluetooth BLE (Opsional)',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.textPrimary,
-                        side: BorderSide(color: AppColors.border.withOpacity(0.4)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 4),
                 ],
               ),
             ),
