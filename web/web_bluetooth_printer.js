@@ -67,7 +67,7 @@ window.WebBluetoothPrinter = {
     }
   },
 
-  // 2. Connect via Web Bluetooth (BLE)
+  // 2. Connect via Web Bluetooth (BLE) with robust retry
   connectBle: async function() {
     if (!navigator.bluetooth) {
       throw new Error("Web Bluetooth tidak didukung pada browser ini. Gunakan Google Chrome atau Microsoft Edge.");
@@ -96,18 +96,60 @@ window.WebBluetoothPrinter = {
     this.device = device;
     this.deviceName = device.name || "Iware Bluetooth Printer";
 
-    await new Promise(r => setTimeout(r, 200));
-
-    let server;
-    try {
-      server = await device.gatt.connect();
-    } catch (e) {
-      await new Promise(r => setTimeout(r, 500));
-      server = await device.gatt.connect();
+    // Disconnect stale GATT connection first if exists
+    if (device.gatt && device.gatt.connected) {
+      try {
+        console.log("[BLE] Disconnecting stale GATT connection...");
+        device.gatt.disconnect();
+        await new Promise(r => setTimeout(r, 500));
+      } catch (_) {}
     }
 
+    // Retry GATT connect up to 3 times with increasing delays
+    let server = null;
+    const maxRetries = 3;
+    const delays = [300, 800, 1500];
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        console.log("[BLE] GATT connect attempt " + (attempt + 1) + "/" + maxRetries + "...");
+        server = await device.gatt.connect();
+        console.log("[BLE] GATT connected on attempt " + (attempt + 1));
+        break;
+      } catch (e) {
+        lastError = e;
+        console.warn("[BLE] GATT attempt " + (attempt + 1) + " failed:", e.message);
+        // Disconnect before retry
+        try { device.gatt.disconnect(); } catch (_) {}
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+    }
+
+    if (!server) {
+      throw new Error("Gagal menghubungkan GATT setelah " + maxRetries + " percobaan. Coba matikan lalu nyalakan kembali printer, kemudian sambungkan ulang. (" + (lastError ? lastError.message : "unknown") + ")");
+    }
+
+    // Wait for services to stabilize
+    await new Promise(r => setTimeout(r, 300));
+
     let foundChar = null;
-    const services = await server.getPrimaryServices();
+    let services;
+    try {
+      services = await server.getPrimaryServices();
+    } catch (e) {
+      // Retry getting services once
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        services = await server.getPrimaryServices();
+      } catch (e2) {
+        throw new Error("Printer terhubung tapi gagal membaca layanan BLE. Coba matikan printer 3 detik, nyalakan kembali, lalu sambungkan ulang.");
+      }
+    }
+
     for (const service of services) {
       try {
         const chars = await service.getCharacteristics();
@@ -124,7 +166,7 @@ window.WebBluetoothPrinter = {
     }
 
     if (!foundChar) {
-      throw new Error("Printer terdeteksi sebagai Bluetooth Classic (SPP). Silakan gunakan tombol 'Hubungkan Iware (Bluetooth SPP / USB)' untuk menghubungkan.");
+      throw new Error("Printer ini tidak mendukung BLE (Bluetooth Low Energy). Gunakan tombol utama '⚡ Hubungkan Iware (Bluetooth / USB)' untuk menghubungkan.");
     }
 
     this.characteristic = foundChar;
