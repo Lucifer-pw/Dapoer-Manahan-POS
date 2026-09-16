@@ -118,7 +118,7 @@ window.WebBluetoothPrinter = {
     return null;
   },
 
-  // 2. Connect via Web Bluetooth (BLE) with robust retry
+  // 2. Connect via Web Bluetooth (BLE) - Direct Bluetooth for RPP02N on Windows/Chrome
   connectBle: async function() {
     if (!navigator.bluetooth) {
       throw new Error("Web Bluetooth tidak didukung pada browser ini. Gunakan Google Chrome atau Microsoft Edge.");
@@ -126,98 +126,97 @@ window.WebBluetoothPrinter = {
 
     const serviceUUIDs = [
       '000018f0-0000-1000-8000-00805f9b34fb',
-      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-      '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+      '0000ffe0-0000-1000-8000-00805f9b34fb',
       '0000ff00-0000-1000-8000-00805f9b34fb',
       '0000fff0-0000-1000-8000-00805f9b34fb',
+      '0000fee7-0000-1000-8000-00805f9b34fb',
       '0000ae00-0000-1000-8000-00805f9b34fb',
+      '0000ae30-0000-1000-8000-00805f9b34fb',
       '0000ff02-0000-1000-8000-00805f9b34fb',
-      '0000ffe0-0000-1000-8000-00805f9b34fb'
+      '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+      'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+      '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
     ];
 
+    console.log("[BLE] Requesting Bluetooth device...");
     const device = await navigator.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: serviceUUIDs
     });
 
     if (!device) {
-      throw new Error("Tidak ada perangkat yang dipilih.");
+      throw new Error("Tidak ada perangkat Bluetooth yang dipilih.");
     }
 
     this.device = device;
-    this.deviceName = device.name || "Iware Bluetooth Printer";
+    this.deviceName = device.name || "RPP02N Bluetooth Printer";
 
-    // Disconnect stale GATT connection first if exists
-    if (device.gatt && device.gatt.connected) {
-      try {
-        console.log("[BLE] Disconnecting stale GATT connection...");
-        device.gatt.disconnect();
-        await new Promise(r => setTimeout(r, 500));
-      } catch (_) {}
-    }
+    console.log("[BLE] Connecting to GATT server for " + this.deviceName + "...");
 
-    // Retry GATT connect up to 3 times with increasing delays
     let server = null;
-    const maxRetries = 3;
-    const delays = [300, 800, 1500];
-    let lastError = null;
-
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      server = await device.gatt.connect();
+    } catch (err1) {
+      console.warn("[BLE] First gatt.connect attempt failed, retrying in 600ms:", err1.message);
+      await new Promise(r => setTimeout(r, 600));
       try {
-        await new Promise(r => setTimeout(r, delays[attempt]));
-        console.log("[BLE] GATT connect attempt " + (attempt + 1) + "/" + maxRetries + "...");
         server = await device.gatt.connect();
-        console.log("[BLE] GATT connected on attempt " + (attempt + 1));
-        break;
-      } catch (e) {
-        lastError = e;
-        console.warn("[BLE] GATT attempt " + (attempt + 1) + " failed:", e.message);
-        // Disconnect before retry
-        try { device.gatt.disconnect(); } catch (_) {}
-        if (attempt < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 500));
-        }
+      } catch (err2) {
+        throw new Error("Gagal menyambungkan ke Bluetooth printer (" + err2.message + "). Pastikan printer menyala dan Bluetooth aktif.");
       }
     }
 
-    if (!server) {
-      throw new Error("Gagal menghubungkan GATT setelah " + maxRetries + " percobaan. Coba matikan lalu nyalakan kembali printer, kemudian sambungkan ulang. (" + (lastError ? lastError.message : "unknown") + ")");
+    if (!server || !server.connected) {
+      throw new Error("GATT Server printer tidak terhubung. Coba matikan printer 3 detik dan nyalakan kembali.");
     }
 
-    // Wait for services to stabilize
+    // Wait 300ms for services to be ready
     await new Promise(r => setTimeout(r, 300));
 
     let foundChar = null;
-    let services;
-    try {
-      services = await server.getPrimaryServices();
-    } catch (e) {
-      // Retry getting services once
-      await new Promise(r => setTimeout(r, 500));
-      try {
-        services = await server.getPrimaryServices();
-      } catch (e2) {
-        throw new Error("Printer terhubung tapi gagal membaca layanan BLE. Coba matikan printer 3 detik, nyalakan kembali, lalu sambungkan ulang.");
-      }
-    }
 
-    for (const service of services) {
+    // 1. Check known thermal printer service UUIDs individually
+    for (const uuid of serviceUUIDs) {
       try {
-        const chars = await service.getCharacteristics();
-        for (const char of chars) {
-          if (char.properties.write || char.properties.writeWithoutResponse) {
-            foundChar = char;
-            break;
+        const s = await server.getPrimaryService(uuid);
+        if (s) {
+          const chars = await s.getCharacteristics();
+          for (const c of chars) {
+            if (c.properties.write || c.properties.writeWithoutResponse) {
+              foundChar = c;
+              console.log("[BLE] Found writable characteristic in service " + uuid + ":", c.uuid);
+              break;
+            }
           }
         }
-      } catch (err) {
-        console.warn("Service characteristic scan warning:", err);
-      }
+      } catch (_) {}
       if (foundChar) break;
     }
 
+    // 2. Fallback: try getPrimaryServices() if individual lookups did not find it
     if (!foundChar) {
-      throw new Error("Printer ini tidak mendukung BLE (Bluetooth Low Energy). Gunakan tombol utama '⚡ Hubungkan Iware (Bluetooth / USB)' untuk menghubungkan.");
+      try {
+        const services = await server.getPrimaryServices();
+        for (const service of services) {
+          try {
+            const chars = await service.getCharacteristics();
+            for (const char of chars) {
+              if (char.properties.write || char.properties.writeWithoutResponse) {
+                foundChar = char;
+                console.log("[BLE] Found writable char from getPrimaryServices:", char.uuid);
+                break;
+              }
+            }
+          } catch (_) {}
+          if (foundChar) break;
+        }
+      } catch (errServices) {
+        console.warn("[BLE] getPrimaryServices fallback warning:", errServices.message);
+      }
+    }
+
+    if (!foundChar) {
+      throw new Error("Layanan cetak Bluetooth tidak ditemukan pada perangkat '" + this.deviceName + "'. Pastikan Anda memilih printer RPP02N.");
     }
 
     this.characteristic = foundChar;
@@ -225,6 +224,7 @@ window.WebBluetoothPrinter = {
     this.isConnected = true;
 
     device.addEventListener('gattserverdisconnected', () => {
+      console.log("[BLE] Printer disconnected");
       this.isConnected = false;
       this.characteristic = null;
       this.mode = null;
@@ -233,6 +233,7 @@ window.WebBluetoothPrinter = {
       }
     });
 
+    console.log("[BLE] Successfully connected to " + this.deviceName);
     return this.deviceName;
   },
 

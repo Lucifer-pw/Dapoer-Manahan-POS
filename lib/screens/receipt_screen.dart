@@ -164,7 +164,7 @@ class ReceiptScreen extends StatelessWidget {
                                   ? null
                                   : () async {
                                       try {
-                                        final ok = await printerProv.connectWebSerial();
+                                        final ok = await printerProv.connectWebBle();
                                         if (ok && context.mounted) {
                                           ScaffoldMessenger.of(context).showSnackBar(
                                             SnackBar(
@@ -254,15 +254,15 @@ class ReceiptScreen extends StatelessWidget {
         await _printWebEscPos(context, printerProv);
         return;
       } else {
-        // Try direct connect first
+        // Try Bluetooth BLE connect first
         try {
-          final ok = await printerProv.connectWebSerial(forcePicker: false);
+          final ok = await printerProv.connectWebBle();
           if (ok && context.mounted) {
             await _printWebEscPos(context, printerProv);
             return;
           }
         } catch (_) {
-          // If connect fails or cancelled, show options (Retry / PDF)
+          // If connect fails or cancelled, show options (Retry / Serial / PDF)
           if (context.mounted) {
             _showWebConnectOptions(context, printerProv, autoPrintAfterConnect: true);
           }
@@ -451,7 +451,7 @@ class ReceiptScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               
-              // Option 1: USB / Bluetooth SPP (Standard for Iware RPP02N)
+              // Option 1: Bluetooth BLE (Direct for RPP02N)
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 shape: RoundedRectangleBorder(
@@ -465,11 +465,55 @@ class ReceiptScreen extends StatelessWidget {
                     color: AppColors.primary.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.print_rounded, color: AppColors.primary, size: 22),
+                  child: const Icon(Icons.bluetooth_rounded, color: AppColors.primary, size: 22),
                 ),
-                title: const Text('Hubungkan Iware (Bluetooth / USB)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                subtitle: Text('Pilih "RPP02N - Paired" pada popup & cetak langsung', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                title: const Text('Hubungkan via Bluetooth (RPP02N)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: Text('Pilih "RPP02N" pada popup browser Bluetooth', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final ok = await printerProv.connectWebBle();
+                    if (ok && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✅ Printer ${printerProv.webDeviceName} terhubung!'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                      if (autoPrintAfterConnect) {
+                        await _printWebEscPos(context, printerProv);
+                      }
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('❌ Gagal menghubungkan: $e'), backgroundColor: AppColors.error),
+                      );
+                    }
+                  }
+                },
+              ),
+              const SizedBox(height: 10),
+
+              // Option 2: USB / Serial Port (Alternative)
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  side: BorderSide(color: AppColors.border.withOpacity(0.4)),
+                ),
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.usb_rounded, color: AppColors.primary, size: 22),
+                ),
+                title: const Text('Hubungkan via Kabel USB / Serial Port', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                subtitle: Text('Pilihan jika printer terhubung via kabel USB', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
@@ -496,7 +540,7 @@ class ReceiptScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Option 2: Browser PDF Dialog (Fallback)
+              // Option 3: Browser PDF Dialog (Fallback)
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 shape: RoundedRectangleBorder(

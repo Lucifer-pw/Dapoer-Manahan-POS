@@ -696,7 +696,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
-                  // Button 1: Web Serial (Bluetooth SPP & USB - Standard for Iware RPP02N on Windows)
+                  // Button 1: Web Bluetooth (Direct for RPP02N)
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -705,7 +705,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                           ? null
                           : () async {
                               try {
-                                final ok = await printerProv.connectWebSerial(forcePicker: false);
+                                final ok = await printerProv.connectWebBle();
                                 if (ok && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -727,9 +727,9 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                             },
                       icon: printerProv.isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.print_rounded, size: 20),
+                          : const Icon(Icons.bluetooth_rounded, size: 20),
                       label: Text(
-                        printerProv.isLoading ? 'Menghubungkan...' : '⚡ Hubungkan Iware (Bluetooth / USB)',
+                        printerProv.isLoading ? 'Menghubungkan...' : '🔵 Hubungkan via Bluetooth (RPP02N)',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
                       ),
                       style: ElevatedButton.styleFrom(
@@ -740,38 +740,47 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
 
-                  // Button 1B: Force Picker / Ganti Port (if user wants to change port or pick another printer)
-                  TextButton.icon(
-                    onPressed: printerProv.isLoading
-                        ? null
-                        : () async {
-                            try {
-                              final ok = await printerProv.connectWebSerial(forcePicker: true);
-                              if (ok && context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
-                                    backgroundColor: AppColors.success,
-                                  ),
-                                );
+                  // Button 2: Web Serial (Bluetooth SPP / USB)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 42,
+                    child: OutlinedButton.icon(
+                      onPressed: printerProv.isLoading
+                          ? null
+                          : () async {
+                              try {
+                                final ok = await printerProv.connectWebSerial(forcePicker: true);
+                                if (ok && context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
+                                      backgroundColor: AppColors.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Gagal menghubungkan: $e'),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
                               }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Gagal menghubungkan: $e'),
-                                    backgroundColor: AppColors.error,
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: Text(
-                      'Pilih / Ganti Perangkat Lain (Buka Popup)',
-                      style: TextStyle(fontSize: 12, color: AppColors.primary.withOpacity(0.85)),
+                            },
+                      icon: const Icon(Icons.usb_rounded, size: 18),
+                      label: const Text(
+                        'Hubungkan via Serial / Kabel USB',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: BorderSide(color: AppColors.border.withOpacity(0.4)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -784,13 +793,13 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
           // 2. Panduan Singkat
           Text('Panduan Hubungkan Printer Iware di Laptop:', style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          _buildWebStepItem('1', 'Nyalakan Printer & Bluetooth Laptop', 'Pastikan printer thermal menyala dan sudah terhubung (Connected) di Bluetooth Windows atau tertancap kabel USB.'),
+          _buildWebStepItem('1', 'Nyalakan Printer & Bluetooth Laptop', 'Pastikan printer thermal menyala dan Bluetooth di Windows dalam keadaan aktif (status RPP02N Connected).'),
           const SizedBox(height: 10),
-          _buildWebStepItem('2', 'Klik Tombol Oranye "⚡ Hubungkan Iware"', 'Cukup klik tombol oranye di atas. Jika sebelumnya sudah pernah terhubung, website akan otomatis menyambungkan tanpa membuka jendela pilihan.'),
+          _buildWebStepItem('2', 'Klik Tombol "🔵 Hubungkan via Bluetooth"', 'Tekan tombol oranye "🔵 Hubungkan via Bluetooth (RPP02N)" di atas.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('3', 'Pilih "RPP02N - Paired" (Pertama Kali Saja)', 'Hanya pada saat pertama kali, pilih "RPP02N - Paired" pada jendela popup browser lalu klik Connect. Browser akan otomatis mengingatnya.'),
+          _buildWebStepItem('3', 'Pilih "RPP02N" & Klik "Pair / Connect"', 'Pada jendela popup browser Google Chrome / Edge yang muncul, klik pada nama "RPP02N" lalu klik tombol Pair / Connect.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('4', 'Selesai!', 'Status printer akan langsung berubah menjadi Hijau (✓ Terhubung) dan siap mencetak struk kasir secara instan.'),
+          _buildWebStepItem('4', 'Selesai!', 'Status printer akan langsung berubah menjadi Hijau (✓ Terhubung) dan siap mencetak struk kasir.'),
 
           const SizedBox(height: 24),
           // 3. Alternative info
