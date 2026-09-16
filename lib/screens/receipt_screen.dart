@@ -418,7 +418,7 @@ class ReceiptScreen extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               
-              // Option 1: Bluetooth BLE (Recommended)
+              // Option 1: USB / Bluetooth SPP (Standard for Iware RPP02N)
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 shape: RoundedRectangleBorder(
@@ -432,15 +432,15 @@ class ReceiptScreen extends StatelessWidget {
                     color: AppColors.primary.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.bluetooth_connected_rounded, color: AppColors.primary, size: 22),
+                  child: const Icon(Icons.print_rounded, color: AppColors.primary, size: 22),
                 ),
-                title: const Text('Bluetooth BLE (Rekomendasi Laptop)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
-                subtitle: Text('Langsung konek ke printer Iware & cetak otomatis', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                title: const Text('Hubungkan Iware (Bluetooth / USB)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+                subtitle: Text('Pilih "RPP02N - Paired" pada popup & cetak langsung', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
-                    final ok = await printerProv.connectWebBle();
+                    final ok = await printerProv.connectWebSerial();
                     if (ok && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -463,7 +463,7 @@ class ReceiptScreen extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Option 2: USB / Bluetooth SPP
+              // Option 2: Bluetooth BLE (Alternative)
               ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 shape: RoundedRectangleBorder(
@@ -476,15 +476,15 @@ class ReceiptScreen extends StatelessWidget {
                     color: AppColors.surfaceDark,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.usb_rounded, color: AppColors.textPrimary, size: 22),
+                  child: Icon(Icons.bluetooth_rounded, color: AppColors.textPrimary, size: 22),
                 ),
-                title: const Text('Kabel USB / Bluetooth SPP', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                subtitle: Text('Hubungkan via port serial USB atau COM port', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                title: const Text('Bluetooth BLE (Opsional)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                subtitle: Text('Khusus printer dengan dukungan Bluetooth BLE', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 trailing: Icon(Icons.chevron_right_rounded, color: AppColors.textHint),
                 onTap: () async {
                   Navigator.pop(ctx);
                   try {
-                    final ok = await printerProv.connectWebSerial();
+                    final ok = await printerProv.connectWebBle();
                     if (ok && context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
