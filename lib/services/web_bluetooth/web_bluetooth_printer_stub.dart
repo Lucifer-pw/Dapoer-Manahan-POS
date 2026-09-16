@@ -12,7 +12,11 @@ class WebBluetoothPrinterService {
     return null;
   }
 
-  Future<String?> connectSerial() async {
+  Future<String?> autoConnect() async {
+    return null;
+  }
+
+  Future<String?> connectSerial({bool forcePicker = false}) async {
     return null;
   }
 

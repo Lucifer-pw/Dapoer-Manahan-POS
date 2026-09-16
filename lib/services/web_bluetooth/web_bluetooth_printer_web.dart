@@ -59,14 +59,30 @@ class WebBluetoothPrinterService {
     }
   }
 
-  Future<String?> connectSerial() async {
+  Future<String?> autoConnect() async {
+    final jsObj = js_util.getProperty(html.window, 'WebBluetoothPrinter');
+    if (jsObj == null) return null;
+
+    try {
+      final promise = js_util.callMethod(jsObj, 'autoConnect', []);
+      final result = await js_util.promiseToFuture(promise);
+      if (result != null && result.toString().isNotEmpty) {
+        _deviceName = result.toString();
+        _isConnected = true;
+        return _deviceName;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<String?> connectSerial({bool forcePicker = false}) async {
     final jsObj = js_util.getProperty(html.window, 'WebBluetoothPrinter');
     if (jsObj == null) {
       throw 'Web Bluetooth library belum terinisialisasi. Silakan refresh browser.';
     }
 
     try {
-      final promise = js_util.callMethod(jsObj, 'connectSerial', []);
+      final promise = js_util.callMethod(jsObj, 'connectSerial', [9600, forcePicker]);
       final result = await js_util.promiseToFuture(promise);
       _deviceName = result?.toString() ?? 'Iware Thermal (Bluetooth/USB)';
       _isConnected = true;

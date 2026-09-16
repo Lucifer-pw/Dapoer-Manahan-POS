@@ -25,24 +25,57 @@ window.WebBluetoothPrinter = {
   },
 
   // 1. Connect via Web Serial (Bluetooth SPP & USB - 100% compatible with Iware on Windows)
-  connectSerial: async function(baudRate = 9600) {
+  connectSerial: async function(baudRate = 9600, forcePicker = false) {
     if (!navigator.serial) {
       throw new Error("Web Serial tidak didukung pada browser ini. Gunakan Google Chrome atau Microsoft Edge terbaru di Laptop.");
     }
 
     try {
-      const port = await navigator.serial.requestPort();
-      if (!port) {
-        throw new Error("Tidak ada printer / port yang dipilih.");
+      let port = null;
+
+      // Check for previously authorized ports first (Smart Reconnect without popup)
+      if (!forcePicker && navigator.serial.getPorts) {
+        try {
+          const authorizedPorts = await navigator.serial.getPorts();
+          if (authorizedPorts && authorizedPorts.length > 0) {
+            console.log("[WebSerial] Found " + authorizedPorts.length + " previously authorized port(s). Attempting direct connection...");
+            for (let i = 0; i < authorizedPorts.length; i++) {
+              const p = authorizedPorts[i];
+              try {
+                if (p.readable || p.writable) {
+                  try { await p.close(); } catch (_) {}
+                }
+                await p.open({ baudRate: baudRate });
+                port = p;
+                console.log("[WebSerial] Connected directly to authorized port without popup!");
+                break;
+              } catch (openErr) {
+                console.warn("[WebSerial] Could not open authorized port " + i + ":", openErr.message);
+              }
+            }
+          }
+        } catch (getPortsErr) {
+          console.warn("[WebSerial] getPorts error:", getPortsErr);
+        }
       }
 
-      try {
-        if (port.readable || port.writable) {
-          await port.close();
+      // If no authorized port connected or forcePicker requested, show browser picker
+      if (!port) {
+        console.log("[WebSerial] Showing browser port selector popup...");
+        port = await navigator.serial.requestPort();
+        if (!port) {
+          throw new Error("Tidak ada printer / port yang dipilih.");
         }
-      } catch (_) {}
 
-      await port.open({ baudRate: baudRate });
+        try {
+          if (port.readable || port.writable) {
+            await port.close();
+          }
+        } catch (_) {}
+
+        await port.open({ baudRate: baudRate });
+      }
+
       this.serialPort = port;
       this.mode = 'serial';
       this.isConnected = true;
@@ -65,6 +98,24 @@ window.WebBluetoothPrinter = {
       this.mode = null;
       throw err;
     }
+  },
+
+  // Auto connect in background if an authorized device already exists
+  autoConnect: async function() {
+    if (this.isConnected) return this.deviceName;
+
+    if (navigator.serial && navigator.serial.getPorts) {
+      try {
+        const ports = await navigator.serial.getPorts();
+        if (ports && ports.length > 0) {
+          console.log("[AutoConnect] Attempting background reconnect with authorized serial port...");
+          return await this.connectSerial(9600, false);
+        }
+      } catch (e) {
+        console.log("[AutoConnect] Serial autoConnect skipped:", e.message);
+      }
+    }
+    return null;
   },
 
   // 2. Connect via Web Bluetooth (BLE) with robust retry

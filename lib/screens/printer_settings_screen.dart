@@ -705,7 +705,7 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                           ? null
                           : () async {
                               try {
-                                final ok = await printerProv.connectWebSerial();
+                                final ok = await printerProv.connectWebSerial(forcePicker: false);
                                 if (ok && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
@@ -740,7 +740,42 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+
+                  // Button 1B: Force Picker / Ganti Port (if user wants to change port or pick another printer)
+                  TextButton.icon(
+                    onPressed: printerProv.isLoading
+                        ? null
+                        : () async {
+                            try {
+                              final ok = await printerProv.connectWebSerial(forcePicker: true);
+                              if (ok && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Printer ${printerProv.webDeviceName} berhasil terhubung!'),
+                                    backgroundColor: AppColors.success,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Gagal menghubungkan: $e'),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: Text(
+                      'Pilih / Ganti Perangkat Lain (Buka Popup)',
+                      style: TextStyle(fontSize: 12, color: AppColors.primary.withOpacity(0.85)),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
                   // Button 2: Web Bluetooth BLE (Alternative)
                   SizedBox(
                     width: double.infinity,
@@ -793,11 +828,11 @@ class _PrinterSettingsScreenState extends State<PrinterSettingsScreen> {
           const SizedBox(height: 12),
           _buildWebStepItem('1', 'Nyalakan Printer & Bluetooth Laptop', 'Pastikan printer thermal menyala dan sudah terhubung (Connected) di Bluetooth Windows atau tertancap kabel USB.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('2', 'Klik Tombol Oranye di Atas', 'Tekan tombol "⚡ Hubungkan Iware (Bluetooth / USB)" di atas.'),
+          _buildWebStepItem('2', 'Klik Tombol Oranye "⚡ Hubungkan Iware"', 'Cukup klik tombol oranye di atas. Jika sebelumnya sudah pernah terhubung, website akan otomatis menyambungkan tanpa membuka jendela pilihan.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('3', 'Pilih "RPP02N - Paired" & Klik "Connect"', 'Pada jendela popup browser Google Chrome / Edge yang muncul, klik pada pilihan "RPP02N - Paired" (atau port COM printer) lalu klik tombol Connect.'),
+          _buildWebStepItem('3', 'Pilih "RPP02N - Paired" (Pertama Kali Saja)', 'Hanya pada saat pertama kali, pilih "RPP02N - Paired" pada jendela popup browser lalu klik Connect. Browser akan otomatis mengingatnya.'),
           const SizedBox(height: 10),
-          _buildWebStepItem('4', 'Selesai!', 'Status printer akan langsung berubah menjadi Hijau (✓ Terhubung) dan siap mencetak struk kasir secara otomatis.'),
+          _buildWebStepItem('4', 'Selesai!', 'Status printer akan langsung berubah menjadi Hijau (✓ Terhubung) dan siap mencetak struk kasir secara instan.'),
 
           const SizedBox(height: 24),
           // 3. Alternative info

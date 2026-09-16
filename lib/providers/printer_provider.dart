@@ -57,18 +57,39 @@ class PrinterProvider extends ChangeNotifier {
         _webDeviceName = '';
         notifyListeners();
       });
+      // Try background auto-connect on startup
+      Future.delayed(const Duration(milliseconds: 600), () {
+        tryAutoConnectWeb();
+      });
     } else {
       _initBluetooth();
     }
   }
 
   // ── Web Bluetooth / Serial Methods ──
-  Future<bool> connectWebSerial() async {
+  Future<bool> tryAutoConnectWeb() async {
+    if (!_isWeb || _isWebConnected || _isLoading) return false;
+    try {
+      final name = await _webBt.autoConnect();
+      if (name != null && name.isNotEmpty) {
+        _webDeviceName = name;
+        _isWebConnected = true;
+        notifyListeners();
+        debugPrint("Web POS: Auto-connected to printer $name");
+        return true;
+      }
+    } catch (e) {
+      debugPrint("Web POS: Auto-connect check error: $e");
+    }
+    return false;
+  }
+
+  Future<bool> connectWebSerial({bool forcePicker = false}) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final name = await _webBt.connectSerial();
+      final name = await _webBt.connectSerial(forcePicker: forcePicker);
       if (name != null && name.isNotEmpty) {
         _webDeviceName = name;
         _isWebConnected = true;
